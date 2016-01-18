@@ -1,5 +1,4 @@
-// +build ignore
-
+// home is my personal website.
 package main
 
 import (
@@ -8,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"path/filepath"
 	"time"
 
 	//"github.com/shurcooL/go/raw_file_server"
@@ -39,7 +39,7 @@ func main() {
 	mux.Handle("/robots.txt", http.NotFoundHandler())
 	//mux.Handle("/", http.RedirectHandler("http://goo.gl/bijah", http.StatusTemporaryRedirect))
 	//mux.Handle("/", NewRouter())
-	mux.Handle("/", http.FileServer(http.Dir("./Dropbox/Public/dmitri/")))
+	mux.Handle("/", http.FileServer(http.Dir(filepath.Join("Dropbox", "Public", "dmitri"))))
 	//mux.Handle("/", raw_file_server.NewUsingHttpFs(http.Dir("./Dropbox/Public/dmitri/")))
 
 	//handler := NewCountingHandler(mux)
