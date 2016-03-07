@@ -7,16 +7,24 @@ import (
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/play/173/wordpress"
+	"github.com/shurcooL/play/186/issuesutil"
+	"github.com/shurcooL/users"
 	"golang.org/x/net/context"
 	"src.sourcegraph.com/apps/tracker/issues"
 )
 
 // initBlog registers a blog handler with path to blog XML file.
 func initBlog(path string) error {
-	service, err := wordpress.NewService(path)
+	users := users.Static{}
+	service, err := wordpress.NewService(path, users)
 	if err != nil {
 		log.Println("failed to init blog, going ahead without it:", err)
 		return nil
+	}
+
+	err = issuesutil.DumpUsers(context.TODO(), service, issues.RepoSpec{})
+	if err != nil {
+		log.Fatalln(err)
 	}
 
 	opt := issuesapp.Options{
