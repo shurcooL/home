@@ -1,35 +1,27 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
+	"github.com/shurcooL/fsissues"
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/common"
-	"github.com/shurcooL/play/173/wordpress"
-	"github.com/shurcooL/play/186/issuesutil"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/context"
 	"src.sourcegraph.com/apps/tracker/issues"
 )
 
-// initBlog registers a blog handler with path to blog XML file.
-func initBlog(path string) error {
+// initBlog registers a blog handler with blog URI as source, based in rootDir.
+func initBlog(rootDir string, blog issues.RepoSpec) error {
 	users := users.Static{}
-	service, err := wordpress.NewService(path, users)
+	service, err := fs.NewService(rootDir, users)
 	if err != nil {
-		log.Println("failed to init blog, going ahead without it:", err)
-		return nil
-	}
-
-	err = issuesutil.DumpUsers(context.TODO(), service, issues.RepoSpec{})
-	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	opt := issuesapp.Options{
 		Context:   func(req *http.Request) context.Context { return context.TODO() },
-		RepoSpec:  func(req *http.Request) issues.RepoSpec { return issues.RepoSpec{} },
+		RepoSpec:  func(req *http.Request) issues.RepoSpec { return blog },
 		BaseURI:   func(req *http.Request) string { return "/blog" },
 		CSRFToken: func(req *http.Request) string { return "" },
 		Verbatim:  func(w http.ResponseWriter) {},

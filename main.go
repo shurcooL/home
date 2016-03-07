@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"src.sourcegraph.com/apps/tracker/issues"
 )
 
 var (
 	httpFlag = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
-	blogFlag = flag.String("blog", "", "Path to wordpress blog XML file.")
 )
 
 func main() {
@@ -19,7 +20,7 @@ func main() {
 
 	http.Handle("/robots.txt", http.NotFoundHandler())
 	http.Handle("/", http.FileServer(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri"))))
-	err := initBlog(*blogFlag)
+	err := initBlog(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues"), issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"})
 	if err != nil {
 		log.Fatalln(err)
 	}
