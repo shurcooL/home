@@ -25,6 +25,13 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	// TODO: Currently assumes initBlog initializes usersService; make that better.
+	sessionsHandler := handler{handler: SessionsHandler}
+	http.Handle("/login/github", sessionsHandler)
+	http.Handle("/callback/github", sessionsHandler)
+	http.Handle("/logout", sessionsHandler)
+	http.Handle("/sessions", sessionsHandler)
+
 	log.Println("Started.")
 
 	err = http.ListenAndServe(*httpFlag, nil)
