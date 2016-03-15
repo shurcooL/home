@@ -75,7 +75,12 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 		text-decoration: underline;
 	}
 	.btn {
-		/*font-size: 14px;*/
+		font-size: 11px;
+		line-height: 11px;
+		border-radius: 4px;
+		border: solid #d2d2d2 1px;
+		background-color: #fff;
+		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
 </style>
 <script>
@@ -93,9 +98,9 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 		<a class="topbar-avatar" href="{{.CurrentUser.HTMLURL}}" target="_blank" tabindex=-1
 			><img class="topbar-avatar" src="{{.CurrentUser.AvatarURL}}" title="Signed in as {{.CurrentUser.Login}}."
 		></a>
-		<form method="post" action="/logout" style="display: inline-block; margin-bottom: 0;"><input type="submit" name="" value="Sign out"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
+		<form method="post" action="/logout" style="display: inline-block; margin-bottom: 0;"><input class="btn" type="submit" value="Sign out"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
 	{{else}}
-		<form method="post" action="/login/github" style="display: inline-block; margin-bottom: 0;"><input type="submit" name="" value="Sign in via GitHub"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
+		<form method="post" action="/login/github" style="display: inline-block; margin-bottom: 0;"><input class="btn" type="submit" value="Sign in via GitHub"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
 	{{end}}
 </div>`,
 	}
