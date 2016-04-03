@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -113,6 +114,18 @@ func IsHTTPError(err error) bool {
 	return ok
 }
 
+// JSONResponse is an error type used for representing a JSON response.
+type JSONResponse struct {
+	Body []byte
+}
+
+func (JSONResponse) Error() string { return "JSONResponse" }
+
+func IsJSONResponse(err error) bool {
+	_, ok := err.(JSONResponse)
+	return ok
+}
+
 // HeaderWriter interface is used to construct an HTTP response header and trailer.
 type HeaderWriter interface {
 	// Header returns the header map that will be sent by
@@ -138,7 +151,8 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	switch req.URL.Path { // HACK.
+	// HACK: Manually check that method is allowed for the given path.
+	switch req.URL.Path {
 	default:
 		if req.Method != "GET" {
 			w.Header().Set("Allow", "GET")
@@ -177,12 +191,16 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case os.IsPermission(err):
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
-	case err != nil:
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 	default:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, string(htmlg.Render(nodes...)))
+	case IsJSONResponse(err):
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(err.(JSONResponse).Body)
+	case err != nil:
+		log.Println(err)
+		// TODO: Only display error details to SiteAdmin users?
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -295,6 +313,21 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 
 		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 		return nil, Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
+	case req.Method == "GET" && req.URL.Path == "/user":
+		// Authorization check.
+		if u == nil {
+			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
+		}
+		user, err := usersService.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
+		if err != nil {
+			log.Println("/sessions: usersService.Get:", err)
+			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
+		}
+		b, err := json.MarshalIndent(user, "", "\t")
+		if err != nil {
+			return nil, err
+		}
+		return nil, JSONResponse{Body: b}
 	case req.Method == "GET" && req.URL.Path == "/sessions":
 		// Authorization check.
 		if u == nil {

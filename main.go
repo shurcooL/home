@@ -30,6 +30,7 @@ func main() {
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
+	http.Handle("/user", sessionsHandler) // TODO: This is an API endpoint. Consider moving under /api/ or so?
 	http.Handle("/sessions", sessionsHandler)
 
 	log.Println("Started.")

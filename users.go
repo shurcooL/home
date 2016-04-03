@@ -89,15 +89,6 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (*users.User, erro
 }
 
 func (s *Users) GetAuthenticated(ctx context.Context) (*users.UserSpec, error) {
-	// TEMP, HACK: Pretend I'm logged in (for testing).
-	//return &users.UserSpec{ID: 1924134, Domain: "github.com"}, nil
-
-	// TEMP, HACK: Pretend I'm logged in as non-admin user.
-	//return &users.UserSpec{ID: 4332971, Domain: "github.com"}, nil
-
-	// Authenticated user not yet supported.
-	//return nil, nil
-
 	req, ok := ctx.Value(requestKey).(*http.Request)
 	if !ok {
 		return nil, nil
