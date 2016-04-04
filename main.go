@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/shurcooL/go/gzip_file_server"
 	"src.sourcegraph.com/apps/tracker/issues"
 )
 
@@ -32,6 +33,14 @@ func main() {
 	http.Handle("/logout", sessionsHandler)
 	http.Handle("/user", sessionsHandler) // TODO: This is an API endpoint. Consider moving under /api/ or so?
 	http.Handle("/sessions", sessionsHandler)
+
+	fileServer := gzip_file_server.New(Assets)
+	//http.Handle("/assets/", http.StripPrefix("/assets/", fileServer))
+	// TODO: Currently assumes initBlog initializes usersService; make that better.
+	err = initResume(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions"), fileServer)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	log.Println("Started.")
 
