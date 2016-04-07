@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/shurcooL/go/gzip_file_server"
+	"golang.org/x/net/webdav"
 	"src.sourcegraph.com/apps/tracker/issues"
 )
 
@@ -37,7 +38,7 @@ func main() {
 	fileServer := gzip_file_server.New(Assets)
 	//http.Handle("/assets/", http.StripPrefix("/assets/", fileServer))
 	// TODO: Currently assumes initBlog initializes usersService; make that better.
-	err = initResume(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions"), fileServer)
+	err = initResume(webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions")), fileServer)
 	if err != nil {
 		log.Fatalln(err)
 	}

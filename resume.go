@@ -7,11 +7,10 @@ import (
 	"net/http"
 	"os"
 
-	"golang.org/x/net/context"
-
-	"github.com/shurcooL/go-goon"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/reactions/fsreactions"
+	"golang.org/x/net/context"
+	"golang.org/x/net/webdav"
 )
 
 const resumeHTML = `<html>
@@ -25,7 +24,7 @@ const resumeHTML = `<html>
 </html>
 `
 
-func initResume(rootDir string, fileServer http.Handler) error {
+func initResume(root webdav.FileSystem, fileServer http.Handler) error {
 	http.Handle("/resume", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, resumeHTML)
@@ -36,7 +35,7 @@ func initResume(rootDir string, fileServer http.Handler) error {
 	http.HandleFunc("/react", reactionHandler)
 
 	var err error
-	rs, err = fsreactions.NewService(rootDir, usersService)
+	rs, err = fsreactions.NewService(root, usersService)
 	if err != nil {
 		return err
 	}
@@ -94,21 +93,10 @@ func reactionHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		goon.DumpExpr(reactions)
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(reactions)
+		if err != nil {
+			log.Println(err)
+		}
 	}
-
-	// TODO: Deduplicate.
-	// {{template "reactions" .Reactions}}{{template "new-reaction" .ID}}
-	/*err = t.ExecuteTemplate(w, "reactions", comment.Reactions)
-	if err != nil {
-		log.Println("t.ExecuteTemplate:", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = t.ExecuteTemplate(w, "new-reaction", comment.ID)
-	if err != nil {
-		log.Println("t.ExecuteTemplate:", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}*/
 }
