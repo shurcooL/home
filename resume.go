@@ -59,7 +59,7 @@ func reactionHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ctx := context.TODO()
+	ctx := context.WithValue(context.Background(), requestKey, req) // TODO, THINK: Is this the best place? Can it be generalized? Isn't it error prone otherwise?
 	reactableURL := req.Form.Get("reactableURL")
 	reactableID := req.Form.Get("reactableID")
 
