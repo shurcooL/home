@@ -20,7 +20,7 @@ type Users struct {
 	gh *github.Client
 }
 
-func (s *Users) Get(ctx context.Context, user users.UserSpec) (*users.User, error) {
+func (s *Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
 	const (
 		ds = "dmitri.shuralyov.com"
 		gh = "github.com"
@@ -29,7 +29,7 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (*users.User, erro
 
 	switch {
 	case /*user == {ID: 1, Domain: ds} ||*/ user == users.UserSpec{ID: 1924134, Domain: gh}:
-		return &users.User{
+		return users.User{
 			UserSpec:  user,
 			Elsewhere: []users.UserSpec{ /*{ID: 1, Domain: ds},*/ {ID: 1924134, Domain: gh}, {ID: 21361484, Domain: tw}},
 			Login:     "shurcooL",
@@ -42,12 +42,12 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (*users.User, erro
 	case user.Domain == "github.com":
 		ghUser, _, err := gitHubUsersGetByID(s.gh, int(user.ID))
 		if err != nil {
-			return nil, err
+			return users.User{}, err
 		}
 		if ghUser.Login == nil || ghUser.AvatarURL == nil || ghUser.HTMLURL == nil {
-			return nil, fmt.Errorf("github user missing fields: %#v", ghUser)
+			return users.User{}, fmt.Errorf("github user missing fields: %#v", ghUser)
 		}
-		return &users.User{
+		return users.User{
 			UserSpec:  user,
 			Login:     *ghUser.Login,
 			AvatarURL: template.URL(*ghUser.AvatarURL),
@@ -55,14 +55,14 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (*users.User, erro
 		}, nil
 
 	case user == users.UserSpec{ID: 2, Domain: ds}: // Bernardo.
-		return &users.User{
+		return users.User{
 			UserSpec:  user,
 			Login:     "Bernardo",
 			Name:      "Bernardo",
 			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
 		}, nil
 	case user == users.UserSpec{ID: 3, Domain: ds}: // Michal Marcinkowski.
-		return &users.User{
+		return users.User{
 			UserSpec:  user,
 			Elsewhere: []users.UserSpec{{ID: 15185890, Domain: tw}},
 			Login:     "Michal Marcinkowski",
@@ -70,21 +70,21 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (*users.User, erro
 			AvatarURL: "https://pbs.twimg.com/profile_images/699932252764037123/MZUgYRn5_400x400.jpg", // TODO: Use Twitter API?
 		}, nil
 	case user == users.UserSpec{ID: 4, Domain: ds}: // Anders Elfgren.
-		return &users.User{
+		return users.User{
 			UserSpec:  user,
 			Login:     "Anders Elfgren",
 			Name:      "Anders Elfgren",
 			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
 		}, nil
 	case user == users.UserSpec{ID: 5, Domain: ds}: // benp.
-		return &users.User{
+		return users.User{
 			UserSpec:  user,
 			Login:     "benp",
 			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
 		}, nil
 
 	default:
-		return nil, fmt.Errorf("user %v not found", user)
+		return users.User{}, fmt.Errorf("user %v not found", user)
 	}
 }
 
@@ -108,8 +108,8 @@ func (s *Users) GetAuthenticated(ctx context.Context) (*users.UserSpec, error) {
 	}, nil
 }
 
-func (*Users) Edit(ctx context.Context, user *users.User) (*users.User, error) {
-	return nil, errors.New("Edit is not implemented")
+func (*Users) Edit(ctx context.Context, user users.User) (users.User, error) {
+	return users.User{}, errors.New("Edit is not implemented")
 }
 
 // gitHubUsersGetByID fetches a GitHub user based on their userID.
