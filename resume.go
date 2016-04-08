@@ -61,10 +61,11 @@ func reactionHandler(w http.ResponseWriter, req *http.Request) {
 
 	ctx := context.TODO()
 	reactableURL := req.Form.Get("reactableURL")
+	reactableID := req.Form.Get("reactableID")
 
 	switch req.Method {
 	case "GET":
-		reactions, err := rs.Get(ctx, reactableURL)
+		reactions, err := rs.Get(ctx, reactableURL, reactableID)
 		if os.IsPermission(err) { // TODO: Move this to a higher level (and upate all other similar code too).
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -83,7 +84,7 @@ func reactionHandler(w http.ResponseWriter, req *http.Request) {
 		tr := reactions.ToggleRequest{
 			Reaction: reactions.EmojiID(req.PostForm.Get("reaction")),
 		}
-		reactions, err := rs.Toggle(ctx, reactableURL, tr)
+		reactions, err := rs.Toggle(ctx, reactableURL, reactableID, tr)
 		if os.IsPermission(err) { // TODO: Move this to a higher level (and upate all other similar code too).
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
