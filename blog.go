@@ -30,7 +30,7 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 			Cache:               httpcache.NewMemoryCache(),
 			MarkCachedResponses: true,
 		}
-		usersService = &Users{gh: github.NewClient(&http.Client{Transport: transport})}
+		usersService = Users{gh: github.NewClient(&http.Client{Transport: transport})}
 		service, err := fs.NewService(rootDir, usersService)
 		if err != nil {
 			return err

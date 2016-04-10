@@ -20,7 +20,7 @@ type Users struct {
 	gh *github.Client
 }
 
-func (s *Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
+func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
 	const (
 		ds = "dmitri.shuralyov.com"
 		gh = "github.com"
@@ -41,7 +41,7 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (users.User, error
 		}, nil
 
 	case user.Domain == "github.com":
-		ghUser, _, err := gitHubUsersGetByID(s.gh, int(user.ID))
+		ghUser, _, err := s.gh.Users.GetByID(int(user.ID))
 		if err != nil {
 			return users.User{}, err
 		}
@@ -89,7 +89,7 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (users.User, error
 	}
 }
 
-func (s *Users) GetAuthenticated(ctx context.Context) (*users.UserSpec, error) {
+func (s Users) GetAuthenticated(ctx context.Context) (*users.UserSpec, error) {
 	req, ok := ctx.Value(requestKey).(*http.Request)
 	if !ok {
 		return nil, nil
@@ -109,29 +109,6 @@ func (s *Users) GetAuthenticated(ctx context.Context) (*users.UserSpec, error) {
 	}, nil
 }
 
-func (*Users) Edit(ctx context.Context, er users.EditRequest) (users.User, error) {
+func (Users) Edit(ctx context.Context, er users.EditRequest) (users.User, error) {
 	return users.User{}, errors.New("Edit is not implemented")
-}
-
-// gitHubUsersGetByID fetches a GitHub user based on their userID.
-func gitHubUsersGetByID(gh *github.Client, userID int) (*github.User, *github.Response, error) {
-	req, err := gh.NewRequest("GET", fmt.Sprintf("/users?since=%v&per_page=1", userID-1), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	var users []github.User
-	resp, err := gh.Do(req, &users)
-	if err != nil {
-		return nil, resp, err
-	}
-	if len(users) != 1 {
-		return nil, resp, fmt.Errorf("expected 1 user, got %v users", len(users))
-	}
-	if users[0].ID == nil {
-		return nil, resp, fmt.Errorf("got user with nil user ID: %#v", users[0])
-	}
-	if *users[0].ID != userID {
-		return nil, resp, fmt.Errorf("expected user ID %v, got user ID %v", userID, *users[0].ID)
-	}
-	return &users[0], resp, nil
 }
