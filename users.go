@@ -28,10 +28,11 @@ func (s *Users) Get(ctx context.Context, user users.UserSpec) (users.User, error
 	)
 
 	switch {
-	case /*user == {ID: 1, Domain: ds} ||*/ user == users.UserSpec{ID: 1924134, Domain: gh}:
+	// TODO: Consider using UserSpec{ID: 1, Domain: ds} as well.
+	case user == users.UserSpec{ID: 1924134, Domain: gh}:
 		return users.User{
 			UserSpec:  user,
-			Elsewhere: []users.UserSpec{ /*{ID: 1, Domain: ds},*/ {ID: 1924134, Domain: gh}, {ID: 21361484, Domain: tw}},
+			Elsewhere: []users.UserSpec{{ID: 21361484, Domain: tw}},
 			Login:     "shurcooL",
 			Name:      "Dmitri Shuralyov",
 			AvatarURL: "https://dmitri.shuralyov.com/avatar.jpg",
@@ -108,7 +109,7 @@ func (s *Users) GetAuthenticated(ctx context.Context) (*users.UserSpec, error) {
 	}, nil
 }
 
-func (*Users) Edit(ctx context.Context, user users.User) (users.User, error) {
+func (*Users) Edit(ctx context.Context, er users.EditRequest) (users.User, error) {
 	return users.User{}, errors.New("Edit is not implemented")
 }
 
