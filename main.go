@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	httpFlag = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
+	httpFlag       = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
+	productionFlag = flag.Bool("production", false, "Production mode.")
 )
 
 func main() {

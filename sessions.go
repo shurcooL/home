@@ -30,14 +30,10 @@ var gitHubConfig = oauth2.Config{
 }
 
 // TODO: Persist? In a secure way?
-var sessions struct {
+var sessions = struct {
 	mu       sync.Mutex
 	sessions map[string]user // Access Token -> User.
-}
-
-func init() {
-	sessions.sessions = make(map[string]user)
-}
+}{sessions: make(map[string]user)}
 
 func cryptoRandBytes() []byte {
 	b := make([]byte, 256)

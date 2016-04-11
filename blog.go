@@ -82,17 +82,7 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 		background-color: #fff;
 		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
-</style>
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-56541369-3', 'auto');
-  ga('send', 'pageview');
-
-</script>`,
+</style>`,
 		BodyPre: `<div style="text-align: right; margin-bottom: 20px; height: 18px; font-size: 12px;">
 	{{if .CurrentUser}}
 		<a class="topbar-avatar" href="{{.CurrentUser.HTMLURL}}" target="_blank" tabindex=-1
@@ -103,6 +93,9 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 		<form method="post" action="/login/github" style="display: inline-block; margin-bottom: 0;"><input class="btn" type="submit" value="Sign in via GitHub"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
 	{{end}}
 </div>`,
+	}
+	if *productionFlag {
+		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
 	issuesApp := issuesapp.New(othersCantCreateBlogPostsService, opt)
 
