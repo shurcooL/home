@@ -1,4 +1,4 @@
-// home is my personal website.
+// home is Dmitri Shuralyov's personal website.
 package main
 
 import (
@@ -10,8 +10,8 @@ import (
 
 	"github.com/shurcooL/go/gzip_file_server"
 	"github.com/shurcooL/home/assets"
+	"github.com/shurcooL/issues"
 	"golang.org/x/net/webdav"
-	"src.sourcegraph.com/apps/tracker/issues"
 )
 
 var (

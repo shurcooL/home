@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/shurcooL/reactions"
-	"github.com/shurcooL/reactions/fsreactions"
+	"github.com/shurcooL/reactions/fs"
 	"golang.org/x/net/context"
 	"golang.org/x/net/webdav"
 )
@@ -35,7 +35,7 @@ func initResume(root webdav.FileSystem, fileServer http.Handler) error {
 	http.HandleFunc("/react", reactionHandler)
 
 	var err error
-	rs, err = fsreactions.NewService(root, usersService)
+	rs, err = fs.NewService(root, usersService)
 	if err != nil {
 		return err
 	}

@@ -6,12 +6,12 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
-	"github.com/shurcooL/fsissues"
+	"github.com/shurcooL/issues"
+	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/context"
-	"src.sourcegraph.com/apps/tracker/issues"
 )
 
 var requestKey struct{}
