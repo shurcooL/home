@@ -97,7 +97,7 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
-	issuesApp := issuesapp.New(othersCantCreateBlogPostsService, opt)
+	issuesApp := issuesapp.New(othersCantCreateBlogPostsService, usersService, opt)
 
 	blogHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// TODO: Factor this out?
