@@ -89,24 +89,31 @@ func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error)
 	}
 }
 
-func (s Users) GetAuthenticated(ctx context.Context) (*users.UserSpec, error) {
+func (s Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
 	req, ok := ctx.Value(requestKey).(*http.Request)
 	if !ok {
-		return nil, nil
+		log.Println("Users.GetAuthenticatedSpec: no *http.Request in context")
+		return users.UserSpec{}, nil
 	}
-	u, err := getUser(req)
-	if err != nil {
-		// Cannot return an error here. If getUser failed, that means no authenticated user.
-		log.Println("ds.com: (*Users) GetAuthenticated:", err)
-		return nil, nil
-	}
+	u, _ := getUser(req)
 	if u == nil {
-		return nil, nil
+		return users.UserSpec{}, nil
 	}
-	return &users.UserSpec{
+	return users.UserSpec{
 		ID:     u.ID,
 		Domain: "github.com",
 	}, nil
+}
+
+func (s Users) GetAuthenticated(ctx context.Context) (users.User, error) {
+	userSpec, err := s.GetAuthenticatedSpec(ctx)
+	if err != nil {
+		return users.User{}, err
+	}
+	if userSpec.ID == 0 {
+		return users.User{}, nil
+	}
+	return s.Get(ctx, userSpec)
 }
 
 func (Users) Edit(ctx context.Context, er users.EditRequest) (users.User, error) {

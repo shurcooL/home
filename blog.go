@@ -136,12 +136,12 @@ type othersCantCreateBlogPosts struct {
 }
 
 func (s othersCantCreateBlogPosts) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
-	currentUser, err := s.users.GetAuthenticated(ctx)
+	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return issues.Issue{}, err
 	}
 	shurcooL := users.UserSpec{ID: 1924134, Domain: "github.com"}
-	if currentUser == nil || *currentUser != shurcooL {
+	if currentUser.ID == 0 || currentUser != shurcooL {
 		return issues.Issue{}, os.ErrPermission
 	}
 	return s.Service.Create(ctx, repo, issue)

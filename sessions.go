@@ -228,7 +228,7 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ascii bytes in state, so use base64.
 		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true})
 
-		// TOOD, THINK.
+		// TODO, THINK.
 		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true})
 
 		url := gitHubConfig.AuthCodeURL(state)
@@ -309,7 +309,7 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 
 		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 		return nil, Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
-	case req.Method == "GET" && req.URL.Path == "/user":
+	case req.Method == "GET" && req.URL.Path == "/api/user":
 		// Authorization check.
 		if u == nil {
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}

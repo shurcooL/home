@@ -34,7 +34,7 @@ func main() {
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
-	http.Handle("/user", sessionsHandler) // TODO: This is an API endpoint. Consider moving under /api/ or so?
+	http.Handle("/api/user", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
 
 	fileServer := gzip_file_server.New(assets.Assets)
