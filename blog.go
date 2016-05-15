@@ -84,7 +84,7 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 	}
 </style>`,
 		BodyPre: `<div style="text-align: right; margin-bottom: 20px; height: 18px; font-size: 12px;">
-	{{if .CurrentUser}}
+	{{if .CurrentUser.ID}}
 		<a class="topbar-avatar" href="{{.CurrentUser.HTMLURL}}" target="_blank" tabindex=-1
 			><img class="topbar-avatar" src="{{.CurrentUser.AvatarURL}}" title="Signed in as {{.CurrentUser.Login}}."
 		></a>
