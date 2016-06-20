@@ -38,7 +38,7 @@ func main() {
 	http.Handle("/sessions", sessionsHandler)
 
 	fileServer := gzip_file_server.New(assets.Assets)
-	//http.Handle("/assets/", http.StripPrefix("/assets/", fileServer))
+	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer))
 	// TODO: Currently assumes initBlog initializes usersService; make that better.
 	err = initResume(webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions")), fileServer)
 	if err != nil {

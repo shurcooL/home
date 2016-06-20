@@ -29,7 +29,7 @@ func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error)
 
 	switch {
 	// TODO: Consider using UserSpec{ID: 1, Domain: ds} as well.
-	case user == users.UserSpec{ID: 1924134, Domain: gh}:
+	case user == users.UserSpec{ID: 1924134, Domain: gh}: // Dmitri Shuralyov.
 		return users.User{
 			UserSpec:  user,
 			Elsewhere: []users.UserSpec{{ID: 21361484, Domain: tw}},

@@ -16,7 +16,7 @@ import (
 var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape": func(s string) template.HTML { return template.HTML(s) }}).Parse(`<html>
 	<head>
 		<title>Dmitri Shuralyov - Resume</title>
-		<link href="/blog/assets/octicons/octicons.css" rel="stylesheet" type="text/css">
+		<link href="/blog/assets/octicons/octicons.min.css" rel="stylesheet" type="text/css">
 		<link href="resume.css" rel="stylesheet" type="text/css">
 		{{noescape "<!-- Unminified source is at https://github.com/shurcooL/resume. -->"}}
 		<script src="resume.js"></script>
