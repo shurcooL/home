@@ -8,12 +8,24 @@ import (
 	"net/http"
 
 	"github.com/google/go-github/github"
+	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/context"
 )
 
-// TODO: Avoid global.
-var usersService users.Service
+func newUsersService() users.Service {
+	var transport http.RoundTripper
+	transport = &github.UnauthenticatedRateLimitedTransport{
+		ClientID:     gitHubConfig.ClientID,
+		ClientSecret: gitHubConfig.ClientSecret,
+	}
+	transport = &httpcache.Transport{
+		Transport:           transport,
+		Cache:               httpcache.NewMemoryCache(),
+		MarkCachedResponses: true,
+	}
+	return Users{gh: github.NewClient(&http.Client{Transport: transport})}
+}
 
 // Users implementats users.Service.
 type Users struct {

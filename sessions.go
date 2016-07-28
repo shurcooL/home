@@ -59,8 +59,8 @@ type user struct {
 
 var errBadAccessToken = errors.New("bad access token")
 
-// getUser either returns a valid user (possibly nil) and nil error, or
-// nil user and errBadAccessToken.
+// getUser either returns a valid user (possibly nil) and nil error,
+// or nil user and errBadAccessToken.
 func getUser(req *http.Request) (*user, error) {
 	cookie, err := req.Cookie(accessTokenCookieName)
 	if err == http.ErrNoCookie {
@@ -97,6 +97,7 @@ func IsRedirect(err error) bool {
 	return ok
 }
 
+// HTTPError is an error type used for representing a non-nil error with a status code.
 type HTTPError struct {
 	Code int
 	err  error // Not nil.
@@ -143,7 +144,7 @@ func SetCookie(w HeaderWriter, cookie *http.Cookie) {
 }
 
 type handler struct {
-	handler func(user *user, w HeaderWriter, req *http.Request) ([]*html.Node, error)
+	handler func(w HeaderWriter, req *http.Request, user *user) ([]*html.Node, error)
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -175,7 +176,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 	}
 
-	nodes, err := h.handler(u, w, req)
+	nodes, err := h.handler(w, req, u)
 	switch {
 	case IsRedirect(err):
 		http.Redirect(w, req, string(err.(Redirect).URL), http.StatusSeeOther)
@@ -215,7 +216,11 @@ func sanitizeReturn(returnURL string) string {
 	return u.Path
 }
 
-func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, error) {
+type SessionsHandler struct {
+	users users.Service
+}
+
+func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
 	// Simple switch-based router for now. For a larger project, a more sophisticated router should be used.
 	switch {
 	case req.Method == "POST" && req.URL.Path == "/login/github":
@@ -226,10 +231,10 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 		}
 
 		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ascii bytes in state, so use base64.
-		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true})
+		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true, Secure: true})
 
 		// TODO, THINK.
-		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true})
+		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: true})
 
 		url := gitHubConfig.AuthCodeURL(state)
 		return nil, Redirect{URL: url}
@@ -298,7 +303,7 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 
 		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
-		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, HttpOnly: true})
+		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, HttpOnly: true, Secure: true})
 		return nil, Redirect{URL: returnURL}
 	case req.Method == "POST" && req.URL.Path == "/logout":
 		if u != nil {
@@ -314,9 +319,9 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 		if u == nil {
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
-		user, err := usersService.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
+		user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
 		if err != nil {
-			log.Println("/sessions: usersService.Get:", err)
+			log.Println("/sessions: h.users.Get:", err)
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
 		b, err := json.MarshalIndent(user, "", "\t")
@@ -329,9 +334,9 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 		if u == nil {
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
-		user, err := usersService.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
+		user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
 		if err != nil {
-			log.Println("/sessions: usersService.Get:", err)
+			log.Println("/sessions: h.users.Get:", err)
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
 		if !user.SiteAdmin {
@@ -342,7 +347,7 @@ func SessionsHandler(u *user, w HeaderWriter, req *http.Request) ([]*html.Node, 
 		var nodes []*html.Node
 		sessions.mu.Lock()
 		for _, u := range sessions.sessions {
-			user, err := usersService.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
+			user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
 			if err != nil {
 				return nil, err
 			}

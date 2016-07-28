@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/go-github/github"
-	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/issuesapp"
@@ -17,25 +15,14 @@ import (
 var requestKey struct{}
 
 // initBlog registers a blog handler with blog URI as source, based in rootDir.
-func initBlog(rootDir string, blog issues.RepoSpec) error {
+func initBlog(rootDir string, blog issues.RepoSpec, users users.Service) error {
 	var othersCantCreateBlogPostsService issues.Service
 	{
-		var transport http.RoundTripper
-		transport = &github.UnauthenticatedRateLimitedTransport{
-			ClientID:     gitHubConfig.ClientID,
-			ClientSecret: gitHubConfig.ClientSecret,
-		}
-		transport = &httpcache.Transport{
-			Transport:           transport,
-			Cache:               httpcache.NewMemoryCache(),
-			MarkCachedResponses: true,
-		}
-		usersService = Users{gh: github.NewClient(&http.Client{Transport: transport})}
-		service, err := fs.NewService(rootDir, usersService)
+		service, err := fs.NewService(rootDir, users)
 		if err != nil {
 			return err
 		}
-		othersCantCreateBlogPostsService = othersCantCreateBlogPosts{Service: service, users: usersService}
+		othersCantCreateBlogPostsService = othersCantCreateBlogPosts{Service: service, users: users}
 	}
 
 	opt := issuesapp.Options{
@@ -57,8 +44,7 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 				},
 			}
 		},
-		HeadPre: `<!--link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/css/bootstrap.css" media="all" rel="stylesheet" type="text/css" /-->
-<style type="text/css">
+		HeadPre: `<style type="text/css">
 	body {
 		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 		font-size: 14px;
@@ -97,7 +83,7 @@ func initBlog(rootDir string, blog issues.RepoSpec) error {
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
-	issuesApp := issuesapp.New(othersCantCreateBlogPostsService, usersService, opt)
+	issuesApp := issuesapp.New(othersCantCreateBlogPostsService, users, opt)
 
 	blogHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// TODO: Factor this out?

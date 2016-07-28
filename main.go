@@ -4,12 +4,13 @@ package main
 import (
 	"flag"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 
-	"github.com/shurcooL/go/gzip_file_server"
 	"github.com/shurcooL/home/assets"
+	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"golang.org/x/net/webdav"
 )
@@ -19,35 +20,59 @@ var (
 	productionFlag = flag.Bool("production", false, "Production mode.")
 )
 
-func main() {
+func run() error {
 	flag.Parse()
 
-	http.Handle("/robots.txt", http.NotFoundHandler())
-	http.Handle("/", http.FileServer(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri"))))
-	err := initBlog(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues"), issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"})
-	if err != nil {
-		log.Fatalln(err)
+	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
+		return err
 	}
 
-	// TODO: Currently assumes initBlog initializes usersService; make that better.
-	sessionsHandler := handler{handler: SessionsHandler}
+	users := newUsersService()
+	reactions, err := newReactionsService(
+		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions")),
+		users,
+	)
+	if err != nil {
+		return err
+	}
+
+	sessionsHandler := handler{handler: SessionsHandler{users}.Serve}
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
 	http.Handle("/api/user", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
 
-	fileServer := gzip_file_server.New(assets.Assets)
-	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer))
-	// TODO: Currently assumes initBlog initializes usersService; make that better.
-	err = initResume(webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions")), fileServer)
+	http.Handle("/react", reactHandler{reactions})
+
+	err = initBlog(
+		filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues"),
+		issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"},
+		users,
+	)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
+
+	fileServer := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
+	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer))
+	initResume(fileServer)
+
+	http.Handle("/", httpgzip.FileServer(
+		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
+		httpgzip.FileServerOptions{
+			IndexHTML:  true,
+			ServeError: httpgzip.Detailed,
+		},
+	))
 
 	log.Println("Started.")
 
-	err = http.ListenAndServe(*httpFlag, nil)
+	return http.ListenAndServe(*httpFlag, nil)
+}
+
+func main() {
+	err := run()
 	if err != nil {
 		log.Fatalln(err)
 	}
