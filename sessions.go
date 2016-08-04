@@ -22,7 +22,7 @@ import (
 	githuboauth2 "golang.org/x/oauth2/github"
 )
 
-var gitHubConfig = oauth2.Config{
+var githubConfig = oauth2.Config{
 	ClientID:     os.Getenv("HOME_GH_CLIENT_ID"),
 	ClientSecret: os.Getenv("HOME_GH_CLIENT_SECRET"),
 	Scopes:       nil,
@@ -236,7 +236,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		// TODO, THINK.
 		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: true})
 
-		url := gitHubConfig.AuthCodeURL(state)
+		url := githubConfig.AuthCodeURL(state)
 		return nil, Redirect{URL: url}
 	case req.Method == "GET" && req.URL.Path == "/callback/github":
 		if u != nil {
@@ -255,11 +255,11 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 				return nil, errors.New("state doesn't match")
 			}
 
-			token, err := gitHubConfig.Exchange(oauth2.NoContext, req.FormValue("code"))
+			token, err := githubConfig.Exchange(oauth2.NoContext, req.FormValue("code"))
 			if err != nil {
 				return nil, err
 			}
-			tc := gitHubConfig.Client(oauth2.NoContext, token)
+			tc := githubConfig.Client(oauth2.NoContext, token)
 			gh := github.NewClient(tc)
 
 			user, _, err := gh.Users.Get("")

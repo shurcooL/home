@@ -16,8 +16,8 @@ import (
 func newUsersService() users.Service {
 	var transport http.RoundTripper
 	transport = &github.UnauthenticatedRateLimitedTransport{
-		ClientID:     gitHubConfig.ClientID,
-		ClientSecret: gitHubConfig.ClientSecret,
+		ClientID:     githubConfig.ClientID,
+		ClientSecret: githubConfig.ClientSecret,
 	}
 	transport = &httpcache.Transport{
 		Transport:           transport,
