@@ -238,6 +238,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 
 		url := githubConfig.AuthCodeURL(state)
 		return nil, Redirect{URL: url}
+
 	case req.Method == "GET" && req.URL.Path == "/callback/github":
 		if u != nil {
 			return nil, Redirect{URL: "/"}
@@ -305,6 +306,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
 		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, HttpOnly: true, Secure: true})
 		return nil, Redirect{URL: returnURL}
+
 	case req.Method == "POST" && req.URL.Path == "/logout":
 		if u != nil {
 			sessions.mu.Lock()
@@ -314,6 +316,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 
 		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 		return nil, Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
+
 	case req.Method == "GET" && req.URL.Path == "/api/user":
 		// Authorization check.
 		if u == nil {
@@ -329,6 +332,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 			return nil, err
 		}
 		return nil, JSONResponse{Body: b}
+
 	case req.Method == "GET" && req.URL.Path == "/sessions":
 		// Authorization check.
 		if u == nil {
@@ -362,6 +366,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		}
 		sessions.mu.Unlock()
 		return nodes, nil
+
 	default:
 		return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrNotExist}
 	}
