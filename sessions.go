@@ -231,10 +231,10 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		}
 
 		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ascii bytes in state, so use base64.
-		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true, Secure: true})
+		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true, Secure: *productionFlag})
 
 		// TODO, THINK.
-		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: true})
+		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: *productionFlag})
 
 		url := githubConfig.AuthCodeURL(state)
 		return nil, Redirect{URL: url}
@@ -304,7 +304,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 
 		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
-		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, HttpOnly: true, Secure: true})
+		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, HttpOnly: true, Secure: *productionFlag})
 		return nil, Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
