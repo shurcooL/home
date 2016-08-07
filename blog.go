@@ -12,7 +12,17 @@ import (
 	"golang.org/x/net/context"
 )
 
-var requestKey struct{}
+// contextKey is a value for use with context.WithValue. It's used as
+// a pointer so it fits in an interface{} without allocation.
+type contextKey struct {
+	name string
+}
+
+func (k *contextKey) String() string { return "github.com/shurcooL/home context value " + k.name }
+
+// requestContextKey is a context key. It can be used to access the HTTP request
+// that the context is tied to. The associated value will be of type *http.Request.
+var requestContextKey = &contextKey{"http-request"}
 
 // initBlog registers a blog handler with blog URI as source, based in rootDir.
 func initBlog(rootDir string, blog issues.RepoSpec, users users.Service) error {
@@ -28,7 +38,7 @@ func initBlog(rootDir string, blog issues.RepoSpec, users users.Service) error {
 	opt := issuesapp.Options{
 		Context: func(req *http.Request) context.Context {
 			// TODO, THINK.
-			return context.WithValue(context.Background(), requestKey, req)
+			return context.WithValue(context.Background(), requestContextKey, req)
 		},
 		RepoSpec: func(req *http.Request) issues.RepoSpec { return blog },
 		BaseURI:  func(req *http.Request) string { return "/blog" },

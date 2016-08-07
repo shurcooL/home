@@ -102,7 +102,7 @@ func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error)
 }
 
 func (s Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
-	req, ok := ctx.Value(requestKey).(*http.Request)
+	req, ok := ctx.Value(requestContextKey).(*http.Request)
 	if !ok {
 		log.Println("Users.GetAuthenticatedSpec: no *http.Request in context")
 		return users.UserSpec{}, nil
