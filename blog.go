@@ -8,6 +8,7 @@ import (
 	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/common"
+	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/context"
 )
@@ -25,10 +26,10 @@ func (k *contextKey) String() string { return "github.com/shurcooL/home context 
 var requestContextKey = &contextKey{"http-request"}
 
 // initBlog registers a blog handler with blog URI as source, based in rootDir.
-func initBlog(rootDir string, blog issues.RepoSpec, users users.Service) error {
+func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.ExternalService, users users.Service) error {
 	var othersCantCreateBlogPostsService issues.Service
 	{
-		service, err := fs.NewService(rootDir, users)
+		service, err := fs.NewService(rootDir, notifications, users)
 		if err != nil {
 			return err
 		}

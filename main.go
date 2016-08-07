@@ -45,9 +45,18 @@ func run() error {
 
 	http.Handle("/react", reactHandler{reactions})
 
+	notifications, err := initNotifications(
+		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
+		users,
+	)
+	if err != nil {
+		return err
+	}
+
 	err = initBlog(
 		filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues"),
 		issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"},
+		notifications,
 		users,
 	)
 	if err != nil {
