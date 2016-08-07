@@ -46,10 +46,10 @@ func initBlog(rootDir string, blog issues.RepoSpec, users users.Service) error {
 		},
 		HeadPre: `<style type="text/css">
 	body {
+		margin: 20px;
 		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 		font-size: 14px;
 		line-height: initial;
-		margin: 20px;
 		color: #373a3c;
 	}
 	a {
