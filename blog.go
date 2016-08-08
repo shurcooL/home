@@ -27,13 +27,13 @@ var requestContextKey = &contextKey{"http-request"}
 
 // initBlog registers a blog handler with blog URI as source, based in rootDir.
 func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.ExternalService, users users.Service) error {
-	var othersCantCreateBlogPostsService issues.Service
+	var onlyShurcoolCreatePostsService issues.Service
 	{
 		service, err := fs.NewService(rootDir, notifications, users)
 		if err != nil {
 			return err
 		}
-		othersCantCreateBlogPostsService = othersCantCreateBlogPosts{Service: service, users: users}
+		onlyShurcoolCreatePostsService = onlyShurcoolCreatePosts{Service: service, users: users}
 	}
 
 	opt := issuesapp.Options{
@@ -94,7 +94,7 @@ func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
-	issuesApp := issuesapp.New(othersCantCreateBlogPostsService, users, opt)
+	issuesApp := issuesapp.New(onlyShurcoolCreatePostsService, users, opt)
 
 	blogHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// TODO: Factor this out?
@@ -125,20 +125,19 @@ func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.
 	return nil
 }
 
-// othersCantCreateBlogPosts limits an issues.Service's Create method to allow only shurcooL
+// onlyShurcoolCreatePosts limits an issues.Service's Create method to allow only shurcooL
 // to create new blog posts.
-type othersCantCreateBlogPosts struct {
+type onlyShurcoolCreatePosts struct {
 	issues.Service
 	users users.Service
 }
 
-func (s othersCantCreateBlogPosts) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+func (s onlyShurcoolCreatePosts) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
 	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return issues.Issue{}, err
 	}
-	shurcooL := users.UserSpec{ID: 1924134, Domain: "github.com"}
-	if currentUser.ID == 0 || currentUser != shurcooL {
+	if currentUser != shurcool {
 		return issues.Issue{}, os.ErrPermission
 	}
 	return s.Service.Create(ctx, repo, issue)

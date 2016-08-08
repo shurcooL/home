@@ -13,6 +13,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
+
 func newUsersService() users.Service {
 	var transport http.RoundTripper
 	transport = &github.UnauthenticatedRateLimitedTransport{

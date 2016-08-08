@@ -68,11 +68,11 @@ func getUser(req *http.Request) (*user, error) {
 	} else if err != nil {
 		return nil, errBadAccessToken
 	}
-	decodedAccessToken, err := base64.RawURLEncoding.DecodeString(cookie.Value)
+	accessTokenBytes, err := base64.RawURLEncoding.DecodeString(cookie.Value)
 	if err != nil {
 		return nil, errBadAccessToken
 	}
-	accessToken := string(decodedAccessToken)
+	accessToken := string(accessTokenBytes)
 	var u *user
 	sessions.mu.Lock()
 	if user, ok := sessions.sessions[accessToken]; ok {
