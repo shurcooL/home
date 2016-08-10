@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
@@ -30,7 +32,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
-	var shurcoolGitHubNotifications notifications.InternalService = githubapi.NewService(
+	shurcoolGitHubNotifications := githubapi.NewService(
 		github.NewClient(&http.Client{Transport: authTransport}),
 		github.NewClient(&http.Client{Transport: cacheTransport}),
 	)
@@ -113,8 +115,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 // shurcoolSeeHisGitHubNotifications lets shurcooL also see his GitHub notifications,
 // in addition to local ones.
 type shurcoolSeeHisGitHubNotifications struct {
-	service                     notifications.InternalService
-	shurcoolGitHubNotifications notifications.InternalService
+	service                     notifications.Service
+	shurcoolGitHubNotifications notifications.Service
 	users                       users.Service
 }
 
@@ -154,4 +156,31 @@ func (s shurcoolSeeHisGitHubNotifications) Count(ctx context.Context, opt interf
 	}
 
 	return count, nil
+}
+
+func (s shurcoolSeeHisGitHubNotifications) MarkRead(ctx context.Context, appID string, repo notifications.RepoSpec, threadID uint64) error {
+	if currentUser, err := s.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool &&
+		strings.HasPrefix(repo.URI, "github.com/") {
+
+		return s.shurcoolGitHubNotifications.MarkRead(ctx, appID, repo, threadID)
+	}
+
+	return s.service.MarkRead(ctx, appID, repo, threadID)
+}
+
+func (s shurcoolSeeHisGitHubNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
+	if currentUser, err := s.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool &&
+		strings.HasPrefix(repo.URI, "github.com/") {
+
+		return s.shurcoolGitHubNotifications.MarkAllRead(ctx, repo)
+	}
+
+	return s.service.MarkAllRead(ctx, repo)
+}
+
+func (s shurcoolSeeHisGitHubNotifications) Subscribe(ctx context.Context, appID string, repo notifications.RepoSpec, threadID uint64, subscribers []users.UserSpec) error {
+	return fmt.Errorf("shurcoolSeeHisGitHubNotifications.Subscribe not implemented")
+}
+func (s shurcoolSeeHisGitHubNotifications) Notify(ctx context.Context, appID string, repo notifications.RepoSpec, threadID uint64, nr notifications.NotificationRequest) error {
+	return fmt.Errorf("shurcoolSeeHisGitHubNotifications.Notify not implemented")
 }
