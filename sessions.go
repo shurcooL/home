@@ -213,7 +213,7 @@ func sanitizeReturn(returnURL string) string {
 	if u.Path == "" {
 		return "/"
 	}
-	return u.Path
+	return (&url.URL{Path: u.Path, RawQuery: u.RawQuery}).String()
 }
 
 type SessionsHandler struct {
