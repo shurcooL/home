@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 
@@ -85,7 +88,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 
 	notificationsHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// TODO: Factor this out?
-		_, err := getUser(req)
+		u, err := getUser(req)
 		if err == errBadAccessToken {
 			// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 			http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
@@ -100,11 +103,24 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 			http.Redirect(w, req, baseURL, http.StatusMovedPermanently)
 			return
 		}
+		returnURL := req.URL.String()
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
 			req.URL.Path = "/"
 		}
-		notificationsApp.ServeHTTP(w, req)
+		rr := httptest.NewRecorder()
+		rr.HeaderMap = w.Header()
+		notificationsApp.ServeHTTP(rr, req)
+		if rr.Code == http.StatusUnauthorized && u == nil {
+			loginURL := (&url.URL{
+				Path:     "/login",
+				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
+			}).String()
+			http.Redirect(w, req, loginURL, http.StatusSeeOther)
+			return
+		}
+		w.WriteHeader(rr.Code)
+		io.Copy(w, rr.Body)
 	})
 	http.Handle("/notifications", notificationsHandler)
 	http.Handle("/notifications/", notificationsHandler)

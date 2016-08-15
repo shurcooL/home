@@ -18,6 +18,7 @@ import (
 	"github.com/shurcooL/users"
 	"golang.org/x/net/context"
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 	"golang.org/x/oauth2"
 	githuboauth2 "golang.org/x/oauth2/github"
 )
@@ -48,6 +49,8 @@ const (
 	accessTokenCookieName = "accessToken"
 	stateCookieName       = "state"
 	returnCookieName      = "return" // TODO, THINK.
+
+	returnQueryName = "return"
 )
 
 // user is a GitHub user (i.e., domain is "github.com").
@@ -186,6 +189,14 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 	case os.IsPermission(err):
+		if u == nil {
+			loginURL := (&url.URL{
+				Path:     "/login",
+				RawQuery: url.Values{returnQueryName: {req.URL.String()}}.Encode(),
+			}).String()
+			http.Redirect(w, req, loginURL, http.StatusSeeOther)
+			return
+		}
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 	default:
@@ -333,6 +344,27 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		}
 		return nil, JSONResponse{Body: b}
 
+	case req.Method == "GET" && req.URL.Path == "/login":
+		returnURL := sanitizeReturn(req.URL.Query().Get(returnQueryName))
+
+		if u != nil {
+			return nil, Redirect{URL: returnURL}
+		}
+
+		centered := &html.Node{
+			Type: html.ElementNode, Data: atom.Div.String(),
+			Attr: []html.Attribute{{Key: atom.Style.String(), Val: `margin-top: 100px; text-align: center;`}},
+		}
+		signInViaGitHub := PostButton{
+			Action:    "/login/github",
+			Text:      "Sign in via GitHub",
+			ReturnURL: returnURL,
+		}
+		for _, n := range signInViaGitHub.Render() {
+			centered.AppendChild(n)
+		}
+		return []*html.Node{centered}, nil
+
 	case req.Method == "GET" && req.URL.Path == "/sessions":
 		// Authorization check.
 		if u == nil {
@@ -370,4 +402,50 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 	default:
 		return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrNotExist}
 	}
+}
+
+type PostButton struct {
+	Action    string
+	Text      string
+	ReturnURL string
+}
+
+func (b PostButton) Render() []*html.Node {
+	// TODO: Make this much nicer.
+	/*
+		<form method="post" action="{{.Action}}" style="display: inline-block; margin-bottom: 0;">
+			<input class="btn" type="submit" value="{{.Text}}">
+			<input type="hidden" name="return" value="{{.ReturnURL}}">
+		</form>
+	*/
+	form := &html.Node{
+		Type: html.ElementNode, Data: atom.Form.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Method.String(), Val: "post"},
+			{Key: atom.Action.String(), Val: b.Action},
+			{Key: atom.Style.String(), Val: `display: inline-block; margin-bottom: 0;`},
+		},
+	}
+	form.AppendChild(&html.Node{
+		Type: html.ElementNode, Data: atom.Input.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Type.String(), Val: "submit"},
+			{Key: atom.Value.String(), Val: b.Text},
+			{Key: atom.Style.String(), Val: `font-size: 11px;
+line-height: 11px;
+border-radius: 4px;
+border: solid #d2d2d2 1px;
+background-color: #fff;
+box-shadow: 0 1px 1px rgba(0, 0, 0, .05);`},
+		},
+	})
+	form.AppendChild(&html.Node{
+		Type: html.ElementNode, Data: atom.Input.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Type.String(), Val: "hidden"},
+			{Key: atom.Name.String(), Val: "return"},
+			{Key: atom.Value.String(), Val: b.ReturnURL},
+		},
+	})
+	return []*html.Node{form}
 }

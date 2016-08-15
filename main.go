@@ -41,6 +41,7 @@ func run() error {
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
 	http.Handle("/api/user", sessionsHandler)
+	http.Handle("/login", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
 
 	http.Handle("/react", reactHandler{reactions})
