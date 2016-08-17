@@ -66,7 +66,7 @@ func run() error {
 
 	fileServer := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
 	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer))
-	initResume(fileServer)
+	initResume(fileServer, reactions, users)
 
 	http.Handle("/", httpgzip.FileServer(
 		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),

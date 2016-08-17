@@ -2,8 +2,17 @@ package main
 
 import (
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
+
+	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/reactions"
+	"github.com/shurcooL/resume"
+	"github.com/shurcooL/resume/backend"
+	"github.com/shurcooL/users"
+	"golang.org/x/net/context"
 )
 
 var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape": func(s string) template.HTML { return template.HTML(s) }}).Parse(`<html>
@@ -13,13 +22,11 @@ var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape
 		<link href="resume.css" rel="stylesheet" type="text/css">
 
 		{{noescape "<!-- Unminified source is at https://github.com/shurcooL/resume. -->"}}
-		<script src="resume.js"></script>
+		<script async src="resume.js"></script>
 
 		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
-	<body></body>
-</html>
-`))
+	<body>`))
 
 const googleAnalytics = `<script>
 		  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -33,16 +40,39 @@ const googleAnalytics = `<script>
 		</script>`
 
 // fileServer contains /resume.{js,css}.
-func initResume(fileServer http.Handler) {
+func initResume(fileServer http.Handler, reactions reactions.Service, users users.Service) {
 	http.Handle("/resume", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct {
-			Production bool
-		}{*productionFlag}
+		data := struct{ Production bool }{*productionFlag}
 		err := resumeHTML.Execute(w, data)
 		if err != nil {
 			log.Println(err)
 		}
+
+		// Optional (still experimental) server-side rendering.
+		if ok, _ := strconv.ParseBool(req.URL.Query().Get("prerender")); ok {
+			ctx := context.WithValue(context.Background(), requestContextKey, req) // TODO, THINK: Is this the best place? Can it be generalized? Isn't it error prone otherwise?
+			authenticatedUser, err := users.GetAuthenticated(ctx)
+			if err != nil {
+				panic(err) // TODO.
+			}
+			returnURL := req.URL.String()
+
+			// THINK.
+			resume.CurrentUser = authenticatedUser
+			resume.Reactions = reactions
+
+			err = backend.T.Execute(w, backend.Header{AuthenticatedUser: authenticatedUser, ReturnURL: returnURL})
+			if err != nil {
+				panic(err) // TODO.
+			}
+			_, err = io.WriteString(w, string(htmlg.Render(resume.DmitriShuralyov{}.Render()...)))
+			if err != nil {
+				panic(err) // TODO.
+			}
+		}
+
+		io.WriteString(w, `</body></html>`)
 	}))
 	http.Handle("/resume.js", fileServer)
 	http.Handle("/resume.css", fileServer)
