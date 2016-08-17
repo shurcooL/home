@@ -331,12 +331,16 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 	case req.Method == "GET" && req.URL.Path == "/api/user":
 		// Authorization check.
 		if u == nil {
-			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
+			b, err := json.MarshalIndent(users.UserSpec{}, "", "\t")
+			if err != nil {
+				return nil, err
+			}
+			return nil, JSONResponse{Body: b}
 		}
 		user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
 		if err != nil {
 			log.Println("/sessions: h.users.Get:", err)
-			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
+			return nil, err
 		}
 		b, err := json.MarshalIndent(user, "", "\t")
 		if err != nil {
