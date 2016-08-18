@@ -44,7 +44,7 @@ func run() error {
 	http.Handle("/login", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
 
-	http.Handle("/react", reactHandler{reactions})
+	http.Handle("/api/react", reactHandler{reactions})
 
 	notifications, err := initNotifications(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
