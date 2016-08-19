@@ -12,7 +12,9 @@ import (
 	"net/url"
 	"os"
 	"sync"
+	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/google/go-github/github"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/users"
@@ -57,6 +59,7 @@ const (
 type user struct {
 	ID uint64
 
+	expiry      time.Time
 	accessToken string // Internal access token. Needed to be able to clear session when this user signs out.
 }
 
@@ -79,7 +82,11 @@ func getUser(req *http.Request) (*user, error) {
 	var u *user
 	sessions.mu.Lock()
 	if user, ok := sessions.sessions[accessToken]; ok {
-		u = &user
+		if time.Now().Before(user.expiry) {
+			u = &user
+		} else {
+			delete(sessions.sessions, accessToken) // This is unlikely to happen because cookie expires by then.
+		}
 	}
 	sessions.mu.Unlock()
 	if u == nil {
@@ -292,9 +299,19 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		}
 
 		accessToken := string(cryptoRandBytes())
+		expiry := time.Now().Add(7 * 24 * time.Hour)
 		sessions.mu.Lock()
+		// Clean up expired sesions.
+		for token, user := range sessions.sessions {
+			if time.Now().Before(user.expiry) {
+				continue
+			}
+			delete(sessions.sessions, token)
+		}
+		// Add new session.
 		sessions.sessions[accessToken] = user{
 			ID:          uint64(*ghUser.ID),
+			expiry:      expiry,
 			accessToken: accessToken,
 		}
 		sessions.mu.Unlock()
@@ -315,7 +332,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 
 		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
-		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, HttpOnly: true, Secure: *productionFlag})
+		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: true, Secure: *productionFlag})
 		return nil, Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
@@ -392,7 +409,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 				return nil, err
 			}
 			nodes = append(nodes,
-				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q accessToken: %q...", user.Login, user.Domain, base64.RawURLEncoding.EncodeToString([]byte(u.accessToken))[:20]))),
+				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(u.expiry), base64.RawURLEncoding.EncodeToString([]byte(u.accessToken))[:20]))),
 			)
 		}
 		if len(sessions.sessions) == 0 {
