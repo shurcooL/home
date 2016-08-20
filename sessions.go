@@ -123,7 +123,7 @@ func IsHTTPError(err error) bool {
 
 // JSONResponse is an error type used for representing a JSON response.
 type JSONResponse struct {
-	Body []byte
+	V interface{}
 }
 
 func (JSONResponse) Error() string { return "JSONResponse" }
@@ -211,7 +211,12 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, string(htmlg.Render(nodes...)))
 	case IsJSONResponse(err):
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(err.(JSONResponse).Body)
+		jw := json.NewEncoder(w)
+		jw.SetIndent("", "\t")
+		err := jw.Encode(err.(JSONResponse).V)
+		if err != nil {
+			log.Println("error encoding JSONResponse:", err)
+		}
 	case err != nil:
 		log.Println(err)
 		// TODO: Only display error details to SiteAdmin users?
@@ -348,22 +353,14 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 	case req.Method == "GET" && req.URL.Path == "/api/user":
 		// Authorization check.
 		if u == nil {
-			b, err := json.MarshalIndent(users.UserSpec{}, "", "\t")
-			if err != nil {
-				return nil, err
-			}
-			return nil, JSONResponse{Body: b}
+			return nil, JSONResponse{users.UserSpec{}}
 		}
 		user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
 		if err != nil {
 			log.Println("/sessions: h.users.Get:", err)
 			return nil, err
 		}
-		b, err := json.MarshalIndent(user, "", "\t")
-		if err != nil {
-			return nil, err
-		}
-		return nil, JSONResponse{Body: b}
+		return nil, JSONResponse{user}
 
 	case req.Method == "GET" && req.URL.Path == "/login":
 		returnURL := sanitizeReturn(req.URL.Query().Get(returnQueryName))
