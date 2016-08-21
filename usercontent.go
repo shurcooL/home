@@ -18,8 +18,8 @@ import (
 )
 
 type userContent struct {
-	store        webdav.FileSystem
-	usersService users.Service
+	store webdav.FileSystem
+	users users.Service
 }
 
 func (uc userContent) UploadHandler(w http.ResponseWriter, req *http.Request) error {
@@ -39,7 +39,7 @@ func (uc userContent) UploadHandler(w http.ResponseWriter, req *http.Request) er
 	// TODO: Replace these with req.Context() in Go 1.7.
 	ctx := context.WithValue(context.Background(), requestContextKey, req) // TODO, THINK: Is this the best place? Can it be generalized? Isn't it error prone otherwise?
 
-	user, err := uc.usersService.GetAuthenticated(ctx)
+	user, err := uc.users.GetAuthenticated(ctx)
 	if err != nil {
 		return JSONResponse{uploadResponse{Error: err.Error()}}
 	}
