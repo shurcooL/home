@@ -112,7 +112,7 @@ func (h errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 	case IsMethodError(err):
 		w.Header().Set("Allow", strings.Join(err.(MethodError).Allowed, ", "))
-		http.Error(w, "method should be POST", http.StatusMethodNotAllowed)
+		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 	case IsJSONResponse(err):
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
@@ -158,7 +158,9 @@ type MethodError struct {
 	Allowed []string // Allowed methods.
 }
 
-func (m MethodError) Error() string { return fmt.Sprintf("method should be %v", m.Allowed) }
+func (m MethodError) Error() string {
+	return fmt.Sprintf("method should be %v", strings.Join(m.Allowed, " or "))
+}
 
 func IsMethodError(err error) bool {
 	_, ok := err.(MethodError)
