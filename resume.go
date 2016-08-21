@@ -10,7 +10,6 @@ import (
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/resume"
-	"github.com/shurcooL/resume/backend"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/context"
 )
@@ -56,13 +55,13 @@ func initResume(fileServer http.Handler, reactions reactions.Service, users user
 			if err != nil {
 				panic(err) // TODO.
 			}
-			returnURL := req.URL.String()
 
 			// THINK.
 			resume.CurrentUser = authenticatedUser
 			resume.Reactions = reactions
 
-			err = backend.T.Execute(w, backend.Header{AuthenticatedUser: authenticatedUser, ReturnURL: returnURL})
+			returnURL := req.URL.String()
+			_, err = io.WriteString(w, string(htmlg.Render(resume.Header{ReturnURL: returnURL}.Render()...)))
 			if err != nil {
 				panic(err) // TODO.
 			}
