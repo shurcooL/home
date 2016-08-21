@@ -46,6 +46,14 @@ func run() error {
 
 	http.Handle("/api/react", reactHandler{reactions})
 
+	userContentStore := webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent"))
+	userContent := userContent{
+		store:        userContentStore,
+		usersService: users,
+	}
+	http.Handle("/api/usercontent", errorHandler{userContent.UploadHandler})
+	http.Handle("/usercontent/", http.StripPrefix("/usercontent", errorHandler{userContent.ServeHandler}))
+
 	notifications, err := initNotifications(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
 		users,
