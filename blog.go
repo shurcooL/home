@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/context"
 )
 
 // contextKey is a value for use with context.WithValue. It's used as

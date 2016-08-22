@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,7 +10,6 @@ import (
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/reactions/fs"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/context"
 	"golang.org/x/net/webdav"
 )
 

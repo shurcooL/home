@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,7 +18,6 @@ import (
 	"github.com/shurcooL/notificationsapp"
 	"github.com/shurcooL/notificationsapp/common"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/context"
 	"golang.org/x/net/webdav"
 	"golang.org/x/oauth2"
 )

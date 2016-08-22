@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -18,7 +19,6 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/context"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/oauth2"

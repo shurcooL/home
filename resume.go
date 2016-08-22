@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"html/template"
 	"io"
 	"log"
@@ -11,7 +12,6 @@ import (
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/resume"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/context"
 )
 
 var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape": func(s string) template.HTML { return template.HTML(s) }}).Parse(`<html>

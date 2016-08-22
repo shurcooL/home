@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -10,7 +11,6 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/context"
 )
 
 var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
