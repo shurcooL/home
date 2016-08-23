@@ -36,10 +36,7 @@ func (uc userContent) UploadHandler(w http.ResponseWriter, req *http.Request) er
 		return JSONResponse{uploadResponse{Error: fmt.Sprintf("Content-Type %q is not supported", contentType)}}
 	}
 
-	// TODO: Replace these with req.Context() in Go 1.7.
-	ctx := context.WithValue(context.Background(), requestContextKey, req) // TODO, THINK: Is this the best place? Can it be generalized? Isn't it error prone otherwise?
-
-	user, err := uc.users.GetAuthenticated(ctx)
+	user, err := uc.users.GetAuthenticated(req.Context())
 	if err != nil {
 		return JSONResponse{uploadResponse{Error: err.Error()}}
 	}
@@ -103,8 +100,16 @@ type errorHandler struct {
 }
 
 func (h errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// TODO: Factor this out into user middleware?
+	u, err := getUser(req)
+	if err == errBadAccessToken {
+		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
+		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+	}
+	req = req.WithContext(context.WithValue(req.Context(), userContextKey, u))
+
 	rw := &responseWriter{ResponseWriter: w}
-	err := h.handler(rw, req)
+	err = h.handler(rw, req)
 	switch {
 	case err != nil && rw.WroteHeader:
 		// The header has already been written, so it's too late to send
@@ -113,6 +118,8 @@ func (h errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case IsMethodError(err):
 		w.Header().Set("Allow", strings.Join(err.(MethodError).Allowed, ", "))
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
+	case IsHTTPError(err):
+		http.Error(w, err.Error(), err.(HTTPError).Code)
 	case IsJSONResponse(err):
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)

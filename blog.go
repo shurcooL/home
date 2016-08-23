@@ -21,9 +21,9 @@ type contextKey struct {
 
 func (k *contextKey) String() string { return "github.com/shurcooL/home context value " + k.name }
 
-// requestContextKey is a context key. It can be used to access the HTTP request
-// that the context is tied to. The associated value will be of type *http.Request.
-var requestContextKey = &contextKey{"http-request"}
+// userContextKey is a context key. It can be used to access the user
+// that the context is tied to. The associated value will be of type *user.
+var userContextKey = &contextKey{"user"}
 
 // initBlog registers a blog handler with blog URI as source, based in rootDir.
 func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.ExternalService, users users.Service) error {
@@ -37,10 +37,6 @@ func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.
 	}
 
 	opt := issuesapp.Options{
-		Context: func(req *http.Request) context.Context {
-			// TODO, THINK.
-			return context.WithValue(context.Background(), requestContextKey, req)
-		},
 		RepoSpec: func(req *http.Request) issues.RepoSpec { return blog },
 		BaseURI:  func(req *http.Request) string { return "/blog" },
 		BaseState: func(req *http.Request) issuesapp.BaseState {
@@ -98,11 +94,12 @@ func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.
 
 	blogHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// TODO: Factor this out?
-		_, err := getUser(req)
+		u, err := getUser(req)
 		if err == errBadAccessToken {
 			// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 			http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 		}
+		req = req.WithContext(context.WithValue(req.Context(), userContextKey, u))
 
 		prefixLen := len("/blog")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {

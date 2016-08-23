@@ -180,11 +180,14 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	// TODO: Factor this out into user middleware?
 	u, err := getUser(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
+		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens, then a successful login results in setting accessTokenCookieName to a new value.
 		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 	}
+	req = req.WithContext(context.WithValue(req.Context(), userContextKey, u))
 
 	nodes, err := h.handler(w, req, u)
 	switch {

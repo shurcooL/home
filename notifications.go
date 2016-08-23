@@ -47,10 +47,6 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	}
 
 	opt := notificationsapp.Options{
-		Context: func(req *http.Request) context.Context {
-			// TODO, THINK.
-			return context.WithValue(context.Background(), requestContextKey, req)
-		},
 		BaseURI: func(req *http.Request) string {
 			return "/notifications"
 		},
@@ -93,6 +89,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 			// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 			http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 		}
+		req = req.WithContext(context.WithValue(req.Context(), userContextKey, u))
 
 		prefixLen := len("/notifications")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {

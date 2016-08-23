@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -40,20 +38,23 @@ const googleAnalytics = `<script>
 
 // fileServer contains /resume.{js,css}.
 func initResume(fileServer http.Handler, reactions reactions.Service, users users.Service) {
-	http.Handle("/resume", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("/resume", errorHandler{func(w http.ResponseWriter, req *http.Request) error {
+		if req.Method != "GET" {
+			return MethodError{Allowed: []string{"GET"}}
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		data := struct{ Production bool }{*productionFlag}
 		err := resumeHTML.Execute(w, data)
 		if err != nil {
-			log.Println(err)
+			return err
 		}
 
 		// Optional (still experimental) server-side rendering.
 		if ok, _ := strconv.ParseBool(req.URL.Query().Get("prerender")); ok {
-			ctx := context.WithValue(context.Background(), requestContextKey, req) // TODO, THINK: Is this the best place? Can it be generalized? Isn't it error prone otherwise?
-			authenticatedUser, err := users.GetAuthenticated(ctx)
+			authenticatedUser, err := users.GetAuthenticated(req.Context())
 			if err != nil {
-				panic(err) // TODO.
+				return err
 			}
 
 			// THINK.
@@ -63,16 +64,17 @@ func initResume(fileServer http.Handler, reactions reactions.Service, users user
 			returnURL := req.URL.String()
 			_, err = io.WriteString(w, string(htmlg.Render(resume.Header{ReturnURL: returnURL}.Render()...)))
 			if err != nil {
-				panic(err) // TODO.
+				return err
 			}
 			_, err = io.WriteString(w, string(htmlg.Render(resume.DmitriShuralyov{}.Render()...)))
 			if err != nil {
-				panic(err) // TODO.
+				return err
 			}
 		}
 
-		io.WriteString(w, `</body></html>`)
-	}))
+		_, err = io.WriteString(w, `</body></html>`)
+		return err
+	}})
 	http.Handle("/resume.js", fileServer)
 	http.Handle("/resume.css", fileServer)
 }

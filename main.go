@@ -44,7 +44,7 @@ func run() error {
 	http.Handle("/login", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
 
-	http.Handle("/api/react", reactHandler{reactions})
+	http.Handle("/api/react", errorHandler{reactHandler{reactions}.ServeHTTP})
 
 	userContent := userContent{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
