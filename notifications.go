@@ -134,6 +134,11 @@ type shurcoolSeeHisGitHubNotifications struct {
 }
 
 func (s shurcoolSeeHisGitHubNotifications) List(ctx context.Context, opt interface{}) (notifications.Notifications, error) {
+	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	var nss notifications.Notifications
 	ns, err := s.service.List(ctx, opt)
 	if err != nil {
@@ -141,7 +146,7 @@ func (s shurcoolSeeHisGitHubNotifications) List(ctx context.Context, opt interfa
 	}
 	nss = append(nss, ns...)
 
-	if currentUser, err := s.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+	if currentUser == shurcool {
 		ns, err := s.shurcoolGitHubNotifications.List(ctx, opt)
 		if err != nil {
 			return nss, err
@@ -153,6 +158,11 @@ func (s shurcoolSeeHisGitHubNotifications) List(ctx context.Context, opt interfa
 }
 
 func (s shurcoolSeeHisGitHubNotifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
+	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+	if err != nil {
+		return 0, err
+	}
+
 	var count uint64
 	n, err := s.service.Count(ctx, opt)
 	if err != nil {
@@ -160,7 +170,7 @@ func (s shurcoolSeeHisGitHubNotifications) Count(ctx context.Context, opt interf
 	}
 	count += n
 
-	if currentUser, err := s.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+	if currentUser == shurcool {
 		n, err := s.shurcoolGitHubNotifications.Count(ctx, opt)
 		if err != nil {
 			return count, err
@@ -172,9 +182,12 @@ func (s shurcoolSeeHisGitHubNotifications) Count(ctx context.Context, opt interf
 }
 
 func (s shurcoolSeeHisGitHubNotifications) MarkRead(ctx context.Context, appID string, repo notifications.RepoSpec, threadID uint64) error {
-	if currentUser, err := s.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool &&
-		strings.HasPrefix(repo.URI, "github.com/") {
+	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+	if err != nil {
+		return err
+	}
 
+	if currentUser == shurcool && strings.HasPrefix(repo.URI, "github.com/") {
 		return s.shurcoolGitHubNotifications.MarkRead(ctx, appID, repo, threadID)
 	}
 
@@ -182,9 +195,12 @@ func (s shurcoolSeeHisGitHubNotifications) MarkRead(ctx context.Context, appID s
 }
 
 func (s shurcoolSeeHisGitHubNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
-	if currentUser, err := s.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool &&
-		strings.HasPrefix(repo.URI, "github.com/") {
+	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+	if err != nil {
+		return err
+	}
 
+	if currentUser == shurcool && strings.HasPrefix(repo.URI, "github.com/") {
 		return s.shurcoolGitHubNotifications.MarkAllRead(ctx, repo)
 	}
 

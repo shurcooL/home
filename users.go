@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 
 	"github.com/google/go-github/github"
@@ -106,8 +105,7 @@ func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error)
 func (s Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
 	u, ok := ctx.Value(userContextKey).(*user)
 	if !ok {
-		log.Println("internal error: userContextKey isn't set on context but Users.GetAuthenticatedSpec is called")
-		return users.UserSpec{}, nil
+		return users.UserSpec{}, fmt.Errorf("internal error: userContextKey isn't set on context but Users.GetAuthenticatedSpec is called")
 	}
 	if u == nil {
 		return users.UserSpec{}, nil

@@ -32,16 +32,16 @@ func (uc userContent) UploadHandler(w http.ResponseWriter, req *http.Request) er
 		Error string `json:",omitempty"`
 	}
 
-	if contentType := req.Header.Get("Content-Type"); contentType != "image/png" {
-		return JSONResponse{uploadResponse{Error: fmt.Sprintf("Content-Type %q is not supported", contentType)}}
-	}
-
 	user, err := uc.users.GetAuthenticated(req.Context())
 	if err != nil {
 		return JSONResponse{uploadResponse{Error: err.Error()}}
 	}
 	if user.ID == 0 {
 		return JSONResponse{uploadResponse{Error: os.ErrPermission.Error()}}
+	}
+
+	if contentType := req.Header.Get("Content-Type"); contentType != "image/png" {
+		return JSONResponse{uploadResponse{Error: fmt.Sprintf("Content-Type %q is not supported", contentType)}}
 	}
 
 	dir := fmt.Sprintf("/%d@%s", user.ID, user.Domain)
