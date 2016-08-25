@@ -13,18 +13,6 @@ import (
 	"github.com/shurcooL/users"
 )
 
-// contextKey is a value for use with context.WithValue. It's used as
-// a pointer so it fits in an interface{} without allocation.
-type contextKey struct {
-	name string
-}
-
-func (k *contextKey) String() string { return "github.com/shurcooL/home context value " + k.name }
-
-// userContextKey is a context key. It can be used to access the user
-// that the context is tied to. The associated value will be of type *user.
-var userContextKey = &contextKey{"user"}
-
 // initBlog registers a blog handler with blog URI as source, based in rootDir.
 func initBlog(rootDir string, blog issues.RepoSpec, notifications notifications.ExternalService, users users.Service) error {
 	var onlyShurcoolCreatePostsService issues.Service

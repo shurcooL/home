@@ -55,6 +55,18 @@ const (
 	returnQueryName = "return"
 )
 
+// contextKey is a value for use with context.WithValue. It's used as
+// a pointer so it fits in an interface{} without allocation.
+type contextKey struct {
+	name string
+}
+
+func (k *contextKey) String() string { return "github.com/shurcooL/home context value " + k.name }
+
+// userContextKey is a context key. It can be used to access the user
+// that the context is tied to. The associated value will be of type *user.
+var userContextKey = &contextKey{"user"}
+
 // user is a GitHub user (i.e., domain is "github.com").
 type user struct {
 	ID uint64

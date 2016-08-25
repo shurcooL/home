@@ -12,11 +12,7 @@ import (
 )
 
 func newReactionsService(root webdav.FileSystem, users users.Service) (reactions.Service, error) {
-	rs, err := fs.NewService(root, users)
-	if err != nil {
-		return nil, err
-	}
-	return rs, nil
+	return fs.NewService(root, users)
 }
 
 type reactHandler struct {
