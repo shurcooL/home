@@ -35,6 +35,18 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	notifications, err := initNotifications(
+		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
+		users,
+	)
+	if err != nil {
+		return err
+	}
+	issuesService, err := newIssuesService(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues"),
+		notifications, users)
+	if err != nil {
+		return err
+	}
 
 	sessionsHandler := handler{handler: SessionsHandler{users}.Serve}
 	http.Handle("/login/github", sessionsHandler)
@@ -53,20 +65,12 @@ func run() error {
 	http.Handle("/api/usercontent", errorHandler{userContent.UploadHandler})
 	http.Handle("/usercontent/", http.StripPrefix("/usercontent", errorHandler{userContent.ServeHandler}))
 
-	notifications, err := initNotifications(
-		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
-		users,
-	)
+	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
 		return err
 	}
 
-	err = initBlog(
-		filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues"),
-		issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"},
-		notifications,
-		users,
-	)
+	err = initIssues(issuesService, notifications, users)
 	if err != nil {
 		return err
 	}
