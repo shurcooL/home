@@ -70,7 +70,14 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	{{else}}
 		<form method="post" action="/login/github" style="display: inline-block; margin-bottom: 0;"><input class="btn" type="submit" value="Sign in via GitHub"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
 	{{end}}
-</div>`,
+</div>
+
+{{/* Override create issue button to only show up for shurcooL as New Blog Post button. */}}
+{{define "create-issue"}}
+	{{if and (eq .CurrentUser.ID 1924134) (eq .CurrentUser.Domain "github.com")}}
+		<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">New Blog Post</button></div>
+	{{end}}
+{{end}}`,
 	}
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
