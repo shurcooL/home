@@ -21,6 +21,7 @@ func importPathToDir(importPath string) string {
 	return p.Dir
 }
 
+// Assets contains assets for home.
 var Assets = union.New(map[string]http.FileSystem{
 	//"/octicons": octicons.Assets,
 	"/resume.js":  gopherjs_http.Package("github.com/shurcooL/resume/frontend"),
