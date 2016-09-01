@@ -48,7 +48,7 @@ func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error)
 			Elsewhere: []users.UserSpec{{ID: 21361484, Domain: tw}},
 			Login:     "shurcooL",
 			Name:      "Dmitri Shuralyov",
-			AvatarURL: "https://dmitri.shuralyov.com/avatar.jpg",
+			AvatarURL: "https://dmitri.shuralyov.com/avatar-s.jpg",
 			HTMLURL:   "https://dmitri.shuralyov.com",
 			SiteAdmin: true,
 		}, nil
