@@ -36,8 +36,8 @@ const googleAnalytics = `<script>
 
 		</script>`
 
-// fileServer contains /resume.{js,css}.
-func initResume(fileServer http.Handler, reactions reactions.Service, users users.Service) {
+// resumeJSCSS contains /resume.{js,css}.
+func initResume(resumeJSCSS http.Handler, reactions reactions.Service, users users.Service) {
 	http.Handle("/resume", errorHandler{func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return MethodError{Allowed: []string{"GET"}}
@@ -75,6 +75,6 @@ func initResume(fileServer http.Handler, reactions reactions.Service, users user
 		_, err = io.WriteString(w, `</body></html>`)
 		return err
 	}})
-	http.Handle("/resume.js", fileServer)
-	http.Handle("/resume.css", fileServer)
+	http.Handle("/resume.js", resumeJSCSS)
+	http.Handle("/resume.css", resumeJSCSS)
 }

@@ -3,6 +3,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"mime"
 	"net/http"
@@ -10,8 +11,11 @@ import (
 	"path/filepath"
 
 	"github.com/shurcooL/home/assets"
+	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 	"golang.org/x/net/webdav"
 )
 
@@ -75,17 +79,101 @@ func run() error {
 		return err
 	}
 
-	fileServer := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
-	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer))
-	initResume(fileServer, reactions, users)
+	resumeJSCSS := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
+	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer)) // TODO.
+	initResume(resumeJSCSS, reactions, users)
 
-	http.Handle("/", httpgzip.FileServer(
+	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
+	indexHandler := errorHandler{func(w http.ResponseWriter, req *http.Request) error {
+		if req.Method != "GET" {
+			return MethodError{Allowed: []string{"GET"}}
+		}
+		authenticatedUser, err := users.GetAuthenticated(req.Context())
+		if err != nil {
+			return err
+		}
+		f, err := os.Open(indexPath)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		indexHTML, err := html.Parse(f)
+		if err != nil {
+			return err
+		}
+		// TODO: topbar component.
+		{
+			div := &html.Node{
+				Type: html.ElementNode, Data: atom.Div.String(),
+				Attr: []html.Attribute{
+					{Key: atom.Style.String(), Val: "max-width: 800px; margin: 0 auto; text-align: right; height: 18px; font-size: 12px;"},
+				},
+			}
+			if authenticatedUser.ID != 0 {
+				n, err := notifications.Count(req.Context(), nil)
+				if err != nil {
+					return err
+				}
+				div.AppendChild(htmlg.SpanClass("margin-right", Notifications{Unread: n > 0}.Render()...))
+				{
+					// TODO: topbar-avatar component.
+					a := &html.Node{
+						Type: html.ElementNode, Data: atom.A.String(),
+						Attr: []html.Attribute{
+							{Key: atom.Class.String(), Val: "topbar-avatar"},
+							{Key: atom.Href.String(), Val: string(authenticatedUser.HTMLURL)},
+							{Key: atom.Target.String(), Val: "_blank"},
+							{Key: atom.Tabindex.String(), Val: "-1"},
+						},
+					}
+					a.AppendChild(&html.Node{
+						Type: html.ElementNode, Data: atom.Img.String(),
+						Attr: []html.Attribute{
+							{Key: atom.Class.String(), Val: "topbar-avatar"},
+							{Key: atom.Src.String(), Val: string(authenticatedUser.AvatarURL)},
+							{Key: atom.Title.String(), Val: fmt.Sprintf("Signed in as %s.", authenticatedUser.Login)},
+						},
+					})
+					div.AppendChild(a)
+				}
+				signOut := PostButton{
+					Action:    "/logout",
+					Text:      "Sign out",
+					ReturnURL: req.URL.Path,
+				}
+				for _, n := range signOut.Render() {
+					div.AppendChild(n)
+				}
+			} else {
+				signInViaGitHub := PostButton{
+					Action:    "/login/github",
+					Text:      "Sign in via GitHub",
+					ReturnURL: req.URL.Path,
+				}
+				for _, n := range signInViaGitHub.Render() {
+					div.AppendChild(n)
+				}
+			}
+			indexHTML.FirstChild.LastChild.InsertBefore(div, indexHTML.FirstChild.LastChild.FirstChild)
+		}
+
+		return html.Render(w, indexHTML)
+	}}
+	staticFiles := httpgzip.FileServer(
 		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
 		httpgzip.FileServerOptions{
 			IndexHTML:  true,
 			ServeError: httpgzip.Detailed,
 		},
-	))
+	)
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		switch req.URL.Path {
+		case "/":
+			indexHandler.ServeHTTP(w, req)
+		default:
+			staticFiles.ServeHTTP(w, req)
+		}
+	})
 
 	log.Println("Started.")
 

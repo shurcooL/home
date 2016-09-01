@@ -24,9 +24,7 @@ import (
 
 // initNotifications creates and returns a notification service,
 // and registers handlers for the notifications app.
-func initNotifications(root webdav.FileSystem, users users.Service) (notifications.ExternalService, error) {
-	service := fs.NewService(root, users)
-
+func initNotifications(root webdav.FileSystem, users users.Service) (notifications.Service, error) {
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_NOTIFICATIONS")}),
 	}
@@ -40,8 +38,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		github.NewClient(&http.Client{Transport: cacheTransport}),
 	)
 
-	shurcoolSeeHisGitHubNotificationsService := shurcoolSeeHisGitHubNotifications{
-		service:                     service,
+	service := shurcoolSeeHisGitHubNotifications{
+		service:                     fs.NewService(root, users),
 		shurcoolGitHubNotifications: shurcoolGitHubNotifications,
 		users: users,
 	}
@@ -80,7 +78,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
-	notificationsApp := notificationsapp.New(shurcoolSeeHisGitHubNotificationsService, users, opt)
+	notificationsApp := notificationsapp.New(service, users, opt)
 
 	notificationsHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// TODO: Factor this out?
