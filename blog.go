@@ -13,13 +13,15 @@ import (
 )
 
 // initBlog registers a blog handler with blog URI as blog content source.
-func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications notifications.ExternalService, users users.Service) error {
+func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications notifications.Service, users users.Service) error {
 	onlyShurcoolCreatePosts := onlyShurcoolCreatePosts{
 		Service: issuesService,
 		users:   users,
 	}
 
 	opt := issuesapp.Options{
+		Notifications: notifications,
+
 		RepoSpec: func(req *http.Request) issues.RepoSpec {
 			return req.Context().Value(issuesapp.RepoSpecContextKey).(issues.RepoSpec)
 		},
@@ -134,4 +136,10 @@ func (s onlyShurcoolCreatePosts) Create(ctx context.Context, repo issues.RepoSpe
 		return issues.Issue{}, os.ErrPermission
 	}
 	return s.Service.Create(ctx, repo, issue)
+}
+
+func (s onlyShurcoolCreatePosts) ThreadType() string {
+	return s.Service.(interface {
+		ThreadType() string
+	}).ThreadType()
 }

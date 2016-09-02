@@ -17,8 +17,10 @@ func newIssuesService(rootDir string, notifications notifications.ExternalServic
 }
 
 // initIssues registers an issues handler.
-func initIssues(issuesService issues.Service, notifications notifications.ExternalService, users users.Service) error {
+func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	opt := issuesapp.Options{
+		Notifications: notifications,
+
 		RepoSpec: func(req *http.Request) issues.RepoSpec {
 			return req.Context().Value(issuesapp.RepoSpecContextKey).(issues.RepoSpec)
 		},
