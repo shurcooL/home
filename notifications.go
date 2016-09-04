@@ -98,7 +98,6 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 			return
 		}
 		returnURL := req.URL.String()
-		req.RequestURI = "" // This is done to force gorilla/mux to route based on modified req.URL.Path. Maybe want to do it differently in the future.
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
 			req.URL.Path = "/"
