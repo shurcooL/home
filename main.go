@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/shurcooL/home/assets"
-	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"golang.org/x/net/html"
@@ -81,7 +80,7 @@ func run() error {
 
 	resumeJSCSS := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
 	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer)) // TODO.
-	initResume(resumeJSCSS, reactions, users)
+	initResume(resumeJSCSS, reactions, notifications, users)
 
 	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
 	indexHandler := errorHandler{func(w http.ResponseWriter, req *http.Request) error {
@@ -101,8 +100,9 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		// TODO: topbar component.
-		{
+		{ // TODO: topbar component.
+			returnURL := req.URL.String()
+
 			div := &html.Node{
 				Type: html.ElementNode, Data: atom.Div.String(),
 				Attr: []html.Attribute{
@@ -110,13 +110,24 @@ func run() error {
 				},
 			}
 			if authenticatedUser.ID != 0 {
-				n, err := notifications.Count(req.Context(), nil)
-				if err != nil {
-					return err
+				{ // Notifications icon.
+					n, err := notifications.Count(req.Context(), nil)
+					if err != nil {
+						return err
+					}
+					span := &html.Node{
+						Type: html.ElementNode, Data: atom.Span.String(),
+						Attr: []html.Attribute{
+							{Key: atom.Style.String(), Val: "margin-right: 10px;"},
+						},
+					}
+					for _, n := range (Notifications{Unread: n > 0}).Render() {
+						span.AppendChild(n)
+					}
+					div.AppendChild(span)
 				}
-				div.AppendChild(htmlg.SpanClass("margin-right", Notifications{Unread: n > 0}.Render()...))
-				{
-					// TODO: topbar-avatar component.
+
+				{ // TODO: topbar-avatar component.
 					a := &html.Node{
 						Type: html.ElementNode, Data: atom.A.String(),
 						Attr: []html.Attribute{
@@ -136,20 +147,13 @@ func run() error {
 					})
 					div.AppendChild(a)
 				}
-				signOut := PostButton{
-					Action:    "/logout",
-					Text:      "Sign out",
-					ReturnURL: req.URL.Path,
-				}
+
+				signOut := PostButton{Action: "/logout", Text: "Sign out", ReturnURL: returnURL}
 				for _, n := range signOut.Render() {
 					div.AppendChild(n)
 				}
 			} else {
-				signInViaGitHub := PostButton{
-					Action:    "/login/github",
-					Text:      "Sign in via GitHub",
-					ReturnURL: req.URL.Path,
-				}
+				signInViaGitHub := PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: returnURL}
 				for _, n := range signInViaGitHub.Render() {
 					div.AppendChild(n)
 				}

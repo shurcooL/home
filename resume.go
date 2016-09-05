@@ -3,10 +3,11 @@ package main
 import (
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/resume"
 	"github.com/shurcooL/users"
@@ -37,7 +38,7 @@ const googleAnalytics = `<script>
 		</script>`
 
 // resumeJSCSS contains /resume.{js,css}.
-func initResume(resumeJSCSS http.Handler, reactions reactions.Service, users users.Service) {
+func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notifications notifications.Service, usersService users.Service) {
 	http.Handle("/resume", errorHandler{func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return MethodError{Allowed: []string{"GET"}}
@@ -52,21 +53,13 @@ func initResume(resumeJSCSS http.Handler, reactions reactions.Service, users use
 
 		// Optional (still experimental) server-side rendering.
 		if ok, _ := strconv.ParseBool(req.URL.Query().Get("prerender")); ok {
-			authenticatedUser, err := users.GetAuthenticated(req.Context())
+			authenticatedUser, err := usersService.GetAuthenticated(req.Context())
 			if err != nil {
-				return err
+				log.Println(err)
+				authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 			}
-
-			// THINK.
-			resume.CurrentUser = authenticatedUser
-			resume.Reactions = reactions
-
 			returnURL := req.URL.String()
-			_, err = io.WriteString(w, string(htmlg.Render(resume.Header{ReturnURL: returnURL}.Render()...)))
-			if err != nil {
-				return err
-			}
-			_, err = io.WriteString(w, string(htmlg.Render(resume.DmitriShuralyov{}.Render()...)))
+			err = resume.RenderBodyInnerHTML(req.Context(), w, reactions, notifications, authenticatedUser, returnURL)
 			if err != nil {
 				return err
 			}
