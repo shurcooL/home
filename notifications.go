@@ -22,7 +22,8 @@ import (
 )
 
 // initNotifications creates and returns a notification service,
-// and registers handlers for the notifications app.
+// registers a handler for its HTTP API,
+// and handlers for the notifications app.
 func initNotifications(root webdav.FileSystem, users users.Service) (notifications.Service, error) {
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_NOTIFICATIONS")}),
@@ -43,6 +44,19 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		users: users,
 	}
 
+	// Register HTTP API endpoint.
+	http.Handle("/api/notifications/count", errorHandler{func(w http.ResponseWriter, req *http.Request) error {
+		if req.Method != "GET" {
+			return MethodError{Allowed: []string{"GET"}}
+		}
+		n, err := service.Count(req.Context(), nil) // TODO: h.notifications.
+		if err != nil {
+			return err
+		}
+		return JSONResponse{n}
+	}})
+
+	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
 		BaseURI: func(req *http.Request) string {
 			return "/notifications"

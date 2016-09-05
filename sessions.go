@@ -365,6 +365,13 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 		return nil, Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
 
+	case req.Method == "GET" && req.URL.Path == "/api/userspec":
+		// Authorization check.
+		if u == nil {
+			return nil, JSONResponse{users.UserSpec{}}
+		}
+		return nil, JSONResponse{users.UserSpec{ID: u.ID, Domain: "github.com"}}
+
 	case req.Method == "GET" && req.URL.Path == "/api/user":
 		// Authorization check.
 		if u == nil {
