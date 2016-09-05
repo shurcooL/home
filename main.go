@@ -55,6 +55,7 @@ func run() error {
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
+	http.Handle("/api/userspec", sessionsHandler)
 	http.Handle("/api/user", sessionsHandler)
 	http.Handle("/login", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
