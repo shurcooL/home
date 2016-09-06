@@ -14,7 +14,9 @@ import (
 // Notifications implements notifications.Service remotely over HTTP.
 type Notifications struct{}
 
-var _ notifications.Service = Notifications{}
+func (Notifications) List(_ context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
+	return nil, fmt.Errorf("List: not implemented")
+}
 
 func (Notifications) Count(_ context.Context, opt interface{}) (uint64, error) {
 	resp, err := http.Get("/api/notifications/count")
@@ -30,18 +32,19 @@ func (Notifications) Count(_ context.Context, opt interface{}) (uint64, error) {
 	err = json.NewDecoder(resp.Body).Decode(&u)
 	return u, err
 }
-func (Notifications) List(_ context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
-	return nil, fmt.Errorf("List: not implemented")
-}
+
 func (Notifications) MarkAllRead(_ context.Context, repo notifications.RepoSpec) error {
 	return fmt.Errorf("MarkAllRead: not implemented")
 }
+
 func (Notifications) Subscribe(_ context.Context, appID string, repo notifications.RepoSpec, threadID uint64, subscribers []users.UserSpec) error {
 	return fmt.Errorf("Subscribe: not implemented")
 }
+
 func (Notifications) MarkRead(_ context.Context, appID string, repo notifications.RepoSpec, threadID uint64) error {
 	return fmt.Errorf("MarkRead: not implemented")
 }
+
 func (Notifications) Notify(_ context.Context, appID string, repo notifications.RepoSpec, threadID uint64, nr notifications.NotificationRequest) error {
 	return fmt.Errorf("Notify: not implemented")
 }

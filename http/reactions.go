@@ -14,8 +14,6 @@ import (
 // Reactions implements reactions.Service remotely over HTTP.
 type Reactions struct{}
 
-var _ reactions.Service = Reactions{}
-
 func (Reactions) Get(_ context.Context, uri string, id string) ([]reactions.Reaction, error) {
 	u := url.URL{Path: "/api/react", RawQuery: url.Values{"reactableURL": {uri}, "reactableID": {id}}.Encode()}
 	resp, err := http.Get(u.String())
@@ -31,6 +29,7 @@ func (Reactions) Get(_ context.Context, uri string, id string) ([]reactions.Reac
 	err = json.NewDecoder(resp.Body).Decode(&rs)
 	return rs, err
 }
+
 func (Reactions) Toggle(_ context.Context, uri string, id string, tr reactions.ToggleRequest) ([]reactions.Reaction, error) {
 	resp, err := http.PostForm("/api/react", url.Values{"reactableURL": {uri}, "reactableID": {id}, "reaction": {string(tr.Reaction)}})
 	if err != nil {

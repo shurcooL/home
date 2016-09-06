@@ -13,8 +13,6 @@ import (
 // Users implements users.Service remotely over HTTP.
 type Users struct{}
 
-var _ users.Service = Users{}
-
 func (Users) GetAuthenticated(_ context.Context) (users.User, error) {
 	resp, err := http.Get("/api/user")
 	if err != nil {
@@ -29,6 +27,7 @@ func (Users) GetAuthenticated(_ context.Context) (users.User, error) {
 	err = json.NewDecoder(resp.Body).Decode(&u)
 	return u, err
 }
+
 func (Users) GetAuthenticatedSpec(_ context.Context) (users.UserSpec, error) {
 	resp, err := http.Get("/api/userspec")
 	if err != nil {
@@ -43,9 +42,11 @@ func (Users) GetAuthenticatedSpec(_ context.Context) (users.UserSpec, error) {
 	err = json.NewDecoder(resp.Body).Decode(&us)
 	return us, err
 }
+
 func (Users) Get(_ context.Context, user users.UserSpec) (users.User, error) {
 	return users.User{}, fmt.Errorf("Get: not implemented")
 }
+
 func (Users) Edit(_ context.Context, er users.EditRequest) (users.User, error) {
 	return users.User{}, fmt.Errorf("Edit: not implemented")
 }
