@@ -51,11 +51,10 @@ func (b PostButton) Render() []*html.Node {
 			{Key: atom.Style.String(), Val: `display: inline-block; margin-bottom: 0;`},
 		},
 	}
-	form.AppendChild(&html.Node{
-		Type: html.ElementNode, Data: atom.Input.String(),
+	button := &html.Node{
+		Type: html.ElementNode, Data: atom.Button.String(),
 		Attr: []html.Attribute{
 			{Key: atom.Type.String(), Val: "submit"},
-			{Key: atom.Value.String(), Val: b.Text},
 			{Key: atom.Style.String(), Val: `font-size: 11px;
 line-height: 11px;
 border-radius: 4px;
@@ -63,7 +62,9 @@ border: solid #d2d2d2 1px;
 background-color: #fff;
 box-shadow: 0 1px 1px rgba(0, 0, 0, .05);`},
 		},
-	})
+	}
+	button.AppendChild(htmlg.Text(b.Text))
+	form.AppendChild(button)
 	form.AppendChild(&html.Node{
 		Type: html.ElementNode, Data: atom.Input.String(),
 		Attr: []html.Attribute{
