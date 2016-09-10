@@ -17,6 +17,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/google/go-github/github"
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -395,7 +396,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 			Type: html.ElementNode, Data: atom.Div.String(),
 			Attr: []html.Attribute{{Key: atom.Style.String(), Val: `margin-top: 100px; text-align: center;`}},
 		}
-		signInViaGitHub := PostButton{
+		signInViaGitHub := component.PostButton{
 			Action:    "/login/github",
 			Text:      "Sign in via GitHub",
 			ReturnURL: returnURL,

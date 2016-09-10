@@ -3,7 +3,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"mime"
 	"net/http"
@@ -11,10 +10,10 @@ import (
 	"path/filepath"
 
 	"github.com/shurcooL/home/assets"
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
 	"golang.org/x/net/webdav"
 )
 
@@ -101,64 +100,17 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		{ // TODO: topbar component.
+		{
 			returnURL := req.URL.String()
 
-			div := &html.Node{
-				Type: html.ElementNode, Data: atom.Div.String(),
-				Attr: []html.Attribute{
-					{Key: atom.Style.String(), Val: "max-width: 800px; margin: 0 auto; text-align: right; height: 18px; font-size: 12px;"},
-				},
+			header := component.Header{
+				MaxWidth:      800,
+				CurrentUser:   authenticatedUser,
+				ReturnURL:     returnURL,
+				Notifications: notifications,
 			}
-			if authenticatedUser.ID != 0 {
-				{ // Notifications icon.
-					n, err := notifications.Count(req.Context(), nil)
-					if err != nil {
-						return err
-					}
-					span := &html.Node{
-						Type: html.ElementNode, Data: atom.Span.String(),
-						Attr: []html.Attribute{
-							{Key: atom.Style.String(), Val: "margin-right: 10px;"},
-						},
-					}
-					for _, n := range (Notifications{Unread: n > 0}).Render() {
-						span.AppendChild(n)
-					}
-					div.AppendChild(span)
-				}
+			div := header.Render(req.Context())[0]
 
-				{ // TODO: topbar-avatar component.
-					a := &html.Node{
-						Type: html.ElementNode, Data: atom.A.String(),
-						Attr: []html.Attribute{
-							{Key: atom.Class.String(), Val: "topbar-avatar"},
-							{Key: atom.Href.String(), Val: string(authenticatedUser.HTMLURL)},
-							{Key: atom.Target.String(), Val: "_blank"},
-							{Key: atom.Tabindex.String(), Val: "-1"},
-						},
-					}
-					a.AppendChild(&html.Node{
-						Type: html.ElementNode, Data: atom.Img.String(),
-						Attr: []html.Attribute{
-							{Key: atom.Class.String(), Val: "topbar-avatar"},
-							{Key: atom.Src.String(), Val: string(authenticatedUser.AvatarURL)},
-							{Key: atom.Title.String(), Val: fmt.Sprintf("Signed in as %s.", authenticatedUser.Login)},
-						},
-					})
-					div.AppendChild(a)
-				}
-
-				signOut := PostButton{Action: "/logout", Text: "Sign out", ReturnURL: returnURL}
-				for _, n := range signOut.Render() {
-					div.AppendChild(n)
-				}
-			} else {
-				signInViaGitHub := PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: returnURL}
-				for _, n := range signInViaGitHub.Render() {
-					div.AppendChild(n)
-				}
-			}
 			indexHTML.FirstChild.LastChild.InsertBefore(div, indexHTML.FirstChild.LastChild.FirstChild)
 		}
 

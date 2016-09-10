@@ -15,10 +15,11 @@ go get -u github.com/shurcooL/home
 Directories
 -----------
 
-| Path                                                        | Synopsis                                                 |
-|-------------------------------------------------------------|----------------------------------------------------------|
-| [assets](https://godoc.org/github.com/shurcooL/home/assets) | Package assets contains assets for home.                 |
-| [http](https://godoc.org/github.com/shurcooL/home/http)     | Package http contains service implementations over HTTP. |
+| Path                                                              | Synopsis                                                                             |
+|-------------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| [assets](https://godoc.org/github.com/shurcooL/home/assets)       | Package assets contains assets for home.                                             |
+| [component](https://godoc.org/github.com/shurcooL/home/component) | Package component contains individual components that can render themselves as HTML. |
+| [http](https://godoc.org/github.com/shurcooL/home/http)           | Package http contains service implementations over HTTP.                             |
 
 License
 -------
