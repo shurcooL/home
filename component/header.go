@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
@@ -73,18 +72,21 @@ func (h Header) Render(ctx context.Context) []*html.Node {
 			a := &html.Node{
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
-					{Key: atom.Class.String(), Val: "topbar-avatar"},
 					{Key: atom.Href.String(), Val: string(h.CurrentUser.HTMLURL)},
 					{Key: atom.Target.String(), Val: "_blank"},
 					{Key: atom.Tabindex.String(), Val: "-1"},
+					{Key: atom.Style.String(), Val: `margin-right: 6px;`},
 				},
 			}
 			a.AppendChild(&html.Node{
 				Type: html.ElementNode, Data: atom.Img.String(),
 				Attr: []html.Attribute{
-					{Key: atom.Class.String(), Val: "topbar-avatar"},
 					{Key: atom.Src.String(), Val: string(h.CurrentUser.AvatarURL)},
 					{Key: atom.Title.String(), Val: fmt.Sprintf("Signed in as %s.", h.CurrentUser.Login)},
+					{Key: atom.Style.String(), Val: `border-radius: 2px;
+width: 18px;
+height: 18px;
+vertical-align: top;`},
 				},
 			})
 			div.AppendChild(a)
@@ -121,7 +123,21 @@ func (n Notifications) Render() []*html.Node {
 	a.AppendChild(octiconssvg.Bell())
 	if n.Unread {
 		a.Attr = append(a.Attr, html.Attribute{Key: atom.Title.String(), Val: "You have unread notifications."})
-		a.AppendChild(htmlg.SpanClass("notifications-unread")) // TODO: Factor in that CSS class's declaration block.
+		notificationsUnread := &html.Node{
+			Type: html.ElementNode, Data: atom.Span.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Style.String(), Val: `display: inline-block;
+width: 10px;
+height: 10px;
+background-color: #4183c4;
+border: 2px solid white;
+border-radius: 50%;
+position: absolute;
+right: -4px;
+top: -6px;`},
+			},
+		}
+		a.AppendChild(notificationsUnread)
 	}
 	return []*html.Node{a}
 }
