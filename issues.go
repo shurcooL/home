@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"net/http"
+	"net/url"
 
+	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/issuesapp"
@@ -28,7 +31,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		BaseState: func(req *http.Request) issuesapp.BaseState {
 			reqPath := req.URL.Path
 			if reqPath == "/" {
-				reqPath = ""
+				reqPath = "" // This is needed so that absolute URL for root view, i.e., /issues, is "/issues" and not "/issues/" because of "/issues" + "/".
 			}
 			return issuesapp.BaseState{
 				State: common.State{
@@ -61,20 +64,39 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		background-color: #fff;
 		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
+
+	/* TODO: Factor out, this is same as in index.html style. */
+	.notifications {
+		display: inline-block;
+		vertical-align: top;
+		position: relative;
+	}
+	.notifications:hover {
+		color: #4183c4;
+		fill: currentColor;
+	}
 </style>`,
-		BodyPre: `<div style="text-align: right; margin-bottom: 20px; height: 18px; font-size: 12px;">
-	{{if .CurrentUser.ID}}
-		<a class="topbar-avatar" href="{{.CurrentUser.HTMLURL}}" target="_blank" tabindex=-1
-			><img class="topbar-avatar" src="{{.CurrentUser.AvatarURL}}" title="Signed in as {{.CurrentUser.Login}}."
-		></a>
-		<form method="post" action="/logout" style="display: inline-block; margin-bottom: 0;"><input class="btn" type="submit" value="Sign out"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
-	{{else}}
-		<form method="post" action="/login/github" style="display: inline-block; margin-bottom: 0;"><input class="btn" type="submit" value="Sign in via GitHub"><input type="hidden" name="return" value="{{.BaseURI}}{{.ReqPath}}"></form>
-	{{end}}
-</div>`,
 	}
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
+	}
+	opt.BodyTop = func(req *http.Request) ([]htmlg.ComponentContext, error) {
+		authenticatedUser, err := users.GetAuthenticated(req.Context())
+		if err != nil {
+			return nil, err
+		}
+		baseURI := req.Context().Value(issuesapp.BaseURIContextKey).(string)
+		reqPath := req.URL.Path
+		if reqPath == "/" {
+			reqPath = "" // This is needed so that absolute URL for root view, i.e., /issues, is "/issues" and not "/issues/" because of "/issues" + "/".
+		}
+		returnURL := (&url.URL{Path: baseURI + reqPath, RawQuery: req.URL.RawQuery}).String()
+		header := component.Header{
+			CurrentUser:   authenticatedUser,
+			ReturnURL:     returnURL,
+			Notifications: notifications,
+		}
+		return []htmlg.ComponentContext{header}, nil
 	}
 	issuesApp := issuesapp.New(issuesService, users, opt)
 

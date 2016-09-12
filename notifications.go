@@ -11,6 +11,8 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
+	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/notifications/fs"
 	"github.com/shurcooL/notifications/githubapi"
@@ -64,7 +66,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		BaseState: func(req *http.Request) notificationsapp.BaseState {
 			reqPath := req.URL.Path
 			if reqPath == "/" {
-				reqPath = ""
+				reqPath = "" // This is needed so that absolute URL for root view, i.e., /notifications, is "/notifications" and not "/notifications/" because of "/notifications" + "/".
 			}
 			return notificationsapp.BaseState{
 				State: common.State{
@@ -86,10 +88,38 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		line-height: initial;
 		color: #373a3c;
 	}
+
+	/* TODO: Factor out, this is same as in index.html style. */
+	.notifications {
+		display: inline-block;
+		vertical-align: top;
+		position: relative;
+	}
+	.notifications:hover {
+		color: #4183c4;
+		fill: currentColor;
+	}
 </style>`,
 	}
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
+	}
+	opt.BodyTop = func(req *http.Request) ([]htmlg.ComponentContext, error) {
+		authenticatedUser, err := users.GetAuthenticated(req.Context())
+		if err != nil {
+			return nil, err
+		}
+		reqPath := req.URL.Path
+		if reqPath == "/" {
+			reqPath = "" // This is needed so that absolute URL for root view, i.e., /notifications, is "/notifications" and not "/notifications/" because of "/notifications" + "/".
+		}
+		returnURL := (&url.URL{Path: "/notifications" + reqPath, RawQuery: req.URL.RawQuery}).String()
+		header := component.Header{
+			CurrentUser:   authenticatedUser,
+			ReturnURL:     returnURL,
+			Notifications: service,
+		}
+		return []htmlg.ComponentContext{header}, nil
 	}
 	notificationsApp := notificationsapp.New(service, users, opt)
 
