@@ -205,7 +205,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	nodes, err := h.handler(w, req, u)
 	switch {
 	case IsRedirect(err):
-		http.Redirect(w, req, string(err.(Redirect).URL), http.StatusSeeOther)
+		http.Redirect(w, req, err.(Redirect).URL, http.StatusSeeOther)
 	case IsHTTPError(err):
 		http.Error(w, err.Error(), err.(HTTPError).Code)
 	case os.IsNotExist(err):
