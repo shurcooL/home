@@ -59,14 +59,14 @@ func run() error {
 	http.Handle("/login", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
 
-	http.Handle("/api/react", errorHandler{reactHandler{reactions}.ServeHTTP})
+	http.Handle("/api/react", errorHandler{reactionsAPIHandler{reactions}.ServeHTTP})
 
-	userContent := userContent{
+	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
 		users: users,
 	}
-	http.Handle("/api/usercontent", errorHandler{userContent.UploadHandler})
-	http.Handle("/usercontent/", http.StripPrefix("/usercontent", errorHandler{userContent.ServeHandler}))
+	http.Handle("/api/usercontent", errorHandler{userContentHandler.Upload})
+	http.Handle("/usercontent/", http.StripPrefix("/usercontent", errorHandler{userContentHandler.Serve}))
 
 	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {

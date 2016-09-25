@@ -17,12 +17,12 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-type userContent struct {
+type userContentHandler struct {
 	store webdav.FileSystem
 	users users.Service
 }
 
-func (uc userContent) UploadHandler(w http.ResponseWriter, req *http.Request) error {
+func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "POST" {
 		return MethodError{Allowed: []string{"POST"}}
 	}
@@ -74,7 +74,7 @@ func (uc userContent) UploadHandler(w http.ResponseWriter, req *http.Request) er
 	return JSONResponse{uploadResponse{URL: pathpkg.Join("/usercontent", path)}}
 }
 
-func (uc userContent) ServeHandler(w http.ResponseWriter, req *http.Request) error {
+func (uc userContentHandler) Serve(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return MethodError{Allowed: []string{"GET"}}
 	}

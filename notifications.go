@@ -23,8 +23,23 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type notificationsAPIHandler struct {
+	notifications notifications.Service
+}
+
+func (h notificationsAPIHandler) Count(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return MethodError{Allowed: []string{"GET"}}
+	}
+	n, err := h.notifications.Count(req.Context(), nil)
+	if err != nil {
+		return err
+	}
+	return JSONResponse{n}
+}
+
 // initNotifications creates and returns a notification service,
-// registers a handler for its HTTP API,
+// registers handlers for its HTTP API,
 // and handlers for the notifications app.
 func initNotifications(root webdav.FileSystem, users users.Service) (notifications.Service, error) {
 	authTransport := &oauth2.Transport{
@@ -47,16 +62,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	}
 
 	// Register HTTP API endpoint.
-	http.Handle("/api/notifications/count", errorHandler{func(w http.ResponseWriter, req *http.Request) error {
-		if req.Method != "GET" {
-			return MethodError{Allowed: []string{"GET"}}
-		}
-		n, err := service.Count(req.Context(), nil) // TODO: h.notifications.
-		if err != nil {
-			return err
-		}
-		return JSONResponse{n}
-	}})
+	notificationsAPIHandler := notificationsAPIHandler{notifications: service}
+	http.Handle("/api/notifications/count", errorHandler{notificationsAPIHandler.Count})
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{

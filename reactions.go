@@ -15,11 +15,11 @@ func newReactionsService(root webdav.FileSystem, users users.Service) (reactions
 	return fs.NewService(root, users)
 }
 
-type reactHandler struct {
+type reactionsAPIHandler struct {
 	rs reactions.Service
 }
 
-func (h reactHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
+func (h reactionsAPIHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" && req.Method != "POST" {
 		return MethodError{Allowed: []string{"GET", "POST"}}
 	}
