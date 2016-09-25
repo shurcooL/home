@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/htmlg"
@@ -19,8 +20,49 @@ func newIssuesService(rootDir string, notifications notifications.ExternalServic
 	return fs.NewService(rootDir, notifications, users)
 }
 
-// initIssues registers an issues handler.
+type issuesAPIHandler struct {
+	issues issues.Service
+}
+
+func (h issuesAPIHandler) List(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return MethodError{Allowed: []string{"GET"}}
+	}
+	q := req.URL.Query() // TODO: Automate this conversion process.
+	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
+	opt := issues.IssueListOptions{State: issues.StateFilter(q.Get("OptState"))}
+	is, err := h.issues.List(req.Context(), repo, opt)
+	if err != nil {
+		return err
+	}
+	return JSONResponse{is}
+}
+
+func (h issuesAPIHandler) ListComments(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return MethodError{Allowed: []string{"GET"}}
+	}
+	q := req.URL.Query() // TODO: Automate this conversion process.
+	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
+	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
+	if err != nil {
+		return HTTPError{Code: http.StatusBadRequest, err: err}
+	}
+	is, err := h.issues.ListComments(req.Context(), repo, id, nil)
+	if err != nil {
+		return err
+	}
+	return JSONResponse{is}
+}
+
+// initIssues registers handlers for the issues service HTTP API,
+// and handlers for the issues app.
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
+	// Register HTTP API endpoint.
+	issuesAPIHandler := issuesAPIHandler{issues: issuesService}
+	http.Handle("/api/issues/list", errorHandler{issuesAPIHandler.List})
+	http.Handle("/api/issues/list-comments", errorHandler{issuesAPIHandler.ListComments})
+
 	opt := issuesapp.Options{
 		Notifications: notifications,
 
