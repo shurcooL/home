@@ -28,7 +28,7 @@ func (h Header) containerStyle() string {
 	}
 }
 
-func (h Header) Render(ctx context.Context) []*html.Node {
+func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	// TODO: Make this much nicer.
 	/*
 		<div style="text-align: right; margin-bottom: 20px; height: 18px; font-size: 12px;">

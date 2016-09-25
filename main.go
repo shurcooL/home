@@ -109,7 +109,7 @@ func run() error {
 				ReturnURL:     returnURL,
 				Notifications: notifications,
 			}
-			div := header.Render(req.Context())[0]
+			div := header.RenderContext(req.Context())[0]
 
 			indexHTML.FirstChild.LastChild.InsertBefore(div, indexHTML.FirstChild.LastChild.FirstChild)
 		}
