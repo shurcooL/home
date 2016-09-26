@@ -83,5 +83,32 @@ func (Issues) Edit(_ context.Context, repo issues.RepoSpec, id uint64, ir issues
 }
 
 func (Issues) EditComment(_ context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
-	return issues.Comment{}, fmt.Errorf("EditComment: not implemented")
+	u := url.URL{
+		Path: "/api/issues/edit-comment",
+		RawQuery: url.Values{
+			"RepoURI": {repo.URI},
+			"ID":      {fmt.Sprint(id)},
+		}.Encode(),
+	}
+	data := url.Values{ // TODO: Automate this conversion process.
+		"ID": {fmt.Sprint(cr.ID)},
+	}
+	if cr.Body != nil {
+		data.Set("Body", *cr.Body)
+	}
+	if cr.Reaction != nil {
+		data.Set("Reaction", string(*cr.Reaction))
+	}
+	resp, err := http.PostForm(u.String(), data)
+	if err != nil {
+		return issues.Comment{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return issues.Comment{}, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var c issues.Comment
+	err = json.NewDecoder(resp.Body).Decode(&c)
+	return c, err
 }

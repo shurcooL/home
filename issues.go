@@ -13,6 +13,7 @@ import (
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 )
 
@@ -55,6 +56,38 @@ func (h issuesAPIHandler) ListComments(w http.ResponseWriter, req *http.Request)
 	return JSONResponse{is}
 }
 
+func (h issuesAPIHandler) EditComment(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "POST" {
+		return MethodError{Allowed: []string{"POST"}}
+	}
+	q := req.URL.Query() // TODO: Automate this conversion process.
+	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
+	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
+	if err != nil {
+		return HTTPError{Code: http.StatusBadRequest, err: err}
+	}
+	if err := req.ParseForm(); err != nil {
+		return HTTPError{Code: http.StatusBadRequest, err: err}
+	}
+	var cr issues.CommentRequest
+	cr.ID, err = strconv.ParseUint(req.PostForm.Get("ID"), 10, 64) // TODO: Automate this conversion process.
+	if err != nil {
+		return HTTPError{Code: http.StatusBadRequest, err: err}
+	}
+	if body := req.PostForm["Body"]; len(body) != 0 {
+		cr.Body = &body[0]
+	}
+	if reaction := req.PostForm["Reaction"]; len(reaction) != 0 {
+		r := reactions.EmojiID(reaction[0])
+		cr.Reaction = &r
+	}
+	is, err := h.issues.EditComment(req.Context(), repo, id, cr)
+	if err != nil {
+		return err
+	}
+	return JSONResponse{is}
+}
+
 // initIssues registers handlers for the issues service HTTP API,
 // and handlers for the issues app.
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
@@ -62,6 +95,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 	issuesAPIHandler := issuesAPIHandler{issues: issuesService}
 	http.Handle("/api/issues/list", errorHandler{issuesAPIHandler.List})
 	http.Handle("/api/issues/list-comments", errorHandler{issuesAPIHandler.ListComments})
+	http.Handle("/api/issues/edit-comment", errorHandler{issuesAPIHandler.EditComment})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,
