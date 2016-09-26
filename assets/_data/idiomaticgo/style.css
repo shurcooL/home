@@ -1,0 +1,202 @@
+/* This is needed to make anchor visible... Can be cleaned up. */
+.markdown-header-anchor {
+	margin-left: -30px;
+	padding-left: 30px;
+}
+.black-link a, .black-link a:focus, .black-link a:hover {
+	color: #373a3c;
+}
+
+/* TODO: Factor out, this is same as in home/style.css. */
+.notifications {
+	display: inline-block;
+	vertical-align: top;
+	position: relative;
+}
+.notifications:hover {
+	color: #4183c4;
+	fill: currentColor;
+}
+.notifications-unread {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	background-color: #4183c4;
+	border: 2px solid white;
+	border-radius: 50%;
+	position: absolute;
+	right: -4px;
+	top: -6px;
+}
+
+div.reactable-container {
+	display: inline-block;
+	vertical-align: top;
+}
+.reaction-bar-appear:hover div.new-reaction {
+	display: inline-block;
+}
+/* Make new-reaction button visible if there are no other reactions. */
+div.reactable-container a:first-child div.new-reaction {
+	display: inline-block;
+}
+
+span.emoji-inner {
+	display: inline-block;
+	overflow: hidden;
+	width: 100%;
+	height: 100%;
+	background: url(https://dl.dropboxusercontent.com/u/8554242/temp/emojis.png);
+	background-size: 4100% !important;
+	vertical-align: middle;
+}
+span.emoji-outer {
+	display: inline-block;
+	height: 1em;
+	width: 1em;
+	font-size: 22px;
+	margin-right: 4px;
+}
+.reaction strong {
+	font-family: sans-serif;
+	font-size: 14px;
+}
+
+div.reaction {
+	cursor: pointer;
+	display: inline-block;
+	box-sizing: border-box;
+	padding: 3px 5px;
+	height: 30px;
+	background-color: #f6fafd;
+	color: #8ec0e6;
+	border: 1px solid #92def9;
+	border-radius: 4px;
+}
+a.reaction {
+	display: inline-block;
+	margin-right: 6px;
+	margin-top: 4px;
+}
+
+div.others {
+	background-color: #fff;
+	color: #aaa;
+	border: 1px solid #e0e0e0;
+}
+div.others:hover {
+	border: 1px solid #92def9;
+}
+
+div.new-reaction {
+	cursor: pointer;
+	display: none;
+	box-sizing: border-box;
+	padding: 5px 2px 5px 4px;
+	height: 30px;
+	color: #aaa;
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+	margin-top: 4px;
+	vertical-align: top;
+}
+div.new-reaction i {
+	font-size: 18px;
+}
+div.new-reaction:hover {
+	color: #eda000;
+	border: 1px solid #92def9;
+}
+
+sup {
+	top: -0.5em;
+	position: relative;
+	font-size: 75%;
+	line-height: 0;
+	vertical-align: baseline;
+}
+
+span.rm-emoji {
+	display: inline-block;
+	width: 22px;
+	height: 22px;
+	background: url(https://dl.dropboxusercontent.com/u/8554242/temp/emojis.png);
+	background-size: 4100%;
+}
+span.rm-large {
+	width: 44px;
+	height: 44px;
+}
+
+div.rm-reaction {
+	display: inline-block;
+	padding: 4px;
+	border-radius: 4px;
+}
+div.rm-reaction:hover {
+	background-color: #92def9;
+}
+
+div#rm-reactions-menu {
+	position: absolute;
+	display: none;
+	z-index: 1000;
+
+	background-color: white;
+	border: 1px solid lightgray;
+	box-shadow: 0 5px 10px rgba(0, 0, 0, .12);
+	border-radius: 6px;
+	padding: 8px;
+	width: 270px;
+	box-sizing: content-box;
+}
+input.rm-reactions-filter {
+	width: 100%;
+	height: 30px;
+	font-family: sans-serif;
+	font-size: 14px;
+	padding: 4px 16px;
+	outline: 0;
+	border: 1px solid #ccc;
+	border-radius: 15px;
+	margin-bottom: 8px;
+	box-sizing: border-box;
+}
+div.rm-reactions-results {
+	overflow-y: scroll;
+	height: 300px;
+	cursor: pointer;
+}
+div.rm-reactions-preview {
+	height: 44px;
+	margin-top: 10px;
+	/*background-color: #eeeeee;*/
+}
+span#rm-reactions-preview-emoji {
+}
+span#rm-reactions-preview-label {
+	margin-left: 10px;
+	vertical-align: top;
+	font-family: sans-serif;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+div.rm-reactions-menu-container {
+	position: relative;
+}
+div.rm-reactions-menu-disabled {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(255, 255, 255, 0.75);
+}
+div.rm-reactions-menu-signin {
+	font-family: sans-serif;
+	margin-top: 185px;
+	margin-left: auto;
+	margin-right: auto;
+	display: table;
+	background-color: rgba(255, 255, 255, 0.7);
+	box-shadow: 0 0 50px 10px rgba(255, 255, 255, 1.0);
+}

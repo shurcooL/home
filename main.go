@@ -78,9 +78,11 @@ func run() error {
 		return err
 	}
 
-	resumeJSCSS := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
+	assetsHandler := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
 	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer)) // TODO.
-	initResume(resumeJSCSS, reactions, notifications, users)
+	initResume(assetsHandler, reactions, notifications, users)
+
+	initIdiomaticGo(assetsHandler, issuesService, notifications, users)
 
 	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
 	indexHandler := errorHandler{func(w http.ResponseWriter, req *http.Request) error {

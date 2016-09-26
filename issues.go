@@ -179,6 +179,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 	for _, repoSpec := range []issues.RepoSpec{
 		{URI: "github.com/shurcooL/issuesapp"},
 		{URI: "github.com/shurcooL/notificationsapp"},
+		{URI: "dmitri.shuralyov.com/idiomatic-go"},
 	} {
 		repoSpec := repoSpec
 		issuesHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
