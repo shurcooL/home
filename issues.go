@@ -15,10 +15,11 @@ import (
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
+	"golang.org/x/net/webdav"
 )
 
-func newIssuesService(rootDir string, notifications notifications.ExternalService, users users.Service) (issues.Service, error) {
-	return fs.NewService(rootDir, notifications, users)
+func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, users users.Service) (issues.Service, error) {
+	return fs.NewService(root, notifications, users)
 }
 
 type issuesAPIHandler struct {

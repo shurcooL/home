@@ -44,7 +44,8 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	issuesService, err := newIssuesService(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues"),
+	issuesService, err := newIssuesService(
+		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues")),
 		notifications, users)
 	if err != nil {
 		return err
