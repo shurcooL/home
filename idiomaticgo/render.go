@@ -80,7 +80,7 @@ You can view this as my supplement to https://github.com/golang/go/wiki/CodeRevi
 			w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
 			fmt.Fprint(w, `</div>`)
 
-			fmt.Fprint(w, `<div class="reaction-bar-appear" style="margin-bottom: 6px;">`)
+			fmt.Fprint(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
 			err = htmlg.RenderComponentsContext(ctx, w, resumecomponent.ReactionsBar{
 				Reactions:    IssuesReactions{Issues: issuesService},
 				ReactableURL: ReactableURL,
@@ -90,9 +90,9 @@ You can view this as my supplement to https://github.com/golang/go/wiki/CodeRevi
 			if err != nil {
 				return err
 			}
-			fmt.Fprint(w, `</div>`)
-			fmt.Fprint(w, `<div class="black-link markdown-body" style="margin-bottom: 60px;">`)
-			fmt.Fprintf(w, `<a href="/issues/%v/%v" style="line-height: 20px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%v comments</a>`, idiomaticGoURI, issue.ID, issue.Replies)
+			fmt.Fprint(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
+			fmt.Fprintf(w, `<a href="/issues/%v/%v" style="line-height: 30px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%v comments</a>`, idiomaticGoURI, issue.ID, issue.Replies)
+			fmt.Fprint(w, `</span>`)
 			fmt.Fprint(w, `</div>`)
 		}
 	}
