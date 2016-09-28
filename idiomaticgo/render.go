@@ -49,7 +49,11 @@ I can do this for the smallest and most subtle of details, since I care about Go
 reuse this each time the same issue comes up, instead of having to re-write the rationale
 multiple times, or skip explaining why I make a given suggestion.
 
-You can view this as my supplement to https://github.com/golang/go/wiki/CodeReviewComments.`)))
+You can view this as my supplement to https://github.com/golang/go/wiki/CodeReviewComments.
+
+If you'd like to add a new suggestion here, please provide convincing rationale and references
+(e.g., links to places in Go project that support your suggestion), and open a new issue [here](/issues/dmitri.shuralyov.com/idiomatic-go).
+It'll show up when I add an "Accepted" label.`)))
 
 		is, err := issuesService.List(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
 		if err != nil {
@@ -57,12 +61,28 @@ You can view this as my supplement to https://github.com/golang/go/wiki/CodeRevi
 		}
 		fmt.Fprint(w, "<ul>")
 		for _, issue := range is {
+			if issue.State != issues.OpenState || !accepted(issue) {
+				continue
+			}
 			fmt.Fprint(w, "<li>"+htmlg.Render(htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))))+"</li>")
 		}
 		fmt.Fprint(w, "</ul>")
+
+		openProposals := 0
+		for _, issue := range is {
+			if issue.State == issues.OpenState && !accepted(issue) {
+				openProposals++
+			}
+		}
+		if openProposals > 0 {
+			w.Write(github_flavored_markdown.Markdown([]byte(fmt.Sprintf("There are also [%d open proposals](/issues/dmitri.shuralyov.com/idiomatic-go) being considered.", openProposals))))
+		}
 		fmt.Fprint(w, `</div>`)
 
 		for _, issue := range is {
+			if issue.State != issues.OpenState || !accepted(issue) {
+				continue
+			}
 			cs, err := issuesService.ListComments(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issue.ID, nil)
 			if err != nil {
 				return err
@@ -99,4 +119,14 @@ You can view this as my supplement to https://github.com/golang/go/wiki/CodeRevi
 	fmt.Fprint(w, `</div>`)
 
 	return nil
+}
+
+// accepted reports if issue has an "Accepted" label.
+func accepted(issue issues.Issue) bool {
+	for _, l := range issue.Labels {
+		if l.Name == "Accepted" {
+			return true
+		}
+	}
+	return false
 }
