@@ -7,8 +7,10 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 
+	"github.com/shurcooL/go/httpstoppable"
 	"github.com/shurcooL/home/assets"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/httpgzip"
@@ -20,6 +22,7 @@ import (
 var (
 	httpFlag       = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
 	productionFlag = flag.Bool("production", false, "Production mode.")
+	statefileFlag  = flag.String("statefile", "", "File to save/load state (file is deleted after loading).")
 )
 
 func run() error {
@@ -32,15 +35,13 @@ func run() error {
 	users := newUsersService()
 	reactions, err := newReactionsService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions")),
-		users,
-	)
+		users)
 	if err != nil {
 		return err
 	}
 	notifications, err := initNotifications(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
-		users,
-	)
+		users)
 	if err != nil {
 		return err
 	}
@@ -135,9 +136,31 @@ func run() error {
 		}
 	})
 
+	if *statefileFlag != "" {
+		err := sessions.LoadAndRemove(*statefileFlag)
+		log.Println("sessions.LoadAndRemove:", err)
+	}
+
 	log.Println("Started.")
 
-	return http.ListenAndServe(*httpFlag, nil)
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	stop := make(chan struct{})
+	go func() {
+		<-interrupt
+		close(stop)
+	}()
+	err = httpstoppable.ListenAndServe(*httpFlag, nil, stop)
+	if err != nil {
+		log.Println("httpstoppable.ListenAndServe:", err)
+	}
+
+	if *statefileFlag != "" {
+		err := sessions.Save(*statefileFlag)
+		log.Println("sessions.Save:", err)
+	}
+
+	return nil
 }
 
 func main() {

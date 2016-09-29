@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,11 +34,48 @@ var githubConfig = oauth2.Config{
 	Endpoint:     githuboauth2.Endpoint,
 }
 
-// TODO: Persist? In a secure way?
-var sessions = struct {
+var sessions = state{sessions: make(map[string]user)}
+
+type state struct {
 	mu       sync.Mutex
 	sessions map[string]user // Access Token -> User.
-}{sessions: make(map[string]user)}
+}
+
+// LoadAndRemove first loads state from file at path, then,
+// if loading was successful, it removes the file.
+func (s *state) LoadAndRemove(path string) error {
+	err := s.loadState(path)
+	if err != nil {
+		return err
+	}
+	// Remove only if loadState was successful.
+	return os.Remove(path)
+}
+
+func (s *state) loadState(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	s.mu.Lock()
+	err = gob.NewDecoder(f).Decode(&s.sessions)
+	s.mu.Unlock()
+	return err
+}
+
+// Save saves state to path with permission 0600.
+func (s *state) Save(path string) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	s.mu.Lock()
+	err = gob.NewEncoder(f).Encode(s.sessions)
+	s.mu.Unlock()
+	return err
+}
 
 func cryptoRandBytes() []byte {
 	b := make([]byte, 256)
@@ -72,8 +110,8 @@ var userContextKey = &contextKey{"user"}
 type user struct {
 	ID uint64
 
-	expiry      time.Time
-	accessToken string // Internal access token. Needed to be able to clear session when this user signs out.
+	Expiry      time.Time
+	AccessToken string // Internal access token. Needed to be able to clear session when this user signs out.
 }
 
 var errBadAccessToken = errors.New("bad access token")
@@ -95,7 +133,7 @@ func getUser(req *http.Request) (*user, error) {
 	var u *user
 	sessions.mu.Lock()
 	if user, ok := sessions.sessions[accessToken]; ok {
-		if time.Now().Before(user.expiry) {
+		if time.Now().Before(user.Expiry) {
 			u = &user
 		} else {
 			delete(sessions.sessions, accessToken) // This is unlikely to happen because cookie expires by then.
@@ -324,7 +362,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		sessions.mu.Lock()
 		// Clean up expired sesions.
 		for token, user := range sessions.sessions {
-			if time.Now().Before(user.expiry) {
+			if time.Now().Before(user.Expiry) {
 				continue
 			}
 			delete(sessions.sessions, token)
@@ -332,8 +370,8 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		// Add new session.
 		sessions.sessions[accessToken] = user{
 			ID:          uint64(*ghUser.ID),
-			expiry:      expiry,
-			accessToken: accessToken,
+			Expiry:      expiry,
+			AccessToken: accessToken,
 		}
 		sessions.mu.Unlock()
 
@@ -359,7 +397,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 	case req.Method == "POST" && req.URL.Path == "/logout":
 		if u != nil {
 			sessions.mu.Lock()
-			delete(sessions.sessions, u.accessToken)
+			delete(sessions.sessions, u.AccessToken)
 			sessions.mu.Unlock()
 		}
 
@@ -429,7 +467,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 				return nil, err
 			}
 			nodes = append(nodes,
-				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(u.expiry), base64.RawURLEncoding.EncodeToString([]byte(u.accessToken))[:20]))),
+				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(u.Expiry), base64.RawURLEncoding.EncodeToString([]byte(u.AccessToken))[:20]))),
 			)
 		}
 		if len(sessions.sessions) == 0 {
