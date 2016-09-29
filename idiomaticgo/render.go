@@ -51,9 +51,10 @@ multiple times, or skip explaining why I make a given suggestion.
 
 You can view this as my supplement to https://github.com/golang/go/wiki/CodeReviewComments.
 
-If you'd like to add a new suggestion here, please provide convincing rationale and references
-(e.g., links to places in Go project that support your suggestion), and open a new issue [here](/issues/dmitri.shuralyov.com/idiomatic-go).
-It'll show up when I add an "Accepted" label.`)))
+This page is generated from the list of issues with label "Accepted" [here](/issues/dmitri.shuralyov.com/idiomatic-go).
+If you'd like to add a new suggestion, please provide convincing rationale and references
+(e.g., links to places in Go project that support your suggestion), and open a new issue.
+It'll show up here when I add an "Accepted" label.`)))
 
 		is, err := issuesService.List(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
 		if err != nil {
