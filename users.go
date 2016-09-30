@@ -33,7 +33,7 @@ type Users struct {
 	gh *github.Client
 }
 
-func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
+func (s Users) Get(_ context.Context, user users.UserSpec) (users.User, error) {
 	const (
 		ds = "dmitri.shuralyov.com"
 		gh = "github.com"

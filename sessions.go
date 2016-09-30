@@ -44,15 +44,15 @@ type state struct {
 // LoadAndRemove first loads state from file at path, then,
 // if loading was successful, it removes the file.
 func (s *state) LoadAndRemove(path string) error {
-	err := s.loadState(path)
+	err := s.load(path)
 	if err != nil {
 		return err
 	}
-	// Remove only if loadState was successful.
+	// Remove only if load was successful.
 	return os.Remove(path)
 }
 
-func (s *state) loadState(path string) error {
+func (s *state) load(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
