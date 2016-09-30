@@ -56,10 +56,12 @@ func run() error {
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
-	http.Handle("/api/userspec", sessionsHandler)
-	http.Handle("/api/user", sessionsHandler)
 	http.Handle("/login", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
+
+	usersAPIHandler := usersAPIHandler{users: users}
+	http.Handle("/api/userspec", errorHandler{usersAPIHandler.GetAuthenticatedSpec})
+	http.Handle("/api/user", errorHandler{usersAPIHandler.GetAuthenticated})
 
 	http.Handle("/api/react", errorHandler{reactionsAPIHandler{reactions}.ServeHTTP})
 

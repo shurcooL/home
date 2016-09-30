@@ -28,6 +28,26 @@ func newUsersService() users.Service {
 	return Users{gh: github.NewClient(&http.Client{Transport: transport})}
 }
 
+type usersAPIHandler struct {
+	users users.Service
+}
+
+func (h usersAPIHandler) GetAuthenticatedSpec(w http.ResponseWriter, req *http.Request) error {
+	us, err := h.users.GetAuthenticatedSpec(req.Context())
+	if err != nil {
+		return err
+	}
+	return JSONResponse{us}
+}
+
+func (h usersAPIHandler) GetAuthenticated(w http.ResponseWriter, req *http.Request) error {
+	u, err := h.users.GetAuthenticated(req.Context())
+	if err != nil {
+		return err
+	}
+	return JSONResponse{u}
+}
+
 // Users implementats users.Service.
 type Users struct {
 	gh *github.Client
