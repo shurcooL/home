@@ -122,6 +122,14 @@ func (s Users) Get(_ context.Context, user users.UserSpec) (users.User, error) {
 	}
 }
 
+// userContextKey is a context key. It can be used to access the user
+// that the context is tied to. The associated value will be of type *user.
+var userContextKey = &contextKey{"user"}
+
+func withUser(req *http.Request, u *user) *http.Request {
+	return req.WithContext(context.WithValue(req.Context(), userContextKey, u))
+}
+
 func (s Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
 	u, ok := ctx.Value(userContextKey).(*user)
 	if !ok {

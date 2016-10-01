@@ -102,10 +102,6 @@ type contextKey struct {
 
 func (k *contextKey) String() string { return "github.com/shurcooL/home context value " + k.name }
 
-// userContextKey is a context key. It can be used to access the user
-// that the context is tied to. The associated value will be of type *user.
-var userContextKey = &contextKey{"user"}
-
 // user is a GitHub user (i.e., domain is "github.com").
 type user struct {
 	ID uint64
@@ -238,7 +234,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens, then a successful login results in setting accessTokenCookieName to a new value.
 		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 	}
-	req = req.WithContext(context.WithValue(req.Context(), userContextKey, u))
+	req = withUser(req, u)
 
 	nodes, err := h.handler(w, req, u)
 	switch {

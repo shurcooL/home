@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -106,7 +105,7 @@ func (h errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 	}
-	req = req.WithContext(context.WithValue(req.Context(), userContextKey, u))
+	req = withUser(req, u)
 
 	rw := &responseWriter{ResponseWriter: w}
 	err = h.handler(rw, req)
