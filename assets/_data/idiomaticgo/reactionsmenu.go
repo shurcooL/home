@@ -132,16 +132,12 @@ func setupReactionsMenu(reactableURI string, reactionsService reactions.Service,
 				log.Println(err)
 				return
 			}
-
-			// TODO: Dedup. This is the inner HTML of Reactable component, straight up copy-pasted here.
-			var l component.List
-			for _, reaction := range reactions {
-				l = append(l, component.Reaction{Reaction: reaction, CurrentUser: Reactions.authenticatedUser})
+			inner := component.ReactionsBarInner{
+				Reactions:   reactions,
+				CurrentUser: Reactions.authenticatedUser,
+				ReactableID: Reactions.reactableID,
 			}
-			l = append(l, component.NewReaction{ReactableID: Reactions.reactableID})
-			body := htmlg.Render(l.Render()...)
-
-			Reactions.reactableContainer.SetInnerHTML(string(body))
+			Reactions.reactableContainer.SetInnerHTML(string(htmlg.Render(inner.Render()...)))
 		}()
 		Reactions.hide()
 	})
@@ -247,16 +243,12 @@ func (rm *ReactionsMenu) ToggleReaction(this dom.HTMLElement, event dom.Event, e
 			log.Println(err)
 			return
 		}
-
-		// TODO: Dedup. This is the inner HTML of Reactable component, straight up copy-pasted here.
-		var l component.List
-		for _, reaction := range reactions {
-			l = append(l, component.Reaction{Reaction: reaction, CurrentUser: rm.authenticatedUser})
+		inner := component.ReactionsBarInner{
+			Reactions:   reactions,
+			CurrentUser: rm.authenticatedUser,
+			ReactableID: reactableID,
 		}
-		l = append(l, component.NewReaction{ReactableID: reactableID})
-		body := htmlg.Render(l.Render()...)
-
-		container.SetInnerHTML(string(body))
+		container.SetInnerHTML(string(htmlg.Render(inner.Render()...)))
 	}()
 }
 
