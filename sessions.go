@@ -213,13 +213,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, "method should be GET", http.StatusMethodNotAllowed)
 			return
 		}
-	case "/login/github":
-		if req.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			http.Error(w, "method should be POST", http.StatusMethodNotAllowed)
-			return
-		}
-	case "/logout":
+	case "/login/github", "/logout":
 		if req.Method != "POST" {
 			w.Header().Set("Allow", "POST")
 			http.Error(w, "method should be POST", http.StatusMethodNotAllowed)
