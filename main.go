@@ -15,6 +15,7 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
+	"github.com/shurcooL/reactions/emojis"
 	"golang.org/x/net/html"
 	"golang.org/x/net/webdav"
 )
@@ -81,6 +82,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+
+	emojisHandler := httpgzip.FileServer(emojis.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
+	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
 
 	assetsHandler := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
 	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer)) // TODO.
