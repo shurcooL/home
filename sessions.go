@@ -420,19 +420,22 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		if u == nil {
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
-		user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
-		if err != nil {
+		if user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"}); err != nil {
 			log.Println("/sessions: h.users.Get:", err)
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
-		}
-		if !user.SiteAdmin {
+		} else if !user.SiteAdmin {
 			log.Printf("/sessions: non-SiteAdmin %q tried to access\n", user.Login)
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
 
-		var nodes []*html.Node
+		var us []user
 		sessions.mu.Lock()
 		for _, u := range sessions.sessions {
+			us = append(us, u)
+		}
+		sessions.mu.Unlock()
+		var nodes []*html.Node
+		for _, u := range us {
 			user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
 			if err != nil {
 				return nil, err
@@ -441,12 +444,11 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(u.Expiry), base64.RawURLEncoding.EncodeToString([]byte(u.AccessToken))[:20]))),
 			)
 		}
-		if len(sessions.sessions) == 0 {
+		if len(us) == 0 {
 			nodes = append(nodes,
 				htmlg.Div(htmlg.Text("-")),
 			)
 		}
-		sessions.mu.Unlock()
 		return nodes, nil
 
 	default:
