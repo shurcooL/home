@@ -48,7 +48,7 @@ func (h usersAPIHandler) GetAuthenticated(w http.ResponseWriter, req *http.Reque
 	return JSONResponse{u}
 }
 
-// Users implementats users.Service.
+// Users implements users.Service.
 type Users struct {
 	gh *github.Client
 }

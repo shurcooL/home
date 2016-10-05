@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
@@ -420,7 +419,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		if u == nil {
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
-		if user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"}); err != nil {
+		if user, err := h.users.Get(req.Context(), users.UserSpec{ID: u.ID, Domain: "github.com"}); err != nil {
 			log.Println("/sessions: h.users.Get:", err)
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		} else if !user.SiteAdmin {
@@ -436,7 +435,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		sessions.mu.Unlock()
 		var nodes []*html.Node
 		for _, u := range us {
-			user, err := h.users.Get(context.TODO(), users.UserSpec{ID: u.ID, Domain: "github.com"})
+			user, err := h.users.Get(req.Context(), users.UserSpec{ID: u.ID, Domain: "github.com"})
 			if err != nil {
 				return nil, err
 			}
