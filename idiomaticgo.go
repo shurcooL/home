@@ -42,7 +42,7 @@ func initIdiomaticGo(assets http.Handler, issues issues.Service, notifications n
 			log.Println(err)
 			authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 		}
-		returnURL := req.URL.String()
+		returnURL := req.RequestURI
 		err = idiomaticgo.RenderBodyInnerHTML(req.Context(), w, issues, notifications, authenticatedUser, returnURL)
 		if err != nil {
 			return err

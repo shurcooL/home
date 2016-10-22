@@ -58,7 +58,7 @@ func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notificat
 				log.Println(err)
 				authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 			}
-			returnURL := req.URL.String()
+			returnURL := req.RequestURI
 			err = resume.RenderBodyInnerHTML(req.Context(), w, reactions, notifications, authenticatedUser, returnURL)
 			if err != nil {
 				return err

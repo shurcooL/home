@@ -111,7 +111,7 @@ func run() error {
 			return err
 		}
 		{
-			returnURL := req.URL.String()
+			returnURL := req.RequestURI
 
 			header := component.Header{
 				MaxWidth:      800,

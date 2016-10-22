@@ -242,7 +242,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if u == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
-				RawQuery: url.Values{returnQueryName: {req.URL.String()}}.Encode(),
+				RawQuery: url.Values{returnQueryName: {req.RequestURI}}.Encode(),
 			}).String()
 			http.Redirect(w, req, loginURL, http.StatusSeeOther)
 			return
