@@ -117,6 +117,8 @@ func (h errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case IsMethodError(err):
 		w.Header().Set("Allow", strings.Join(err.(MethodError).Allowed, ", "))
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
+	case IsRedirect(err):
+		http.Redirect(w, req, err.(Redirect).URL, http.StatusSeeOther)
 	case IsHTTPError(err):
 		http.Error(w, err.Error(), err.(HTTPError).Code)
 	case IsJSONResponse(err):

@@ -92,6 +92,8 @@ func run() error {
 
 	initIdiomaticGo(assetsHandler, issuesService, notifications, users)
 
+	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
+
 	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
 	indexHandler := errorHandler{func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
