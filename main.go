@@ -13,6 +13,7 @@ import (
 	"github.com/shurcooL/go/httpstoppable"
 	"github.com/shurcooL/home/assets"
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/reactions/emojis"
@@ -61,17 +62,17 @@ func run() error {
 	http.Handle("/sessions", sessionsHandler)
 
 	usersAPIHandler := usersAPIHandler{users: users}
-	http.Handle("/api/userspec", userMiddleware{errorHandler{usersAPIHandler.GetAuthenticatedSpec}})
-	http.Handle("/api/user", userMiddleware{errorHandler{usersAPIHandler.GetAuthenticated}})
+	http.Handle("/api/userspec", userMiddleware{httputil.ErrorHandler{usersAPIHandler.GetAuthenticatedSpec}})
+	http.Handle("/api/user", userMiddleware{httputil.ErrorHandler{usersAPIHandler.GetAuthenticated}})
 
-	http.Handle("/api/react", userMiddleware{errorHandler{reactionsAPIHandler{reactions}.ServeHTTP}})
+	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler{reactionsAPIHandler{reactions}.ServeHTTP}})
 
 	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
 		users: users,
 	}
-	http.Handle("/api/usercontent", userMiddleware{errorHandler{userContentHandler.Upload}})
-	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{errorHandler{userContentHandler.Serve}}))
+	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler{userContentHandler.Upload}})
+	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler{userContentHandler.Serve}}))
 
 	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
@@ -95,9 +96,9 @@ func run() error {
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
 	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
-	indexHandler := userMiddleware{errorHandler{func(w http.ResponseWriter, req *http.Request) error {
+	indexHandler := userMiddleware{httputil.ErrorHandler{func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
-			return MethodError{Allowed: []string{"GET"}}
+			return httputil.MethodError{Allowed: []string{"GET"}}
 		}
 		authenticatedUser, err := users.GetAuthenticated(req.Context())
 		if err != nil {

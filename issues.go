@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
@@ -28,7 +29,7 @@ type issuesAPIHandler struct {
 
 func (h issuesAPIHandler) List(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return MethodError{Allowed: []string{"GET"}}
+		return httputil.MethodError{Allowed: []string{"GET"}}
 	}
 	q := req.URL.Query() // TODO: Automate this conversion process.
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
@@ -37,43 +38,43 @@ func (h issuesAPIHandler) List(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return JSONResponse{is}
+	return httputil.JSONResponse{is}
 }
 
 func (h issuesAPIHandler) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return MethodError{Allowed: []string{"GET"}}
+		return httputil.MethodError{Allowed: []string{"GET"}}
 	}
 	q := req.URL.Query() // TODO: Automate this conversion process.
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
 	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
 	if err != nil {
-		return HTTPError{Code: http.StatusBadRequest, err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
 	is, err := h.issues.ListComments(req.Context(), repo, id, nil)
 	if err != nil {
 		return err
 	}
-	return JSONResponse{is}
+	return httputil.JSONResponse{is}
 }
 
 func (h issuesAPIHandler) EditComment(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "POST" {
-		return MethodError{Allowed: []string{"POST"}}
+		return httputil.MethodError{Allowed: []string{"POST"}}
 	}
 	q := req.URL.Query() // TODO: Automate this conversion process.
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
 	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
 	if err != nil {
-		return HTTPError{Code: http.StatusBadRequest, err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
 	if err := req.ParseForm(); err != nil {
-		return HTTPError{Code: http.StatusBadRequest, err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
 	var cr issues.CommentRequest
 	cr.ID, err = strconv.ParseUint(req.PostForm.Get("ID"), 10, 64) // TODO: Automate this conversion process.
 	if err != nil {
-		return HTTPError{Code: http.StatusBadRequest, err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
 	if body := req.PostForm["Body"]; len(body) != 0 {
 		cr.Body = &body[0]
@@ -86,7 +87,7 @@ func (h issuesAPIHandler) EditComment(w http.ResponseWriter, req *http.Request) 
 	if err != nil {
 		return err
 	}
-	return JSONResponse{is}
+	return httputil.JSONResponse{is}
 }
 
 // initIssues registers handlers for the issues service HTTP API,
@@ -94,9 +95,9 @@ func (h issuesAPIHandler) EditComment(w http.ResponseWriter, req *http.Request) 
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoint.
 	issuesAPIHandler := issuesAPIHandler{issues: issuesService}
-	http.Handle("/api/issues/list", userMiddleware{errorHandler{issuesAPIHandler.List}})
-	http.Handle("/api/issues/list-comments", userMiddleware{errorHandler{issuesAPIHandler.ListComments}})
-	http.Handle("/api/issues/edit-comment", userMiddleware{errorHandler{issuesAPIHandler.EditComment}})
+	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler{issuesAPIHandler.List}})
+	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler{issuesAPIHandler.ListComments}})
+	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler{issuesAPIHandler.EditComment}})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/idiomaticgo"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
@@ -24,9 +25,9 @@ var idiomaticGoHTML = template.Must(template.New("").Parse(`<html>
 	<body>`))
 
 func initIdiomaticGo(assets http.Handler, issues issues.Service, notifications notifications.Service, usersService users.Service) {
-	http.Handle("/idiomatic-go", userMiddleware{errorHandler{func(w http.ResponseWriter, req *http.Request) error {
+	http.Handle("/idiomatic-go", userMiddleware{httputil.ErrorHandler{func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
-			return MethodError{Allowed: []string{"GET"}}
+			return httputil.MethodError{Allowed: []string{"GET"}}
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

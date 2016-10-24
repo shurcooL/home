@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/users"
 )
 
@@ -37,7 +38,7 @@ func (h usersAPIHandler) GetAuthenticatedSpec(w http.ResponseWriter, req *http.R
 	if err != nil {
 		return err
 	}
-	return JSONResponse{us}
+	return httputil.JSONResponse{us}
 }
 
 func (h usersAPIHandler) GetAuthenticated(w http.ResponseWriter, req *http.Request) error {
@@ -45,7 +46,7 @@ func (h usersAPIHandler) GetAuthenticated(w http.ResponseWriter, req *http.Reque
 	if err != nil {
 		return err
 	}
-	return JSONResponse{u}
+	return httputil.JSONResponse{u}
 }
 
 // Users implements users.Service.

@@ -18,6 +18,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/google/go-github/github"
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -141,44 +142,6 @@ func getUser(req *http.Request) (*user, error) {
 	return u, nil // Existing user.
 }
 
-// Redirect is an error type used for representing a simple HTTP redirection.
-type Redirect struct {
-	URL string
-}
-
-func (r Redirect) Error() string { return fmt.Sprintf("redirecting to %s", r.URL) }
-
-func IsRedirect(err error) bool {
-	_, ok := err.(Redirect)
-	return ok
-}
-
-// HTTPError is an error type used for representing a non-nil error with a status code.
-type HTTPError struct {
-	Code int
-	err  error // Not nil.
-}
-
-// Error returns HTTPError.err.Error().
-func (h HTTPError) Error() string { return h.err.Error() }
-
-func IsHTTPError(err error) bool {
-	_, ok := err.(HTTPError)
-	return ok
-}
-
-// JSONResponse is an error type used for representing a JSON response.
-type JSONResponse struct {
-	V interface{}
-}
-
-func (JSONResponse) Error() string { return "JSONResponse" }
-
-func IsJSONResponse(err error) bool {
-	_, ok := err.(JSONResponse)
-	return ok
-}
-
 // HeaderWriter interface is used to construct an HTTP response header and trailer.
 type HeaderWriter interface {
 	// Header returns the header map that will be sent by
@@ -246,10 +209,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	nodes, err := h.handler(w, req, u)
 	switch {
-	case IsRedirect(err):
-		http.Redirect(w, req, err.(Redirect).URL, http.StatusSeeOther)
-	case IsHTTPError(err):
-		http.Error(w, err.Error(), err.(HTTPError).Code)
+	case httputil.IsRedirect(err):
+		http.Redirect(w, req, err.(httputil.Redirect).URL, http.StatusSeeOther)
+	case httputil.IsHTTPError(err):
+		http.Error(w, err.Error(), err.(httputil.HTTPError).Code)
 	case os.IsNotExist(err):
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -267,11 +230,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	default:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, string(htmlg.Render(nodes...)))
-	case IsJSONResponse(err):
+	case httputil.IsJSONResponse(err):
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
 		jw.SetIndent("", "\t")
-		err := jw.Encode(err.(JSONResponse).V)
+		err := jw.Encode(err.(httputil.JSONResponse).V)
 		if err != nil {
 			log.Println("error encoding JSONResponse:", err)
 		}
@@ -308,7 +271,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		returnURL := sanitizeReturn(req.PostFormValue("return"))
 
 		if u != nil {
-			return nil, Redirect{URL: returnURL}
+			return nil, httputil.Redirect{URL: returnURL}
 		}
 
 		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ascii bytes in state, so use base64.
@@ -318,11 +281,11 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: *productionFlag})
 
 		url := githubConfig.AuthCodeURL(state)
-		return nil, Redirect{URL: url}
+		return nil, httputil.Redirect{URL: url}
 
 	case req.Method == "GET" && req.URL.Path == "/callback/github":
 		if u != nil {
-			return nil, Redirect{URL: "/"}
+			return nil, httputil.Redirect{URL: "/"}
 		}
 
 		ghUser, err := func() (*github.User, error) {
@@ -358,7 +321,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		}()
 		if err != nil {
 			log.Println(err)
-			return nil, HTTPError{Code: http.StatusUnauthorized, err: err}
+			return nil, httputil.HTTPError{Code: http.StatusUnauthorized, Err: err}
 		}
 
 		accessToken := string(cryptoRandBytes())
@@ -396,7 +359,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
 		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: true, Secure: *productionFlag})
-		return nil, Redirect{URL: returnURL}
+		return nil, httputil.Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
 		if u != nil {
@@ -406,13 +369,13 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		}
 
 		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
-		return nil, Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
+		return nil, httputil.Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
 
 	case req.Method == "GET" && req.URL.Path == "/login":
 		returnURL := sanitizeReturn(req.URL.Query().Get(returnQueryName))
 
 		if u != nil {
-			return nil, Redirect{URL: returnURL}
+			return nil, httputil.Redirect{URL: returnURL}
 		}
 
 		centered := &html.Node{

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/reactions/fs"
 	"github.com/shurcooL/users"
@@ -21,12 +22,12 @@ type reactionsAPIHandler struct {
 
 func (h reactionsAPIHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" && req.Method != "POST" {
-		return MethodError{Allowed: []string{"GET", "POST"}}
+		return httputil.MethodError{Allowed: []string{"GET", "POST"}}
 	}
 
 	if err := req.ParseForm(); err != nil {
 		log.Println("req.ParseForm:", err)
-		return HTTPError{Code: http.StatusBadRequest, err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
 
 	reactableURL := req.Form.Get("reactableURL")

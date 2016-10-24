@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/presentdata"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httpfs/html/vfstemplate"
@@ -33,7 +34,7 @@ func initTalks(root http.FileSystem, notifications notifications.Service, users 
 	tmpl = tmpl.Funcs(template.FuncMap{"playable": func(present.Code) bool { return false }})
 	tmpl = template.Must(vfstemplate.ParseFiles(presentdata.Assets, tmpl, "/templates/action.tmpl", "/templates/slides.tmpl"))
 
-	talksHandler := http.StripPrefix("/talks", userMiddleware{errorHandler{(&talksHandler{
+	talksHandler := http.StripPrefix("/talks", userMiddleware{httputil.ErrorHandler{(&talksHandler{
 		base:   "/talks",
 		fs:     root,
 		slides: tmpl,
@@ -56,13 +57,13 @@ type talksHandler struct {
 
 func (h *talksHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return MethodError{Allowed: []string{"GET"}}
+		return httputil.MethodError{Allowed: []string{"GET"}}
 	}
 	if canonicalURL := pathpkg.Clean(req.RequestURI); canonicalURL != req.RequestURI {
 		if req.URL.RawQuery != "" {
 			canonicalURL += "?" + req.URL.RawQuery
 		}
-		return Redirect{URL: canonicalURL}
+		return httputil.Redirect{URL: canonicalURL}
 	}
 
 	path := pathpkg.Clean("/" + req.URL.Path)
