@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
@@ -14,7 +14,6 @@ import (
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 )
@@ -23,78 +22,11 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 	return fs.NewService(root, notifications, users)
 }
 
-type issuesAPIHandler struct {
-	issues issues.Service
-}
-
-func (h issuesAPIHandler) List(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
-	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	opt := issues.IssueListOptions{State: issues.StateFilter(q.Get("OptState"))}
-	is, err := h.issues.List(req.Context(), repo, opt)
-	if err != nil {
-		return err
-	}
-	return httputil.JSONResponse{is}
-}
-
-func (h issuesAPIHandler) ListComments(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
-	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
-	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
-	}
-	is, err := h.issues.ListComments(req.Context(), repo, id, nil)
-	if err != nil {
-		return err
-	}
-	return httputil.JSONResponse{is}
-}
-
-func (h issuesAPIHandler) EditComment(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "POST" {
-		return httputil.MethodError{Allowed: []string{"POST"}}
-	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
-	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
-	}
-	if err := req.ParseForm(); err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
-	}
-	var cr issues.CommentRequest
-	cr.ID, err = strconv.ParseUint(req.PostForm.Get("ID"), 10, 64) // TODO: Automate this conversion process.
-	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
-	}
-	if body := req.PostForm["Body"]; len(body) != 0 {
-		cr.Body = &body[0]
-	}
-	if reaction := req.PostForm["Reaction"]; len(reaction) != 0 {
-		r := reactions.EmojiID(reaction[0])
-		cr.Reaction = &r
-	}
-	is, err := h.issues.EditComment(req.Context(), repo, id, cr)
-	if err != nil {
-		return err
-	}
-	return httputil.JSONResponse{is}
-}
-
 // initIssues registers handlers for the issues service HTTP API,
 // and handlers for the issues app.
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoint.
-	issuesAPIHandler := issuesAPIHandler{issues: issuesService}
+	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler{issuesAPIHandler.List}})
 	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler{issuesAPIHandler.ListComments}})
 	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler{issuesAPIHandler.EditComment}})
