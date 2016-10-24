@@ -33,14 +33,14 @@ func initTalks(root http.FileSystem, notifications notifications.Service, users 
 	tmpl = tmpl.Funcs(template.FuncMap{"playable": func(present.Code) bool { return false }})
 	tmpl = template.Must(vfstemplate.ParseFiles(presentdata.Assets, tmpl, "/templates/action.tmpl", "/templates/slides.tmpl"))
 
-	talksHandler := http.StripPrefix("/talks", errorHandler{(&talksHandler{
+	talksHandler := http.StripPrefix("/talks", userMiddleware{errorHandler{(&talksHandler{
 		base:   "/talks",
 		fs:     root,
 		slides: tmpl,
 
 		notifications: notifications,
 		users:         users,
-	}).ServeHTTP})
+	}).ServeHTTP}})
 	http.Handle("/talks", talksHandler)
 	http.Handle("/talks/", talksHandler)
 }

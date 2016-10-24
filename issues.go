@@ -94,9 +94,9 @@ func (h issuesAPIHandler) EditComment(w http.ResponseWriter, req *http.Request) 
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoint.
 	issuesAPIHandler := issuesAPIHandler{issues: issuesService}
-	http.Handle("/api/issues/list", errorHandler{issuesAPIHandler.List})
-	http.Handle("/api/issues/list-comments", errorHandler{issuesAPIHandler.ListComments})
-	http.Handle("/api/issues/edit-comment", errorHandler{issuesAPIHandler.EditComment})
+	http.Handle("/api/issues/list", userMiddleware{errorHandler{issuesAPIHandler.List}})
+	http.Handle("/api/issues/list-comments", userMiddleware{errorHandler{issuesAPIHandler.ListComments}})
+	http.Handle("/api/issues/edit-comment", userMiddleware{errorHandler{issuesAPIHandler.EditComment}})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,

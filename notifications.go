@@ -63,7 +63,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 
 	// Register HTTP API endpoint.
 	notificationsAPIHandler := notificationsAPIHandler{notifications: service}
-	http.Handle("/api/notifications/count", errorHandler{notificationsAPIHandler.Count})
+	http.Handle("/api/notifications/count", userMiddleware{errorHandler{notificationsAPIHandler.Count}})
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{

@@ -199,6 +199,21 @@ func SetCookie(w HeaderWriter, cookie *http.Cookie) {
 	}
 }
 
+// userMiddleware parses authentication information from request headers,
+// and sets authenticated user as a context value.
+type userMiddleware struct {
+	Handler http.Handler
+}
+
+func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	user, err := getUser(req)
+	if err == errBadAccessToken {
+		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
+		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+	}
+	mw.Handler.ServeHTTP(w, withUser(req, user))
+}
+
 type handler struct {
 	handler func(w HeaderWriter, req *http.Request, user *user) ([]*html.Node, error)
 }

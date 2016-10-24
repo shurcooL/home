@@ -61,17 +61,17 @@ func run() error {
 	http.Handle("/sessions", sessionsHandler)
 
 	usersAPIHandler := usersAPIHandler{users: users}
-	http.Handle("/api/userspec", errorHandler{usersAPIHandler.GetAuthenticatedSpec})
-	http.Handle("/api/user", errorHandler{usersAPIHandler.GetAuthenticated})
+	http.Handle("/api/userspec", userMiddleware{errorHandler{usersAPIHandler.GetAuthenticatedSpec}})
+	http.Handle("/api/user", userMiddleware{errorHandler{usersAPIHandler.GetAuthenticated}})
 
-	http.Handle("/api/react", errorHandler{reactionsAPIHandler{reactions}.ServeHTTP})
+	http.Handle("/api/react", userMiddleware{errorHandler{reactionsAPIHandler{reactions}.ServeHTTP}})
 
 	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
 		users: users,
 	}
-	http.Handle("/api/usercontent", errorHandler{userContentHandler.Upload})
-	http.Handle("/usercontent/", http.StripPrefix("/usercontent", errorHandler{userContentHandler.Serve}))
+	http.Handle("/api/usercontent", userMiddleware{errorHandler{userContentHandler.Upload}})
+	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{errorHandler{userContentHandler.Serve}}))
 
 	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
@@ -95,7 +95,7 @@ func run() error {
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
 	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
-	indexHandler := errorHandler{func(w http.ResponseWriter, req *http.Request) error {
+	indexHandler := userMiddleware{errorHandler{func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return MethodError{Allowed: []string{"GET"}}
 		}
@@ -127,7 +127,7 @@ func run() error {
 		}
 
 		return html.Render(w, indexHTML)
-	}}
+	}}}
 	staticFiles := httpgzip.FileServer(
 		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
 		httpgzip.FileServerOptions{

@@ -39,7 +39,7 @@ const googleAnalytics = `<script>
 
 // resumeJSCSS contains /resume.{js,css}.
 func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notifications notifications.Service, usersService users.Service) {
-	http.Handle("/resume", errorHandler{func(w http.ResponseWriter, req *http.Request) error {
+	http.Handle("/resume", userMiddleware{errorHandler{func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return MethodError{Allowed: []string{"GET"}}
 		}
@@ -67,7 +67,7 @@ func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notificat
 
 		_, err = io.WriteString(w, `</body></html>`)
 		return err
-	}})
+	}}})
 	http.Handle("/resume.js", resumeJSCSS)
 	http.Handle("/resume.css", resumeJSCSS)
 }
