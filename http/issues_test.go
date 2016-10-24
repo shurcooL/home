@@ -61,8 +61,8 @@ func init() {
 
 	// Register the issues API handler.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle("/api/issues/list", httputil.ErrorHandler{H: issuesAPIHandler.List})
-	http.Handle("/api/issues/list-comments", httputil.ErrorHandler{H: issuesAPIHandler.ListComments})
+	http.Handle("/api/issues/list", httputil.ErrorHandler(issuesAPIHandler.List))
+	http.Handle("/api/issues/list-comments", httputil.ErrorHandler(issuesAPIHandler.ListComments))
 }
 
 var issuesClient = httpapi.Issues{}

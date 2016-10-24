@@ -27,9 +27,9 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoint.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler{H: issuesAPIHandler.List}})
-	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler{H: issuesAPIHandler.ListComments}})
-	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler{H: issuesAPIHandler.EditComment}})
+	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.List)})
+	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.ListComments)})
+	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.EditComment)})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,
