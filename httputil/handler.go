@@ -10,12 +10,12 @@ import (
 
 // ErrorHandler factors error handling out of the HTTP handler.
 type ErrorHandler struct {
-	Handler func(w http.ResponseWriter, req *http.Request) error
+	H func(w http.ResponseWriter, req *http.Request) error
 }
 
 func (h ErrorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	rw := &responseWriter{ResponseWriter: w}
-	err := h.Handler(rw, req)
+	err := h.H(rw, req)
 	switch {
 	case err != nil && rw.WroteHeader:
 		// The header has already been written, so it's too late to send

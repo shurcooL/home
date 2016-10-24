@@ -36,7 +36,7 @@ func (h notificationsAPIHandler) Count(w http.ResponseWriter, req *http.Request)
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{n}
+	return httputil.JSONResponse{V: n}
 }
 
 // initNotifications creates and returns a notification service,
@@ -64,7 +64,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 
 	// Register HTTP API endpoint.
 	notificationsAPIHandler := notificationsAPIHandler{notifications: service}
-	http.Handle("/api/notifications/count", userMiddleware{httputil.ErrorHandler{notificationsAPIHandler.Count}})
+	http.Handle("/api/notifications/count", userMiddleware{httputil.ErrorHandler{H: notificationsAPIHandler.Count}})
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{

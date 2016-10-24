@@ -26,7 +26,7 @@ func (h Issues) List(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{is}
+	return httputil.JSONResponse{V: is}
 }
 
 func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
@@ -43,7 +43,7 @@ func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{is}
+	return httputil.JSONResponse{V: is}
 }
 
 func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
@@ -75,5 +75,5 @@ func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{is}
+	return httputil.JSONResponse{V: is}
 }

@@ -38,7 +38,7 @@ func (h usersAPIHandler) GetAuthenticatedSpec(w http.ResponseWriter, req *http.R
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{us}
+	return httputil.JSONResponse{V: us}
 }
 
 func (h usersAPIHandler) GetAuthenticated(w http.ResponseWriter, req *http.Request) error {
@@ -46,7 +46,7 @@ func (h usersAPIHandler) GetAuthenticated(w http.ResponseWriter, req *http.Reque
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{u}
+	return httputil.JSONResponse{V: u}
 }
 
 // Users implements users.Service.

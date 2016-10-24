@@ -62,17 +62,17 @@ func run() error {
 	http.Handle("/sessions", sessionsHandler)
 
 	usersAPIHandler := usersAPIHandler{users: users}
-	http.Handle("/api/userspec", userMiddleware{httputil.ErrorHandler{usersAPIHandler.GetAuthenticatedSpec}})
-	http.Handle("/api/user", userMiddleware{httputil.ErrorHandler{usersAPIHandler.GetAuthenticated}})
+	http.Handle("/api/userspec", userMiddleware{httputil.ErrorHandler{H: usersAPIHandler.GetAuthenticatedSpec}})
+	http.Handle("/api/user", userMiddleware{httputil.ErrorHandler{H: usersAPIHandler.GetAuthenticated}})
 
-	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler{reactionsAPIHandler{reactions}.ServeHTTP}})
+	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler{H: reactionsAPIHandler{reactions}.ServeHTTP}})
 
 	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
 		users: users,
 	}
-	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler{userContentHandler.Upload}})
-	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler{userContentHandler.Serve}}))
+	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler{H: userContentHandler.Upload}})
+	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler{H: userContentHandler.Serve}}))
 
 	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
@@ -96,7 +96,7 @@ func run() error {
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
 	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
-	indexHandler := userMiddleware{httputil.ErrorHandler{func(w http.ResponseWriter, req *http.Request) error {
+	indexHandler := userMiddleware{httputil.ErrorHandler{H: func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httputil.MethodError{Allowed: []string{"GET"}}
 		}

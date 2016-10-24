@@ -47,7 +47,7 @@ func ExampleIssues_List() {
 		log.Fatalln(err)
 	}
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle("/api/issues/list", httputil.ErrorHandler{issuesAPIHandler.List})
+	http.Handle("/api/issues/list", httputil.ErrorHandler{H: issuesAPIHandler.List})
 	http.DefaultTransport.(*http.Transport).RegisterProtocol("", localRoundTripper{})
 
 	s := httpapi.Issues{}

@@ -31,27 +31,27 @@ func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) er
 
 	user, err := uc.users.GetAuthenticated(req.Context())
 	if err != nil {
-		return httputil.JSONResponse{uploadResponse{Error: err.Error()}}
+		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 	if user.ID == 0 {
-		return httputil.JSONResponse{uploadResponse{Error: os.ErrPermission.Error()}}
+		return httputil.JSONResponse{V: uploadResponse{Error: os.ErrPermission.Error()}}
 	}
 
 	if contentType := req.Header.Get("Content-Type"); contentType != "image/png" {
-		return httputil.JSONResponse{uploadResponse{Error: fmt.Sprintf("Content-Type %q is not supported", contentType)}}
+		return httputil.JSONResponse{V: uploadResponse{Error: fmt.Sprintf("Content-Type %q is not supported", contentType)}}
 	}
 
 	dir := fmt.Sprintf("/%d@%s", user.ID, user.Domain)
 	err = vfsutil.MkdirAll(uc.store, dir, 0755)
 	if err != nil {
-		return httputil.JSONResponse{uploadResponse{Error: err.Error()}}
+		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 
 	name := uuid.NewV4().String() + ".png"
 	path := pathpkg.Join(dir, name)
 	f, err := uc.store.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return httputil.JSONResponse{uploadResponse{Error: err.Error()}}
+		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 
 	const maxSizeBytes = 10 * 1024 * 1024
@@ -60,15 +60,15 @@ func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) er
 	if err != nil {
 		f.Close()
 		uc.store.RemoveAll(path)
-		return httputil.JSONResponse{uploadResponse{Error: err.Error()}}
+		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 	err = f.Close()
 	if err != nil {
 		uc.store.RemoveAll(path)
-		return httputil.JSONResponse{uploadResponse{Error: err.Error()}}
+		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 
-	return httputil.JSONResponse{uploadResponse{URL: pathpkg.Join("/usercontent", path)}}
+	return httputil.JSONResponse{V: uploadResponse{URL: pathpkg.Join("/usercontent", path)}}
 }
 
 func (uc userContentHandler) Serve(w http.ResponseWriter, req *http.Request) error {
