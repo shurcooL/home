@@ -1,3 +1,4 @@
+// Package idiomaticgo contains functionality for rendering /idiomatic-go page.
 package idiomaticgo
 
 import (
