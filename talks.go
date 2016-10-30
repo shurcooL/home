@@ -147,7 +147,7 @@ func (h *talksHandler) renderDir(w io.Writer, fs http.FileSystem, path string, d
 	dl := &dirList{Base: h.base, Path: path}
 	for _, fi := range fis {
 		switch dir, ext := fi.IsDir(), pathpkg.Ext(fi.Name()); {
-		// Add a .slide file to Slides.
+		// Add .slide files to Slides.
 		case !dir && ext == ".slide":
 			title, err := parseTitle(fs, pathpkg.Join(path, fi.Name()))
 			if err != nil {
@@ -160,7 +160,14 @@ func (h *talksHandler) renderDir(w io.Writer, fs http.FileSystem, path string, d
 				Title: title,
 			})
 
-		// Add a directory to Dirs.
+		// Add .pdf files to Files.
+		case !dir && ext == ".pdf":
+			dl.Files = append(dl.Files, dirEntry{
+				Name: fi.Name(),
+				Path: pathpkg.Join(path, fi.Name()),
+			})
+
+		// Add directories to Dirs.
 		case dir && !strings.HasPrefix(fi.Name(), "."):
 			dl.Dirs = append(dl.Dirs, dirEntry{
 				Name: fi.Name(),
@@ -177,9 +184,9 @@ func (h *talksHandler) renderDir(w io.Writer, fs http.FileSystem, path string, d
 
 // dirList is a directory listing of slides and directories.
 type dirList struct {
-	Base         string // Base URL to prepend to links.
-	Path         string
-	Slides, Dirs dirEntries
+	Base                string // Base URL to prepend to links.
+	Path                string
+	Slides, Files, Dirs dirEntries
 }
 
 // Render renders the directory listing as HTML.
@@ -203,6 +210,21 @@ func (dl *dirList) Render() []*html.Node {
 			ns = append(ns,
 				htmlg.DD(
 					htmlg.A(s.Name, template.URL(pathpkg.Join(dl.Base, s.Path))), htmlg.Text(": "+s.Title),
+				),
+			)
+		}
+		nodes = append(nodes, htmlg.DL(ns...))
+	}
+
+	if len(dl.Files) > 0 {
+		nodes = append(nodes,
+			htmlg.H4(htmlg.Text("Files:")),
+		)
+		var ns []*html.Node
+		for _, s := range dl.Files {
+			ns = append(ns,
+				htmlg.DD(
+					htmlg.A(s.Name, template.URL(pathpkg.Join(dl.Base, s.Path))),
 				),
 			)
 		}
