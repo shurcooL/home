@@ -49,7 +49,7 @@ func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) er
 
 	name := uuid.NewV4().String() + ".png"
 	path := pathpkg.Join(dir, name)
-	f, err := uc.store.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := uc.store.OpenFile(req.Context(), path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
@@ -59,12 +59,12 @@ func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) er
 	_, err = io.Copy(f, body)
 	if err != nil {
 		f.Close()
-		uc.store.RemoveAll(path)
+		uc.store.RemoveAll(req.Context(), path)
 		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 	err = f.Close()
 	if err != nil {
-		uc.store.RemoveAll(path)
+		uc.store.RemoveAll(req.Context(), path)
 		return httputil.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 
