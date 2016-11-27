@@ -12,12 +12,10 @@ import (
 
 	"github.com/shurcooL/go/httpstoppable"
 	"github.com/shurcooL/home/assets"
-	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/reactions/emojis"
-	"golang.org/x/net/html"
 	"golang.org/x/net/webdav"
 )
 
@@ -95,40 +93,9 @@ func run() error {
 
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
-	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
-	indexHandler := userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
-		if req.Method != "GET" {
-			return httputil.MethodError{Allowed: []string{"GET"}}
-		}
-		authenticatedUser, err := users.GetAuthenticated(req.Context())
-		if err != nil {
-			return err
-		}
-		f, err := os.Open(indexPath)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		indexHTML, err := html.Parse(f)
-		if err != nil {
-			return err
-		}
-		{
-			returnURL := req.RequestURI
+	initAbout(notifications, users)
 
-			header := component.Header{
-				MaxWidth:      800,
-				CurrentUser:   authenticatedUser,
-				ReturnURL:     returnURL,
-				Notifications: notifications,
-			}
-			div := header.RenderContext(req.Context())[0]
-
-			indexHTML.FirstChild.LastChild.InsertBefore(div, indexHTML.FirstChild.LastChild.FirstChild)
-		}
-
-		return html.Render(w, indexHTML)
-	})}
+	indexHandler := initIndex(assetsHandler, notifications, users)
 	staticFiles := httpgzip.FileServer(
 		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
 		httpgzip.FileServerOptions{
