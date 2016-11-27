@@ -72,6 +72,10 @@ func run() error {
 	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler(userContentHandler.Upload)})
 	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(userContentHandler.Serve)}))
 
+	indexHandler := initIndex(notifications, users)
+
+	initAbout(notifications, users)
+
 	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
 		return err
@@ -86,16 +90,14 @@ func run() error {
 	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
 
 	assetsHandler := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
-	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer)) // TODO.
+	http.Handle("/assets/", assetsHandler)
+
 	initResume(assetsHandler, reactions, notifications, users)
 
-	initIdiomaticGo(assetsHandler, issuesService, notifications, users)
+	initIdiomaticGo(issuesService, notifications, users)
 
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
-	initAbout(notifications, users)
-
-	indexHandler := initIndex(assetsHandler, notifications, users)
 	staticFiles := httpgzip.FileServer(
 		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
 		httpgzip.FileServerOptions{

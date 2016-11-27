@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
@@ -12,26 +13,35 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// Header is a header component that displays current user and notifications.
 type Header struct {
-	MaxWidth      int
 	CurrentUser   users.User
 	ReturnURL     string
 	Notifications notifications.Service
 }
 
-func (h Header) containerStyle() string {
-	switch h.MaxWidth {
-	case 0:
-		return "margin-bottom: 20px; text-align: right; height: 18px; font-size: 12px;"
-	default:
-		return fmt.Sprintf("max-width: %dpx; margin: 0 auto 20px auto; text-align: right; height: 18px; font-size: 12px;", h.MaxWidth)
+// THINKING.
+func parseNodes(s string) (nodes []*html.Node) {
+	e, err := html.ParseFragment(strings.NewReader(s), nil)
+	if err != nil {
+		panic(fmt.Errorf("internal error: html.ParseFragment failed: %v", err))
 	}
+	for {
+		n := e[0].LastChild.FirstChild
+		if n == nil {
+			break
+		}
+		n.Parent.RemoveChild(n)
+		nodes = append(nodes, n)
+	}
+	return nodes
 }
 
+// RenderContext implements htmlg.ComponentContext.
 func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	// TODO: Make this much nicer.
 	/*
-		<div style="text-align: right; margin-bottom: 20px; height: 18px; font-size: 12px;">
+		<div style="margin-bottom: 20px; text-align: right; height: 18px; font-size: 12px;">
 			{{if h.CurrentUser.ID}}
 				Notifications{Unread: h.Notifications.Count() > 0}
 				<a class="topbar-avatar" href="{{h.CurrentUser.HTMLURL}}" tabindex=-1>
@@ -46,7 +56,20 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 
 	div := &html.Node{
 		Type: html.ElementNode, Data: atom.Div.String(),
-		Attr: []html.Attribute{{Key: atom.Style.String(), Val: h.containerStyle()}},
+		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "margin-bottom: 20px; text-align: right; height: 18px; font-size: 12px;"}},
+	}
+
+	for _, n := range parseNodes(`<div class="nav">
+		<ul class="nav">
+			<li class="nav"><a href="/blog">Blog</a></li>
+			<li class="nav smaller"><a href="/idiomatic-go">Idiomatic Go</a></li>
+			<li class="nav"><a href="/talks">Talks</a></li>
+			<li class="nav"><a href="/projects">Projects</a></li>
+			<li class="nav"><a href="/resume">Resume</a></li>
+			<li class="nav"><a href="/about">About</a></li>
+		</ul>
+	</div>`) {
+		div.AppendChild(n)
 	}
 
 	if h.CurrentUser.ID != 0 {
@@ -111,6 +134,7 @@ type Notifications struct {
 	Unread bool
 }
 
+// Render implements htmlg.Component.
 func (n Notifications) Render() []*html.Node {
 	a := &html.Node{
 		Type: html.ElementNode, Data: atom.A.String(),
