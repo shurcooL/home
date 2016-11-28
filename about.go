@@ -53,21 +53,6 @@ func initAbout(notifications notifications.Service, users users.Service) {
 			return err
 		}
 
-		// Render the nav bar.
-		_, err = io.WriteString(w, `<div class="nav">
-				<ul class="nav">
-					<li class="nav"><a href="/blog">Blog</a></li>
-					<li class="nav smaller"><a href="/idiomatic-go">Idiomatic Go</a></li>
-					<li class="nav"><a href="/talks">Talks</a></li>
-					<li class="nav"><a href="/projects">Projects</a></li>
-					<li class="nav"><a href="/resume">Resume</a></li>
-					<li class="nav"><a href="/about">About</a></li>
-				</ul>
-			</div>`)
-		if err != nil {
-			return err
-		}
-
 		// Render content.
 		_, err = io.WriteString(w, `<div style="float: left;"><img width="300" height="450" src="avatar-p.jpg"></div>
 			<div style="margin-left: 340px; text-align: justify;">

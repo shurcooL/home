@@ -60,21 +60,6 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 			return err
 		}
 
-		// Render the nav bar.
-		_, err = io.WriteString(w, `<div class="nav">
-				<ul class="nav">
-					<li class="nav"><a href="/blog">Blog</a></li>
-					<li class="nav smaller"><a href="/idiomatic-go">Idiomatic Go</a></li>
-					<li class="nav"><a href="/talks">Talks</a></li>
-					<li class="nav"><a href="/projects">Projects</a></li>
-					<li class="nav"><a href="/resume">Resume</a></li>
-					<li class="nav"><a href="/about">About</a></li>
-				</ul>
-			</div>`)
-		if err != nil {
-			return err
-		}
-
 		// https://godoc.org/github.com/google/go-github/github#ActivityService.ListEventsPerformedByUser
 		events, _, err := ListEventsPerformedByUser("shurcooL", true, nil)
 		if err != nil {
