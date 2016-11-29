@@ -25,20 +25,20 @@ const ReactableURL = idiomaticGoURI
 // RenderBodyInnerHTML renders the inner HTML of the <body> element of the Idiomatic Go page.
 // It's safe for concurrent use.
 func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.Service, notifications notifications.Service, authenticatedUser users.User, returnURL string) error {
-	// Render the header.
-	header := component.Header{
-		CurrentUser:   authenticatedUser,
-		ReturnURL:     returnURL,
-		Notifications: notifications,
-	}
-	err := htmlg.RenderComponentsContext(ctx, w, header)
-	if err != nil {
-		return err
-	}
-
 	// TODO: This is messy rendering code, clean it up.
-	fmt.Fprint(w, `<div style="margin: 0 auto 0 auto;  padding: 0 30px 0 30px; max-width: 800px;">`)
+	fmt.Fprint(w, `<div style="margin: 20px auto 20px auto;  padding: 0 30px 0 30px; max-width: 800px;">`)
 	{
+		// Render the header.
+		header := component.Header{
+			CurrentUser:   authenticatedUser,
+			ReturnURL:     returnURL,
+			Notifications: notifications,
+		}
+		err := htmlg.RenderComponentsContext(ctx, w, header)
+		if err != nil {
+			return err
+		}
+
 		fmt.Fprint(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 60px;">`)
 		w.Write(github_flavored_markdown.Markdown([]byte(`# Idiomatic Go
 

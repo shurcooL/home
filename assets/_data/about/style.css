@@ -18,3 +18,7 @@ a.blue {
 a.blue:hover {
 	color: #4183c4;
 }
+
+.mr8 {
+	margin-right: 8px;
+}

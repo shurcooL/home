@@ -61,7 +61,7 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	font-family: sans-serif;
 	font-size: 14px;
 	margin-bottom: 20px;
-	background-color: #e0e0e0; 
+	/*background-color: #e0e0e0;*/
 }
 
 .header a {
@@ -73,24 +73,26 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	color: #4183c4;
 }
 
-ul.nav {
+.header ul.nav {
 	display: inline-block;
 	margin-top: 0;
 	margin-bottom: 0;
 	padding-left: 0;
 }
-li.nav {
+.header li.nav {
 	display: inline-block;
 	margin-left: 20px;
 }
-.nav.smaller {
+.header .nav.smaller {
 	font-size: smaller;
+}
+
+.header .user {
+	float: right;
+	padding-top: 8px;
 }`))
 
-	div := &html.Node{
-		Type: html.ElementNode, Data: atom.Div.String(),
-		Attr: []html.Attribute{{Key: atom.Class.String(), Val: "header"}},
-	}
+	div := htmlg.DivClass("header")
 
 	div.AppendChild(a("/", Logo{}.Render()...))
 
@@ -103,6 +105,7 @@ li.nav {
 		htmlg.LIClass("nav", htmlg.A("About", "/about")),
 	))
 
+	userSpan := htmlg.SpanClass("user")
 	if h.CurrentUser.ID != 0 {
 		{ // Notifications icon.
 			n, err := h.Notifications.Count(ctx, nil)
@@ -119,7 +122,7 @@ li.nav {
 			for _, n := range (Notifications{Unread: n > 0}).Render() {
 				span.AppendChild(n)
 			}
-			div.AppendChild(span)
+			userSpan.AppendChild(span)
 		}
 
 		{ // TODO: topbar-avatar component.
@@ -142,19 +145,20 @@ height: 18px;
 vertical-align: top;`},
 				},
 			})
-			div.AppendChild(a)
+			userSpan.AppendChild(a)
 		}
 
 		signOut := PostButton{Action: "/logout", Text: "Sign out", ReturnURL: h.ReturnURL}
 		for _, n := range signOut.Render() {
-			div.AppendChild(n)
+			userSpan.AppendChild(n)
 		}
 	} else {
 		signInViaGitHub := PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: h.ReturnURL}
 		for _, n := range signInViaGitHub.Render() {
-			div.AppendChild(n)
+			userSpan.AppendChild(n)
 		}
 	}
+	div.AppendChild(userSpan)
 
 	return []*html.Node{style, div}
 }

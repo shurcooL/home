@@ -74,17 +74,6 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		background-color: #fff;
 		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
-
-	/* TODO: Factor out, this is same as in index.html style. */
-	.notifications {
-		display: inline-block;
-		vertical-align: top;
-		position: relative;
-	}
-	.notifications:hover {
-		color: #4183c4;
-		fill: currentColor;
-	}
 </style>`,
 	}
 	if *productionFlag {

@@ -96,17 +96,6 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		line-height: initial;
 		color: #373a3c;
 	}
-
-	/* TODO: Factor out, this is same as in index.html style. */
-	.notifications {
-		display: inline-block;
-		vertical-align: top;
-		position: relative;
-	}
-	.notifications:hover {
-		color: #4183c4;
-		fill: currentColor;
-	}
 </style>`,
 	}
 	if *productionFlag {

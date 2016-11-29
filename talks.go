@@ -337,28 +337,6 @@ var talksDirHTML = template.Must(template.New("").Parse(`<html>
 			dd {
 				font-size: 14px;
 			}
-
-			/* TODO: Factor out, this is same as in home/style.css. */
-			.notifications {
-				display: inline-block;
-				vertical-align: top;
-				position: relative;
-			}
-			.notifications:hover {
-				color: #4183c4;
-				fill: currentColor;
-			}
-			.notifications-unread {
-				display: inline-block;
-				width: 10px;
-				height: 10px;
-				background-color: #4183c4;
-				border: 2px solid white;
-				border-radius: 50%;
-				position: absolute;
-				right: -4px;
-				top: -6px;
-			}
 		</style>
 		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
