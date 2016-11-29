@@ -19,55 +19,6 @@ a.blue:hover {
 	color: #4183c4;
 }
 
-div.nav {
-	display: inline-block;
-	font-size: 14px;
-	text-align: right;
-}
-ul.nav {
-	margin-top: 0;
-	margin-bottom: 0;
-}
-li.nav {
-	display: inline-block;
-	margin-left: 20px;
-}
-.nav.smaller {
-	font-size: smaller;
-}
-
-/* TODO: Factor this out, etc. */
-img.topbar-avatar {
-	border-radius: 2px;
-	width: 18px;
-	height: 18px;
-	vertical-align: top;
-}
-a.topbar-avatar {
-	margin-right: 6px;
-}
-
-.notifications {
-	display: inline-block;
-	vertical-align: top;
-	position: relative;
-}
-.notifications:hover {
-	color: #4183c4;
-	fill: currentColor;
-}
-.notifications-unread {
-	display: inline-block;
-	width: 10px;
-	height: 10px;
-	background-color: #4183c4;
-	border: 2px solid white;
-	border-radius: 50%;
-	position: absolute;
-	right: -4px;
-	top: -6px;
-}
-
 div.event {
 	margin-top: 20px;
 	margin-bottom: 20px;

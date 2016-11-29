@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/notifications"
@@ -21,27 +20,12 @@ type Header struct {
 	Notifications notifications.Service
 }
 
-// THINKING.
-func parseNodes(s string) (nodes []*html.Node) {
-	e, err := html.ParseFragment(strings.NewReader(s), nil)
-	if err != nil {
-		panic(fmt.Errorf("internal error: html.ParseFragment failed: %v", err))
-	}
-	for {
-		n := e[0].LastChild.FirstChild
-		if n == nil {
-			break
-		}
-		n.Parent.RemoveChild(n)
-		nodes = append(nodes, n)
-	}
-	return nodes
-}
-
 // RenderContext implements htmlg.ComponentContext.
 func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	// TODO: Make this much nicer.
 	/*
+		<style type="text/css">...</style>
+
 		<div style="margin-bottom: 20px; text-align: right; height: 44px; font-size: 12px;">
 			<a href="/">Logo{}</a>
 
@@ -68,22 +52,55 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 		</div>
 	*/
 
+	style := &html.Node{
+		Type: html.ElementNode, Data: atom.Style.String(),
+		Attr: []html.Attribute{{Key: atom.Type.String(), Val: "text/css"}},
+	}
+	style.AppendChild(htmlg.Text(`
+.header {
+	font-family: sans-serif;
+	font-size: 14px;
+	margin-bottom: 20px;
+	background-color: #e0e0e0; 
+}
+
+.header a {
+	color: black;
+	text-decoration: none;
+	font-weight: bold;
+}
+.header a:hover {
+	color: #4183c4;
+}
+
+ul.nav {
+	display: inline-block;
+	margin-top: 0;
+	margin-bottom: 0;
+	padding-left: 0;
+}
+li.nav {
+	display: inline-block;
+	margin-left: 20px;
+}
+.nav.smaller {
+	font-size: smaller;
+}`))
+
 	div := &html.Node{
 		Type: html.ElementNode, Data: atom.Div.String(),
-		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "margin-bottom: 20px; text-align: right; height: 44px; font-size: 12px;"}},
+		Attr: []html.Attribute{{Key: atom.Class.String(), Val: "header"}},
 	}
 
 	div.AppendChild(a("/", Logo{}.Render()...))
 
-	div.AppendChild(htmlg.DivClass("nav",
-		htmlg.ULClass("nav",
-			htmlg.LIClass("nav", htmlg.A("Blog", "/blog")),
-			htmlg.LIClass("nav smaller", htmlg.A("Idiomatic Go", "/idiomatic-go")),
-			htmlg.LIClass("nav", htmlg.A("Talks", "/talks")),
-			htmlg.LIClass("nav", htmlg.A("Projects", "/projects")),
-			htmlg.LIClass("nav", htmlg.A("Resume", "/resume")),
-			htmlg.LIClass("nav", htmlg.A("About", "/about")),
-		),
+	div.AppendChild(htmlg.ULClass("nav",
+		htmlg.LIClass("nav", htmlg.A("Blog", "/blog")),
+		htmlg.LIClass("nav smaller", htmlg.A("Idiomatic Go", "/idiomatic-go")),
+		htmlg.LIClass("nav", htmlg.A("Talks", "/talks")),
+		htmlg.LIClass("nav", htmlg.A("Projects", "/projects")),
+		htmlg.LIClass("nav", htmlg.A("Resume", "/resume")),
+		htmlg.LIClass("nav", htmlg.A("About", "/about")),
 	))
 
 	if h.CurrentUser.ID != 0 {
@@ -139,7 +156,7 @@ vertical-align: top;`},
 		}
 	}
 
-	return []*html.Node{div}
+	return []*html.Node{style, div}
 }
 
 // Notifications is an icon for displaying if user has unread notifications.
@@ -153,8 +170,11 @@ func (n Notifications) Render() []*html.Node {
 	a := &html.Node{
 		Type: html.ElementNode, Data: atom.A.String(),
 		Attr: []html.Attribute{
-			{Key: atom.Class.String(), Val: "notifications"}, // TODO: Factor in that CSS class's declaration block, and :hover selector.
 			{Key: atom.Href.String(), Val: "/notifications"},
+			{Key: atom.Style.String(), Val: `display: inline-block;
+vertical-align: top;
+position: relative;
+fill: currentColor;`},
 		},
 	}
 	a.AppendChild(octiconssvg.Bell())
@@ -184,14 +204,17 @@ type Logo struct{}
 
 // Render implements htmlg.Component.
 func (Logo) Render() []*html.Node {
+	// THINK: Notifications embeds the <a> element inside, Logo does not. Make it consistent?
 	svg := &html.Node{
 		Type: html.ElementNode, Data: atom.Svg.String(),
 		Attr: []html.Attribute{
 			{Key: "xmlns", Val: "http://www.w3.org/2000/svg"},
-			{Key: "width", Val: "32"},
-			{Key: "height", Val: "32"},
 			{Key: "viewBox", Val: "0 0 200 200"},
-			{Key: "style", Val: "vertical-align: top;"},
+			{Key: atom.Width.String(), Val: "32"},
+			{Key: atom.Height.String(), Val: "32"},
+			{Key: atom.Style.String(), Val: `fill: currentColor;
+stroke: currentColor;
+vertical-align: middle;`}, // THINK: Is this right scope?
 		},
 	}
 	svg.AppendChild(&html.Node{
@@ -200,7 +223,6 @@ func (Logo) Render() []*html.Node {
 			{Key: "cx", Val: "100"},
 			{Key: "cy", Val: "100"},
 			{Key: "r", Val: "90"},
-			{Key: "stroke", Val: "black"},
 			{Key: "stroke-width", Val: "20"},
 			{Key: "fill", Val: "none"},
 		},
