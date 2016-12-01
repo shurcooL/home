@@ -25,22 +25,25 @@ const ReactableURL = idiomaticGoURI
 // RenderBodyInnerHTML renders the inner HTML of the <body> element of the Idiomatic Go page.
 // It's safe for concurrent use.
 func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.Service, notifications notifications.Service, authenticatedUser users.User, returnURL string) error {
-	// TODO: This is messy rendering code, clean it up.
-	fmt.Fprint(w, `<div style="margin: 20px auto 20px auto;  padding: 0 30px 0 30px; max-width: 800px;">`)
-	{
-		// Render the header.
-		header := component.Header{
-			CurrentUser:   authenticatedUser,
-			ReturnURL:     returnURL,
-			Notifications: notifications,
-		}
-		err := htmlg.RenderComponentsContext(ctx, w, header)
-		if err != nil {
-			return err
-		}
+	_, err := io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
+	if err != nil {
+		return err
+	}
 
-		fmt.Fprint(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 60px;">`)
-		w.Write(github_flavored_markdown.Markdown([]byte(`# Idiomatic Go
+	// Render the header.
+	header := component.Header{
+		CurrentUser:   authenticatedUser,
+		ReturnURL:     returnURL,
+		Notifications: notifications,
+	}
+	err = htmlg.RenderComponentsContext(ctx, w, header)
+	if err != nil {
+		return err
+	}
+
+	// TODO: This is messy rendering code, clean it up.
+	fmt.Fprint(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 60px;">`)
+	w.Write(github_flavored_markdown.Markdown([]byte(`# Idiomatic Go
 
 When reviewing Go code, if I run into a situation where I see an unnecessary deviation from
 idiomatic Go style or best practice, I add an entry here complete with some rationale, and
@@ -57,70 +60,69 @@ If you'd like to add a new suggestion, please provide convincing rationale and r
 (e.g., links to places in Go project that support your suggestion), and open a new issue.
 It'll show up here when I add an "Accepted" label.`)))
 
-		is, err := issuesService.List(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
-		if err != nil {
-			return err
+	is, err := issuesService.List(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(w, "<ul>")
+	for _, issue := range is {
+		if issue.State != issues.OpenState || !accepted(issue) {
+			continue
 		}
-		fmt.Fprint(w, "<ul>")
-		for _, issue := range is {
-			if issue.State != issues.OpenState || !accepted(issue) {
-				continue
-			}
-			fmt.Fprint(w, "<li>"+htmlg.Render(htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))))+"</li>")
-		}
-		fmt.Fprint(w, "</ul>")
+		fmt.Fprint(w, "<li>"+htmlg.Render(htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))))+"</li>")
+	}
+	fmt.Fprint(w, "</ul>")
 
-		openProposals := 0
-		for _, issue := range is {
-			if issue.State == issues.OpenState && !accepted(issue) {
-				openProposals++
-			}
+	openProposals := 0
+	for _, issue := range is {
+		if issue.State == issues.OpenState && !accepted(issue) {
+			openProposals++
 		}
-		if openProposals > 0 {
-			w.Write(github_flavored_markdown.Markdown([]byte(fmt.Sprintf("There are also [%d open proposals](/issues/dmitri.shuralyov.com/idiomatic-go) being considered.", openProposals))))
-		}
-		fmt.Fprint(w, `</div>`)
-
-		for _, issue := range is {
-			if issue.State != issues.OpenState || !accepted(issue) {
-				continue
-			}
-			cs, err := issuesService.ListComments(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issue.ID, nil)
-			if err != nil {
-				return err
-			}
-			const commentID = 0
-			if commentID >= len(cs) {
-				return fmt.Errorf("issue has no body")
-			}
-			comment := cs[commentID]
-
-			fmt.Fprint(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 12px;">`)
-			w.Write(github_flavored_markdown.Markdown([]byte("### " + issue.Title)))
-			fmt.Fprint(w, `</div>`)
-			fmt.Fprint(w, `<div class="markdown-body" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px;">`)
-			w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
-			fmt.Fprint(w, `</div>`)
-
-			fmt.Fprint(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
-			err = htmlg.RenderComponentsContext(ctx, w, resumecomponent.ReactionsBar{
-				Reactions:    IssuesReactions{Issues: issuesService},
-				ReactableURL: ReactableURL,
-				CurrentUser:  authenticatedUser,
-				ID:           fmt.Sprintf("%v", issue.ID), // TODO: "/0"?
-			})
-			if err != nil {
-				return err
-			}
-			fmt.Fprint(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
-			fmt.Fprintf(w, `<a href="/issues/%v/%v" style="line-height: 30px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%v comments</a>`, idiomaticGoURI, issue.ID, issue.Replies)
-			fmt.Fprint(w, `</span>`)
-			fmt.Fprint(w, `</div>`)
-		}
+	}
+	if openProposals > 0 {
+		w.Write(github_flavored_markdown.Markdown([]byte(fmt.Sprintf("There are also [%d open proposals](/issues/dmitri.shuralyov.com/idiomatic-go) being considered.", openProposals))))
 	}
 	fmt.Fprint(w, `</div>`)
 
-	return nil
+	for _, issue := range is {
+		if issue.State != issues.OpenState || !accepted(issue) {
+			continue
+		}
+		cs, err := issuesService.ListComments(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issue.ID, nil)
+		if err != nil {
+			return err
+		}
+		const commentID = 0
+		if commentID >= len(cs) {
+			return fmt.Errorf("issue has no body")
+		}
+		comment := cs[commentID]
+
+		fmt.Fprint(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 12px;">`)
+		w.Write(github_flavored_markdown.Markdown([]byte("### " + issue.Title)))
+		fmt.Fprint(w, `</div>`)
+		fmt.Fprint(w, `<div class="markdown-body" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px;">`)
+		w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
+		fmt.Fprint(w, `</div>`)
+
+		fmt.Fprint(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
+		err = htmlg.RenderComponentsContext(ctx, w, resumecomponent.ReactionsBar{
+			Reactions:    IssuesReactions{Issues: issuesService},
+			ReactableURL: ReactableURL,
+			CurrentUser:  authenticatedUser,
+			ID:           fmt.Sprintf("%v", issue.ID), // TODO: "/0"?
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
+		fmt.Fprintf(w, `<a href="/issues/%v/%v" style="line-height: 30px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%v comments</a>`, idiomaticGoURI, issue.ID, issue.Replies)
+		fmt.Fprint(w, `</span>`)
+		fmt.Fprint(w, `</div>`)
+	}
+
+	_, err = io.WriteString(w, `</div>`)
+	return err
 }
 
 // accepted reports if issue has an "Accepted" label.

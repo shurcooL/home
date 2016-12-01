@@ -1,3 +1,7 @@
+body {
+	margin: 20px;
+}
+
 /* This is needed to make anchor visible... Can be cleaned up. */
 .markdown-header-anchor {
 	margin-left: -30px;

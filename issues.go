@@ -75,6 +75,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
 </style>`,
+		BodyPre: `<div style="max-width: 800px; margin: 0 auto 100px auto;">`,
 	}
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics

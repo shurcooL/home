@@ -71,7 +71,9 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	{{if and (eq .CurrentUser.ID 1924134) (eq .CurrentUser.Domain "github.com")}}
 		<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">New Blog Post</button></div>
 	{{end}}
-{{end}}`,
+{{end}}
+
+<div style="max-width: 800px; margin: 0 auto 100px auto;">`,
 	}
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics

@@ -26,19 +26,17 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	/*
 		<style type="text/css">...</style>
 
-		<div style="margin-bottom: 20px; text-align: right; height: 44px; font-size: 12px;">
+		<div class="header">
 			<a href="/">Logo{}</a>
 
-			<div class="nav">
-				<ul class="nav">
-					<li class="nav"><a href="/blog">Blog</a></li>
-					<li class="nav smaller"><a href="/idiomatic-go">Idiomatic Go</a></li>
-					<li class="nav"><a href="/talks">Talks</a></li>
-					<li class="nav"><a href="/projects">Projects</a></li>
-					<li class="nav"><a href="/resume">Resume</a></li>
-					<li class="nav"><a href="/about">About</a></li>
-				</ul>
-			</div>
+			<ul class="nav">
+				<li class="nav"><a href="/blog">Blog</a></li>
+				<li class="nav smaller"><a href="/idiomatic-go">Idiomatic Go</a></li>
+				<li class="nav"><a href="/talks">Talks</a></li>
+				<li class="nav"><a href="/projects">Projects</a></li>
+				<li class="nav"><a href="/resume">Resume</a></li>
+				<li class="nav"><a href="/about">About</a></li>
+			</ul>
 
 			{{if h.CurrentUser.ID}}
 				Notifications{Unread: h.Notifications.Count() > 0}
@@ -60,7 +58,8 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 .header {
 	font-family: sans-serif;
 	font-size: 14px;
-	margin-bottom: 20px;
+	margin-top: 30px;
+	margin-bottom: 30px;
 	/*background-color: #e0e0e0;*/
 }
 

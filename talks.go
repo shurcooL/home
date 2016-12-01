@@ -104,7 +104,7 @@ func (h *talksHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 			return err
 		}
 
-		io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto;">`)
+		io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
 
 		authenticatedUser, err := h.users.GetAuthenticated(req.Context())
 		if err != nil {

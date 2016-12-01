@@ -28,7 +28,7 @@ var indexHTML = template.Must(template.New("").Parse(`<html>
 		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>
-		<div style="max-width: 800px; margin: 0 auto 20px auto;">`))
+		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
 func initIndex(notifications notifications.Service, users users.Service) http.Handler {
 	return userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
@@ -68,6 +68,11 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 
 		activity := activity{events: events}
 		err = htmlg.RenderComponents(w, activity)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.WriteString(w, `</div>`)
 		if err != nil {
 			return err
 		}
