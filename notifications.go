@@ -101,6 +101,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
+	opt.BodyPre = `<div style="max-width: 800px; margin: 0 auto 100px auto;">`
 	opt.BodyTop = func(req *http.Request) ([]htmlg.ComponentContext, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())
 		if err != nil {

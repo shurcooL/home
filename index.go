@@ -61,7 +61,7 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 		}
 
 		// https://godoc.org/github.com/google/go-github/github#ActivityService.ListEventsPerformedByUser
-		events, _, err := ListEventsPerformedByUser("shurcooL", true, nil)
+		events, _, err := ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 30})
 		if err != nil {
 			return err
 		}
@@ -88,54 +88,45 @@ type activity struct {
 
 func (a activity) Render() []*html.Node {
 	var nodes []*html.Node
+	nodes = append(nodes,
+		htmlg.DivClass("events-header", htmlg.Text(fmt.Sprintf("Today"))),
+	)
 	for _, e := range a.events {
 		switch e.Payload().(type) {
 		case *github.WatchEvent:
-			nodes = append(nodes,
-				htmlg.DivClass("event", htmlg.Text(fmt.Sprintf("%v starred %v", *e.Actor.Login, *e.Repo.Name))),
-			)
+			e := event{
+				Actor:  *e.Actor.Login,
+				Verb:   "starred",
+				Target: "github.com/" + *e.Repo.Name,
+				Time:   *e.CreatedAt,
+			}
+			for _, n := range e.Render() {
+				nodes = append(nodes, n)
+			}
 		}
 	}
-	return []*html.Node{htmlg.Div(nodes...)}
+	return []*html.Node{htmlg.DivClass("activity", nodes...)}
 }
 
-// TODO: Finish shaping this abstraction up, and use it.
 type event struct {
-	Actor     string
-	Verb      string
-	TargetURL string
-	Time      time.Time
+	Actor  string
+	Verb   string
+	Target string // URL of the target without schema. E.g., "github.com/user/repo".
+	Time   time.Time
 }
 
 func (e event) Render() []*html.Node {
 	var nodes []*html.Node
 	nodes = append(nodes,
-		htmlg.H4(
+		htmlg.DivClass("event",
 			htmlg.Text(e.Actor),
 			htmlg.Text(" "),
 			htmlg.Text(e.Verb),
-			htmlg.Text(" in "),
-			htmlg.A(e.TargetURL, template.URL("https://"+e.TargetURL)),
-			htmlg.Text(" at "),
-			htmlg.Text(humanize.Time(e.Time)),
+			htmlg.Text(" "),
+			htmlg.A(e.Target, template.URL("https://"+e.Target)),
+			htmlg.SpanClass("time", htmlg.Text(humanize.Time(e.Time))),
 		),
 	)
-	return nodes
-}
-
-func parseNodes(s string) (nodes []*html.Node) {
-	e, err := html.ParseFragment(strings.NewReader(s), nil)
-	if err != nil {
-		panic(fmt.Errorf("internal error: html.ParseFragment failed: %v", err))
-	}
-	for {
-		n := e[0].LastChild.FirstChild
-		if n == nil {
-			break
-		}
-		n.Parent.RemoveChild(n)
-		nodes = append(nodes, n)
-	}
 	return nodes
 }
 

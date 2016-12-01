@@ -305,7 +305,7 @@ var talksDirHTML = template.Must(template.New("").Parse(`<html>
 			.rootHeading {
 				margin: 20px 0;
 				padding: 0;
-				color: #375EAB;
+				color: rgb(35, 35, 35);
 				font-weight: bold;
 			}
 			h1 {

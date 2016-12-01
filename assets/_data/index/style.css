@@ -18,7 +18,20 @@ a.blue:hover {
 	color: #4183c4;
 }
 
-div.event {
-	margin-top: 20px;
-	margin-bottom: 20px;
+div.activity {
+	font-size: 14px;
+}
+.activity div.events-header {
+	color: #bbb;
+	margin-bottom: 6px;
+}
+.activity div.event {
+	padding-top: 20px;
+	padding-bottom: 20px;
+	border-top: 1px solid #f0f0f0;
+}
+.activity span.time {
+	color: #bbb;
+	font-size: 12px;
+	margin-left: 4px;
 }
