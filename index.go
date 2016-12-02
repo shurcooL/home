@@ -10,7 +10,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/google/go-github/github"
-	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
@@ -31,27 +30,13 @@ var indexHTML = template.Must(template.New("").Parse(`<html>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
 func initIndex(notifications notifications.Service, users users.Service) http.Handler {
-	// TODO: Unify this unauthenticated GitHub client with that of newUsersService.
-	var transport http.RoundTripper
-	transport = &github.UnauthenticatedRateLimitedTransport{
-		ClientID:     githubConfig.ClientID,
-		ClientSecret: githubConfig.ClientSecret,
-	}
-	transport = &httpcache.Transport{
-		Transport:           transport,
-		Cache:               httpcache.NewMemoryCache(),
-		MarkCachedResponses: true,
-	}
-	gh := github.NewClient(&http.Client{Transport: transport})
-
 	h := &indexHandler{
 		notifications: notifications,
 		users:         users,
 	}
 	go func() {
 		for {
-			events, _, err := gh.Activity.ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 30})
-			//fmt.Println("called gh.Activity.ListEventsPerformedByUser:", len(events), err, resp.Rate.Remaining)
+			events, _, err := unauthenticatedGitHubClient.Activity.ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 30})
 			h.mu.Lock()
 			h.events, h.eventsError = events, err
 			h.mu.Unlock()

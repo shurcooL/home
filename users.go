@@ -15,7 +15,9 @@ import (
 
 var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
 
-func newUsersService() users.Service {
+// unauthenticatedGitHubClient makes unauthenticated calls
+// with the OAuth application credentials.
+var unauthenticatedGitHubClient = func() *github.Client {
 	var transport http.RoundTripper
 	transport = &github.UnauthenticatedRateLimitedTransport{
 		ClientID:     githubConfig.ClientID,
@@ -26,7 +28,11 @@ func newUsersService() users.Service {
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
-	return Users{gh: github.NewClient(&http.Client{Transport: transport})}
+	return github.NewClient(&http.Client{Transport: transport})
+}()
+
+func newUsersService() users.Service {
+	return Users{gh: unauthenticatedGitHubClient}
 }
 
 type usersAPIHandler struct {
