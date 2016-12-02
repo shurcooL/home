@@ -26,9 +26,20 @@ div.activity {
 	margin-bottom: 6px;
 }
 .activity div.event {
-	padding-top: 20px;
-	padding-bottom: 20px;
+	padding-top: 16px;
+	padding-bottom: 16px;
 	border-top: 1px solid #f0f0f0;
+}
+.activity div.event.wip {
+	background-color: #ffffdd;
+}
+.activity span.icon {
+	color: #bbb;
+	display: inline-block;
+	width: 16px;
+	margin-left: 16px;
+	margin-right: 16px;
+	vertical-align: middle;
 }
 .activity span.time {
 	color: #bbb;

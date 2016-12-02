@@ -176,8 +176,7 @@ func (n Notifications) Render() []*html.Node {
 			{Key: atom.Href.String(), Val: "/notifications"},
 			{Key: atom.Style.String(), Val: `display: inline-block;
 vertical-align: top;
-position: relative;
-fill: currentColor;`},
+position: relative;`},
 		},
 	}
 	a.AppendChild(octiconssvg.Bell())
