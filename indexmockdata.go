@@ -1,5 +1,18 @@
 package main
 
+import (
+	"encoding/json"
+	"strings"
+
+	"github.com/google/go-github/github"
+)
+
+func ListEventsPerformedByUser(user string, publicOnly bool, opt *github.ListOptions) ([]*github.Event, *github.Response, error) {
+	var events []*github.Event
+	err := json.NewDecoder(strings.NewReader(sampleEventsData)).Decode(&events)
+	return events, nil, err
+}
+
 const sampleEventsData = `[
   {
     "id": "4872223251",

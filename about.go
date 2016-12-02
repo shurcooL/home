@@ -75,6 +75,11 @@ func initAbout(notifications notifications.Service, users users.Service) {
 			return err
 		}
 
+		_, err = io.WriteString(w, `</div>`)
+		if err != nil {
+			return err
+		}
+
 		_, err = io.WriteString(w, `</body></html>`)
 		return err
 	})})

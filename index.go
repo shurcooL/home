@@ -1,16 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/google/go-github/github"
+	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
@@ -31,55 +31,95 @@ var indexHTML = template.Must(template.New("").Parse(`<html>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
 func initIndex(notifications notifications.Service, users users.Service) http.Handler {
-	return userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
-		if req.Method != "GET" {
-			return httputil.MethodError{Allowed: []string{"GET"}}
-		}
+	// TODO: Unify this unauthenticated GitHub client with that of newUsersService.
+	var transport http.RoundTripper
+	transport = &github.UnauthenticatedRateLimitedTransport{
+		ClientID:     githubConfig.ClientID,
+		ClientSecret: githubConfig.ClientSecret,
+	}
+	transport = &httpcache.Transport{
+		Transport:           transport,
+		Cache:               httpcache.NewMemoryCache(),
+		MarkCachedResponses: true,
+	}
+	gh := github.NewClient(&http.Client{Transport: transport})
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct{ Production bool }{*productionFlag}
-		err := indexHTML.Execute(w, data)
-		if err != nil {
-			return err
-		}
+	h := &indexHandler{
+		notifications: notifications,
+		users:         users,
+	}
+	go func() {
+		for {
+			events, _, err := gh.Activity.ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 30})
+			//fmt.Println("called gh.Activity.ListEventsPerformedByUser:", len(events), err, resp.Rate.Remaining)
+			h.mu.Lock()
+			h.events, h.eventsError = events, err
+			h.mu.Unlock()
 
-		authenticatedUser, err := users.GetAuthenticated(req.Context())
-		if err != nil {
-			return err
+			time.Sleep(time.Minute)
 		}
-		returnURL := req.RequestURI
+	}()
+	return userMiddleware{httputil.ErrorHandler(h.ServeHTTP)}
+}
 
-		// Render the header.
-		header := component.Header{
-			CurrentUser:   authenticatedUser,
-			ReturnURL:     returnURL,
-			Notifications: notifications,
-		}
-		err = htmlg.RenderComponentsContext(req.Context(), w, header)
-		if err != nil {
-			return err
-		}
+type indexHandler struct {
+	notifications notifications.Service
+	users         users.Service
 
-		// https://godoc.org/github.com/google/go-github/github#ActivityService.ListEventsPerformedByUser
-		events, _, err := ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 30})
-		if err != nil {
-			return err
-		}
+	mu          sync.Mutex
+	events      []*github.Event
+	eventsError error
+}
 
-		activity := activity{events: events}
-		err = htmlg.RenderComponents(w, activity)
-		if err != nil {
-			return err
-		}
+func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return httputil.MethodError{Allowed: []string{"GET"}}
+	}
 
-		_, err = io.WriteString(w, `</div>`)
-		if err != nil {
-			return err
-		}
-
-		_, err = io.WriteString(w, `</body></html>`)
+	h.mu.Lock()
+	events, err := h.events, h.eventsError
+	h.mu.Unlock()
+	if err != nil {
 		return err
-	})}
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	data := struct{ Production bool }{*productionFlag}
+	err = indexHTML.Execute(w, data)
+	if err != nil {
+		return err
+	}
+
+	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
+	if err != nil {
+		return err
+	}
+	returnURL := req.RequestURI
+
+	// Render the header.
+	header := component.Header{
+		CurrentUser:   authenticatedUser,
+		ReturnURL:     returnURL,
+		Notifications: h.notifications,
+	}
+	err = htmlg.RenderComponentsContext(req.Context(), w, header)
+	if err != nil {
+		return err
+	}
+
+	activity := activity{events: events}
+	err = htmlg.RenderComponents(w, activity)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `</div>`)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `</body></html>`)
+	return err
 }
 
 type activity struct {
@@ -88,9 +128,11 @@ type activity struct {
 
 func (a activity) Render() []*html.Node {
 	var nodes []*html.Node
+
 	nodes = append(nodes,
 		htmlg.DivClass("events-header", htmlg.Text(fmt.Sprintf("Today"))),
 	)
+
 	for _, e := range a.events {
 		switch e.Payload().(type) {
 		case *github.WatchEvent:
@@ -105,6 +147,7 @@ func (a activity) Render() []*html.Node {
 			}
 		}
 	}
+
 	return []*html.Node{htmlg.DivClass("activity", nodes...)}
 }
 
@@ -128,10 +171,4 @@ func (e event) Render() []*html.Node {
 		),
 	)
 	return nodes
-}
-
-func ListEventsPerformedByUser(user string, publicOnly bool, opt *github.ListOptions) ([]*github.Event, *github.Response, error) {
-	var events []*github.Event
-	err := json.NewDecoder(strings.NewReader(sampleEventsData)).Decode(&events)
-	return events, nil, err
 }
