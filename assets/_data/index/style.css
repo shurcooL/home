@@ -25,6 +25,9 @@ div.activity {
 	color: #bbb;
 	margin-bottom: 6px;
 }
+.activity div.events-header:not(:first-child) {
+	margin-top: 30px;
+}
 .activity div.event {
 	padding-top: 16px;
 	padding-bottom: 16px;

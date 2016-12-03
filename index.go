@@ -97,6 +97,11 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return err
 	}
 
+	/*err = html.Render(w, htmlg.H1(htmlg.Text("Activity")))
+	if err != nil {
+		return err
+	}*/
+
 	activity := activity{Events: events, ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool}
 	err = htmlg.RenderComponents(w, activity)
 	if err != nil {
@@ -136,7 +141,7 @@ func (a activity) Render() []*html.Node {
 		}{
 			{Text: "Today", End: now.Truncate(24 * time.Hour).Add(24 * time.Hour)},
 			{Text: "Yesterday", End: now.Truncate(24 * time.Hour)},
-			{Text: "This week", End: timeutil.StartOfWeek(now).Add(7 * 24 * time.Hour)},
+			{Text: "This week", End: now.Truncate(24 * time.Hour).Add(-24 * time.Hour)},
 			{Text: "Last week", End: timeutil.StartOfWeek(now)},
 			{Text: "Earlier", End: timeutil.StartOfWeek(now).Add(-7 * 24 * time.Hour)},
 		}
@@ -247,6 +252,13 @@ func (a activity) Render() []*html.Node {
 				Action:     "starred",
 			}
 
+		case *github.CreateEvent:
+			displayEvent = event{
+				basicEvent: &basicEvent,
+				Icon:       octiconssvg.GitBranch,
+				Action:     fmt.Sprintf("created %v in", *p.RefType),
+				//*p.Ref
+			}
 		case *github.DeleteEvent:
 			displayEvent = event{
 				basicEvent: &basicEvent,
