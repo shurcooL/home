@@ -281,9 +281,7 @@ func (a activity) Render() []*html.Node {
 			continue
 		}
 
-		for _, n := range displayEvent.Render() {
-			nodes = append(nodes, n)
-		}
+		nodes = append(nodes, displayEvent.Render()...)
 	}
 
 	return []*html.Node{htmlg.DivClass("activity", nodes...)}
