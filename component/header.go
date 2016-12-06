@@ -60,7 +60,6 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	font-size: 14px;
 	margin-top: 30px;
 	margin-bottom: 30px;
-	/*background-color: #e0e0e0;*/
 }
 
 .header a {
