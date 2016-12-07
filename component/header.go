@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
@@ -12,26 +13,31 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// Header is a header component that displays current user and notifications.
 type Header struct {
-	MaxWidth      int
 	CurrentUser   users.User
 	ReturnURL     string
 	Notifications notifications.Service
 }
 
-func (h Header) containerStyle() string {
-	switch h.MaxWidth {
-	case 0:
-		return "margin-bottom: 20px; text-align: right; height: 18px; font-size: 12px;"
-	default:
-		return fmt.Sprintf("max-width: %dpx; margin: 0 auto 20px auto; text-align: right; height: 18px; font-size: 12px;", h.MaxWidth)
-	}
-}
-
+// RenderContext implements htmlg.ComponentContext.
 func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	// TODO: Make this much nicer.
 	/*
-		<div style="text-align: right; margin-bottom: 20px; height: 18px; font-size: 12px;">
+		<style type="text/css">...</style>
+
+		<div class="header">
+			<a href="/">Logo{}</a>
+
+			<ul class="nav">
+				<li class="nav"><a href="/blog">Blog</a></li>
+				<li class="nav smaller"><a href="/idiomatic-go">Idiomatic Go</a></li>
+				<li class="nav"><a href="/talks">Talks</a></li>
+				<li class="nav"><a href="/projects">Projects</a></li>
+				<li class="nav"><a href="/resume">Resume</a></li>
+				<li class="nav"><a href="/about">About</a></li>
+			</ul>
+
 			{{if h.CurrentUser.ID}}
 				Notifications{Unread: h.Notifications.Count() > 0}
 				<a class="topbar-avatar" href="{{h.CurrentUser.HTMLURL}}" tabindex=-1>
@@ -44,11 +50,60 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 		</div>
 	*/
 
-	div := &html.Node{
-		Type: html.ElementNode, Data: atom.Div.String(),
-		Attr: []html.Attribute{{Key: atom.Style.String(), Val: h.containerStyle()}},
+	style := &html.Node{
+		Type: html.ElementNode, Data: atom.Style.String(),
+		Attr: []html.Attribute{{Key: atom.Type.String(), Val: "text/css"}},
 	}
+	style.AppendChild(htmlg.Text(`
+.header {
+	font-family: sans-serif;
+	font-size: 14px;
+	margin-top: 30px;
+	margin-bottom: 30px;
+}
 
+.header a {
+	color: black;
+	text-decoration: none;
+	font-weight: bold;
+}
+.header a:hover {
+	color: #4183c4;
+}
+
+.header ul.nav {
+	display: inline-block;
+	margin-top: 0;
+	margin-bottom: 0;
+	padding-left: 0;
+}
+.header li.nav {
+	display: inline-block;
+	margin-left: 20px;
+}
+.header .nav.smaller {
+	font-size: smaller;
+}
+
+.header .user {
+	float: right;
+	padding-top: 8px;
+}`))
+
+	div := htmlg.DivClass("header")
+
+	div.AppendChild(a("/", Logo{}.Render()...))
+
+	div.AppendChild(htmlg.ULClass("nav",
+		htmlg.LIClass("nav", htmlg.A("Blog", "/blog")),
+		htmlg.LIClass("nav smaller", htmlg.A("Idiomatic Go", "/idiomatic-go")),
+		htmlg.LIClass("nav", htmlg.A("Talks", "/talks")),
+		htmlg.LIClass("nav", htmlg.A("Projects", "/projects")),
+		htmlg.LIClass("nav", htmlg.A("Resume", "/resume")),
+		htmlg.LIClass("nav", htmlg.A("About", "/about")),
+	))
+
+	userSpan := htmlg.SpanClass("user")
 	if h.CurrentUser.ID != 0 {
 		{ // Notifications icon.
 			n, err := h.Notifications.Count(ctx, nil)
@@ -65,7 +120,7 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 			for _, n := range (Notifications{Unread: n > 0}).Render() {
 				span.AppendChild(n)
 			}
-			div.AppendChild(span)
+			userSpan.AppendChild(span)
 		}
 
 		{ // TODO: topbar-avatar component.
@@ -88,21 +143,22 @@ height: 18px;
 vertical-align: top;`},
 				},
 			})
-			div.AppendChild(a)
+			userSpan.AppendChild(a)
 		}
 
 		signOut := PostButton{Action: "/logout", Text: "Sign out", ReturnURL: h.ReturnURL}
 		for _, n := range signOut.Render() {
-			div.AppendChild(n)
+			userSpan.AppendChild(n)
 		}
 	} else {
 		signInViaGitHub := PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: h.ReturnURL}
 		for _, n := range signInViaGitHub.Render() {
-			div.AppendChild(n)
+			userSpan.AppendChild(n)
 		}
 	}
+	div.AppendChild(userSpan)
 
-	return []*html.Node{div}
+	return []*html.Node{style, div}
 }
 
 // Notifications is an icon for displaying if user has unread notifications.
@@ -111,12 +167,15 @@ type Notifications struct {
 	Unread bool
 }
 
+// Render implements htmlg.Component.
 func (n Notifications) Render() []*html.Node {
 	a := &html.Node{
 		Type: html.ElementNode, Data: atom.A.String(),
 		Attr: []html.Attribute{
-			{Key: atom.Class.String(), Val: "notifications"}, // TODO: Factor in that CSS class's declaration block, and :hover selector.
 			{Key: atom.Href.String(), Val: "/notifications"},
+			{Key: atom.Style.String(), Val: `display: inline-block;
+vertical-align: top;
+position: relative;`},
 		},
 	}
 	a.AppendChild(octiconssvg.Bell())
@@ -139,4 +198,54 @@ top: -6px;`},
 		a.AppendChild(notificationsUnread)
 	}
 	return []*html.Node{a}
+}
+
+// Logo is a logo component.
+type Logo struct{}
+
+// Render implements htmlg.Component.
+func (Logo) Render() []*html.Node {
+	// THINK: Notifications embeds the <a> element inside, Logo does not. Make it consistent?
+	svg := &html.Node{
+		Type: html.ElementNode, Data: atom.Svg.String(),
+		Attr: []html.Attribute{
+			{Key: "xmlns", Val: "http://www.w3.org/2000/svg"},
+			{Key: "viewBox", Val: "0 0 200 200"},
+			{Key: atom.Width.String(), Val: "32"},
+			{Key: atom.Height.String(), Val: "32"},
+			{Key: atom.Style.String(), Val: `fill: currentColor;
+stroke: currentColor;
+vertical-align: middle;`}, // THINK: Is this right scope?
+		},
+	}
+	svg.AppendChild(&html.Node{
+		Type: html.ElementNode, Data: "circle",
+		Attr: []html.Attribute{
+			{Key: "cx", Val: "100"},
+			{Key: "cy", Val: "100"},
+			{Key: "r", Val: "90"},
+			{Key: "stroke-width", Val: "20"},
+			{Key: "fill", Val: "none"},
+		},
+	})
+	svg.AppendChild(&html.Node{
+		Type: html.ElementNode, Data: "circle",
+		Attr: []html.Attribute{
+			{Key: "cx", Val: "100"},
+			{Key: "cy", Val: "100"},
+			{Key: "r", Val: "60"},
+		},
+	})
+	return []*html.Node{svg}
+}
+
+func a(href string, nodes ...*html.Node) *html.Node {
+	a := &html.Node{
+		Type: html.ElementNode, Data: atom.A.String(),
+		Attr: []html.Attribute{{Key: atom.Href.String(), Val: href}},
+	}
+	for _, n := range nodes {
+		a.AppendChild(n)
+	}
+	return a
 }

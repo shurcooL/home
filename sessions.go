@@ -300,11 +300,11 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 				return nil, errors.New("state doesn't match")
 			}
 
-			token, err := githubConfig.Exchange(oauth2.NoContext, req.FormValue("code"))
+			token, err := githubConfig.Exchange(req.Context(), req.FormValue("code"))
 			if err != nil {
 				return nil, err
 			}
-			tc := githubConfig.Client(oauth2.NoContext, token)
+			tc := githubConfig.Client(req.Context(), token)
 			gh := github.NewClient(tc)
 
 			user, _, err := gh.Users.Get("")

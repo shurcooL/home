@@ -12,12 +12,10 @@ import (
 
 	"github.com/shurcooL/go/httpstoppable"
 	"github.com/shurcooL/home/assets"
-	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/reactions/emojis"
-	"golang.org/x/net/html"
 	"golang.org/x/net/webdav"
 )
 
@@ -74,6 +72,10 @@ func run() error {
 	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler(userContentHandler.Upload)})
 	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(userContentHandler.Serve)}))
 
+	indexHandler := initIndex(notifications, users)
+
+	initAbout(notifications, users)
+
 	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
 		return err
@@ -88,47 +90,14 @@ func run() error {
 	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
 
 	assetsHandler := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
-	//http.Handle("/assets/", http.StripPrefix("/assets", fileServer)) // TODO.
+	http.Handle("/assets/", assetsHandler)
+
 	initResume(assetsHandler, reactions, notifications, users)
 
-	initIdiomaticGo(assetsHandler, issuesService, notifications, users)
+	initIdiomaticGo(issuesService, notifications, users)
 
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
-	indexPath := filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "index.html")
-	indexHandler := userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
-		if req.Method != "GET" {
-			return httputil.MethodError{Allowed: []string{"GET"}}
-		}
-		authenticatedUser, err := users.GetAuthenticated(req.Context())
-		if err != nil {
-			return err
-		}
-		f, err := os.Open(indexPath)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		indexHTML, err := html.Parse(f)
-		if err != nil {
-			return err
-		}
-		{
-			returnURL := req.RequestURI
-
-			header := component.Header{
-				MaxWidth:      800,
-				CurrentUser:   authenticatedUser,
-				ReturnURL:     returnURL,
-				Notifications: notifications,
-			}
-			div := header.RenderContext(req.Context())[0]
-
-			indexHTML.FirstChild.LastChild.InsertBefore(div, indexHTML.FirstChild.LastChild.FirstChild)
-		}
-
-		return html.Render(w, indexHTML)
-	})}
 	staticFiles := httpgzip.FileServer(
 		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
 		httpgzip.FileServerOptions{

@@ -96,22 +96,12 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		line-height: initial;
 		color: #373a3c;
 	}
-
-	/* TODO: Factor out, this is same as in index.html style. */
-	.notifications {
-		display: inline-block;
-		vertical-align: top;
-		position: relative;
-	}
-	.notifications:hover {
-		color: #4183c4;
-		fill: currentColor;
-	}
 </style>`,
 	}
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
+	opt.BodyPre = `<div style="max-width: 800px; margin: 0 auto 100px auto;">`
 	opt.BodyTop = func(req *http.Request) ([]htmlg.ComponentContext, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())
 		if err != nil {

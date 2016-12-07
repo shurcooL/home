@@ -65,24 +65,15 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		background-color: #fff;
 		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
-
-	/* TODO: Factor out, this is same as in index.html style. */
-	.notifications {
-		display: inline-block;
-		vertical-align: top;
-		position: relative;
-	}
-	.notifications:hover {
-		color: #4183c4;
-		fill: currentColor;
-	}
 </style>`,
 		BodyPre: `{{/* Override create issue button to only show up for shurcooL as New Blog Post button. */}}
 {{define "create-issue"}}
 	{{if and (eq .CurrentUser.ID 1924134) (eq .CurrentUser.Domain "github.com")}}
 		<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">New Blog Post</button></div>
 	{{end}}
-{{end}}`,
+{{end}}
+
+<div style="max-width: 800px; margin: 0 auto 100px auto;">`,
 	}
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics

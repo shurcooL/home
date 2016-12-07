@@ -104,7 +104,7 @@ func (h *talksHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 			return err
 		}
 
-		io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto;">`)
+		io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
 
 		authenticatedUser, err := h.users.GetAuthenticated(req.Context())
 		if err != nil {
@@ -305,7 +305,7 @@ var talksDirHTML = template.Must(template.New("").Parse(`<html>
 			.rootHeading {
 				margin: 20px 0;
 				padding: 0;
-				color: #375EAB;
+				color: rgb(35, 35, 35);
 				font-weight: bold;
 			}
 			h1 {
@@ -336,28 +336,6 @@ var talksDirHTML = template.Must(template.New("").Parse(`<html>
 			dl,
 			dd {
 				font-size: 14px;
-			}
-
-			/* TODO: Factor out, this is same as in home/style.css. */
-			.notifications {
-				display: inline-block;
-				vertical-align: top;
-				position: relative;
-			}
-			.notifications:hover {
-				color: #4183c4;
-				fill: currentColor;
-			}
-			.notifications-unread {
-				display: inline-block;
-				width: 10px;
-				height: 10px;
-				background-color: #4183c4;
-				border: 2px solid white;
-				border-radius: 50%;
-				position: absolute;
-				right: -4px;
-				top: -6px;
 			}
 		</style>
 		{{if .Production}}` + googleAnalytics + `{{end}}

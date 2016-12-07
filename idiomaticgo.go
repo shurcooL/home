@@ -24,7 +24,7 @@ var idiomaticGoHTML = template.Must(template.New("").Parse(`<html>
 	</head>
 	<body>`))
 
-func initIdiomaticGo(assets http.Handler, issues issues.Service, notifications notifications.Service, usersService users.Service) {
+func initIdiomaticGo(issues issues.Service, notifications notifications.Service, usersService users.Service) {
 	http.Handle("/idiomatic-go", userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httputil.MethodError{Allowed: []string{"GET"}}
@@ -52,6 +52,4 @@ func initIdiomaticGo(assets http.Handler, issues issues.Service, notifications n
 		_, err = io.WriteString(w, `</body></html>`)
 		return err
 	})})
-	http.Handle("/assets/idiomaticgo/idiomaticgo.js", assets)
-	http.Handle("/assets/idiomaticgo/style.css", assets)
 }

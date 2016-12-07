@@ -1,3 +1,7 @@
+body {
+	margin: 20px;
+}
+
 /* This is needed to make anchor visible... Can be cleaned up. */
 .markdown-header-anchor {
 	margin-left: -30px;
@@ -5,28 +9,6 @@
 }
 .black-link a, .black-link a:focus, .black-link a:hover {
 	color: #373a3c;
-}
-
-/* TODO: Factor out, this is same as in home/style.css. */
-.notifications {
-	display: inline-block;
-	vertical-align: top;
-	position: relative;
-}
-.notifications:hover {
-	color: #4183c4;
-	fill: currentColor;
-}
-.notifications-unread {
-	display: inline-block;
-	width: 10px;
-	height: 10px;
-	background-color: #4183c4;
-	border: 2px solid white;
-	border-radius: 50%;
-	position: absolute;
-	right: -4px;
-	top: -6px;
 }
 
 div.reactable-container {

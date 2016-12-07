@@ -1,0 +1,23 @@
+body {
+	margin: 20px;
+	font-family: sans-serif;
+	font-size: 16px;
+	color: rgb(35, 35, 35);
+}
+a {
+	color: #4183c4;
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+a.blue {
+	color: rgb(138, 178, 219);
+}
+a.blue:hover {
+	color: #4183c4;
+}
+
+.mr8 {
+	margin-right: 8px;
+}
