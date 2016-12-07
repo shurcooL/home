@@ -30,11 +30,11 @@ var Assets = func() http.FileSystem {
 	fs := vfsgen۰FS{
 		"/": &vfsgen۰DirInfo{
 			name:    "/",
-			modTime: mustUnmarshalTextTime("2016-10-20T08:27:51Z"),
+			modTime: mustUnmarshalTextTime("0001-01-01T00:00:00Z"),
 		},
 		"/static": &vfsgen۰DirInfo{
 			name:    "static",
-			modTime: mustUnmarshalTextTime("2016-10-20T08:27:51Z"),
+			modTime: mustUnmarshalTextTime("2016-12-03T07:42:57Z"),
 		},
 		"/static/slides.js": &vfsgen۰CompressedFileInfo{
 			name:             "slides.js",
@@ -52,7 +52,7 @@ var Assets = func() http.FileSystem {
 		},
 		"/templates": &vfsgen۰DirInfo{
 			name:    "templates",
-			modTime: mustUnmarshalTextTime("2016-10-20T08:27:51Z"),
+			modTime: mustUnmarshalTextTime("2016-12-03T07:42:57Z"),
 		},
 		"/templates/action.tmpl": &vfsgen۰CompressedFileInfo{
 			name:             "action.tmpl",
