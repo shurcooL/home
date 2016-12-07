@@ -26,8 +26,8 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 	/*
 		<style type="text/css">...</style>
 
-		<div class="header">
-			<a href="/">Logo{}</a>
+		<header class="header">
+			Logo{}
 
 			<ul class="nav">
 				<li class="nav"><a href="/blog">Blog</a></li>
@@ -47,7 +47,7 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 			{{else}}
 				PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: h.ReturnURL}
 			{{end}}
-		</div>
+		</header>
 	*/
 
 	style := &html.Node{
@@ -55,46 +55,51 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 		Attr: []html.Attribute{{Key: atom.Type.String(), Val: "text/css"}},
 	}
 	style.AppendChild(htmlg.Text(`
-.header {
+header.header {
 	font-family: sans-serif;
 	font-size: 14px;
 	margin-top: 30px;
 	margin-bottom: 30px;
 }
 
-.header a {
+header.header a {
 	color: black;
 	text-decoration: none;
 	font-weight: bold;
 }
-.header a:hover {
+header.header a:hover {
 	color: #4183c4;
 }
 
-.header ul.nav {
+header.header ul.nav {
 	display: inline-block;
 	margin-top: 0;
 	margin-bottom: 0;
 	padding-left: 0;
 }
-.header li.nav {
+header.header li.nav {
 	display: inline-block;
 	margin-left: 20px;
 }
-.header .nav.smaller {
+header.header .nav.smaller {
 	font-size: smaller;
 }
 
-.header .user {
+header.header .user {
 	float: right;
 	padding-top: 8px;
 }`))
 
-	div := htmlg.DivClass("header")
+	header := &html.Node{
+		Type: html.ElementNode, Data: atom.Header.String(),
+		Attr: []html.Attribute{{Key: atom.Class.String(), Val: "header"}},
+	}
 
-	div.AppendChild(a("/", Logo{}.Render()...))
+	for _, n := range (Logo{}).Render() {
+		header.AppendChild(n)
+	}
 
-	div.AppendChild(htmlg.ULClass("nav",
+	header.AppendChild(htmlg.ULClass("nav",
 		htmlg.LIClass("nav", htmlg.A("Blog", "/blog")),
 		htmlg.LIClass("nav smaller", htmlg.A("Idiomatic Go", "/idiomatic-go")),
 		htmlg.LIClass("nav", htmlg.A("Talks", "/talks")),
@@ -156,12 +161,13 @@ vertical-align: top;`},
 			userSpan.AppendChild(n)
 		}
 	}
-	div.AppendChild(userSpan)
+	header.AppendChild(userSpan)
 
-	return []*html.Node{style, div}
+	return []*html.Node{style, header}
 }
 
 // Notifications is an icon for displaying if user has unread notifications.
+// It links to "/notifications".
 type Notifications struct {
 	// Unread is whether the user has unread notifications.
 	Unread bool
@@ -200,12 +206,18 @@ top: -6px;`},
 	return []*html.Node{a}
 }
 
-// Logo is a logo component.
+// Logo is a logo component. It links to "/".
 type Logo struct{}
 
 // Render implements htmlg.Component.
 func (Logo) Render() []*html.Node {
-	// THINK: Notifications embeds the <a> element inside, Logo does not. Make it consistent?
+	a := &html.Node{
+		Type: html.ElementNode, Data: atom.A.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Href.String(), Val: "/"},
+			{Key: atom.Style.String(), Val: "display: inline-block;"},
+		},
+	}
 	svg := &html.Node{
 		Type: html.ElementNode, Data: atom.Svg.String(),
 		Attr: []html.Attribute{
@@ -236,16 +248,6 @@ vertical-align: middle;`}, // THINK: Is this right scope?
 			{Key: "r", Val: "60"},
 		},
 	})
-	return []*html.Node{svg}
-}
-
-func a(href string, nodes ...*html.Node) *html.Node {
-	a := &html.Node{
-		Type: html.ElementNode, Data: atom.A.String(),
-		Attr: []html.Attribute{{Key: atom.Href.String(), Val: href}},
-	}
-	for _, n := range nodes {
-		a.AppendChild(n)
-	}
-	return a
+	a.AppendChild(svg)
+	return []*html.Node{a}
 }
