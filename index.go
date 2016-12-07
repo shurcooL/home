@@ -97,11 +97,6 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return err
 	}
 
-	/*err = html.Render(w, htmlg.H1(htmlg.Text("Activity")))
-	if err != nil {
-		return err
-	}*/
-
 	activity := activity{Events: events, ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool}
 	err = htmlg.RenderComponents(w, activity)
 	if err != nil {
@@ -200,7 +195,6 @@ func (a activity) Render() []*html.Node {
 		case *github.IssueCommentEvent:
 			e := event{
 				basicEvent: &basicEvent,
-				//Icon:       octiconssvg.CommentDiscussion,
 			}
 			switch *p.Action {
 			case "created":
@@ -213,7 +207,6 @@ func (a activity) Render() []*html.Node {
 		case *github.PullRequestReviewCommentEvent:
 			e := event{
 				basicEvent: &basicEvent,
-				//Icon:       octiconssvg.CommentDiscussion,
 			}
 			switch *p.Action {
 			case "created":
@@ -226,8 +219,7 @@ func (a activity) Render() []*html.Node {
 		case *github.CommitCommentEvent:
 			displayEvent = event{
 				basicEvent: &basicEvent,
-				//Icon:       octiconssvg.CommentDiscussion,
-				Action: "commented on a commit in",
+				Action:     "commented on a commit in",
 			}
 
 		case *github.PushEvent:
@@ -303,14 +295,14 @@ type event struct {
 }
 
 func (e event) Render() []*html.Node {
-	var eventClass = "event"
+	divClass := "event"
 	if e.WIP {
-		eventClass += " wip"
+		divClass += " wip"
 	}
 	if e.Icon == nil {
 		e.Icon = func() *html.Node { return &html.Node{Type: html.TextNode} }
 	}
-	div := htmlg.DivClass(eventClass,
+	div := htmlg.DivClass(divClass,
 		htmlg.SpanClass("icon", e.Icon()),
 		htmlg.Text(e.Actor),
 		htmlg.Text(" "),
