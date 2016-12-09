@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -97,7 +98,11 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return err
 	}
 
-	activity := activity{Events: events, ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool}
+	activity := activity{
+		Events:  events,
+		ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool,
+	}
+	activity.ShowRaw, _ = strconv.ParseBool(req.URL.Query().Get("raw"))
 	err = htmlg.RenderComponents(w, activity)
 	if err != nil {
 		return err
@@ -114,7 +119,8 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 
 type activity struct {
 	Events  []*github.Event
-	ShowWIP bool // ShowWIP controls whether all events are displayed, including WIP ones, and full raw payload as titles.
+	ShowWIP bool // Controls whether all events are displayed, including WIP ones.
+	ShowRaw bool // Controls whether full raw payload are available as titles.
 }
 
 func (a activity) Render() []*html.Node {
@@ -161,7 +167,7 @@ func (a activity) Render() []*html.Node {
 			Container: "github.com/" + *e.Repo.Name,
 		}
 
-		if a.ShowWIP {
+		if a.ShowRaw {
 			// For debugging, include full raw payload as a title.
 			var raw bytes.Buffer
 			err := json.Indent(&raw, (*e.RawPayload), "", "\t")
@@ -213,7 +219,7 @@ func (a activity) Render() []*html.Node {
 				e.Action = "commented on a pull request in"
 			default:
 				basicEvent.WIP = true
-				e.Action = fmt.Sprintf("%v comment on an issue in", *p.Action)
+				e.Action = fmt.Sprintf("%v on a pull request in", *p.Action)
 			}
 			displayEvent = e
 		case *github.CommitCommentEvent:
@@ -284,8 +290,8 @@ type basicEvent struct {
 	Actor     string
 	Container string // URL of container without schema. E.g., "github.com/user/repo".
 
-	Raw string // Raw event for debugging.
 	WIP bool   // Whether this event's presentation is a work in progress.
+	Raw string // Raw event for debugging to display as title. Empty string excludes it.
 }
 
 type event struct {
@@ -302,13 +308,17 @@ func (e event) Render() []*html.Node {
 	if e.Icon == nil {
 		e.Icon = func() *html.Node { return &html.Node{Type: html.TextNode} }
 	}
+	var actionAttr []html.Attribute
+	if e.Raw != "" {
+		actionAttr = []html.Attribute{{Key: atom.Title.String(), Val: e.Raw}}
+	}
 	div := htmlg.DivClass(divClass,
 		htmlg.SpanClass("icon", e.Icon()),
 		htmlg.Text(e.Actor),
 		htmlg.Text(" "),
 		&html.Node{
 			Type: html.ElementNode, Data: atom.Span.String(),
-			Attr:       []html.Attribute{{Key: atom.Title.String(), Val: e.Raw}},
+			Attr:       actionAttr,
 			FirstChild: htmlg.Text(e.Action),
 		},
 		htmlg.Text(" "),
