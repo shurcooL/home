@@ -19,9 +19,11 @@ var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
 // with the OAuth application credentials.
 var unauthenticatedGitHubClient = func() *github.Client {
 	var transport http.RoundTripper
-	transport = &github.UnauthenticatedRateLimitedTransport{
-		ClientID:     githubConfig.ClientID,
-		ClientSecret: githubConfig.ClientSecret,
+	if githubConfig.ClientID != "" {
+		transport = &github.UnauthenticatedRateLimitedTransport{
+			ClientID:     githubConfig.ClientID,
+			ClientSecret: githubConfig.ClientSecret,
+		}
 	}
 	transport = &httpcache.Transport{
 		Transport:           transport,
