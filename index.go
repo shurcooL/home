@@ -182,21 +182,50 @@ func (a activity) Render() []*html.Node {
 		case *github.IssuesEvent:
 			e := event{
 				basicEvent: &basicEvent,
+				Icon:       octiconssvg.IssueOpened,
 				Action:     fmt.Sprintf("%v an issue in", *p.Action),
+			}
+			details := iconLinkDetails{
+				Text:  *p.Issue.Title,
+				URL:   *p.Issue.HTMLURL,
+				Black: true,
 			}
 			switch *p.Action {
 			case "opened":
-				e.Icon = octiconssvg.IssueOpened
+				details.Icon = octiconssvg.IssueOpened
+				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case "closed":
-				e.Icon = octiconssvg.IssueClosed
+				details.Icon = octiconssvg.IssueClosed
+				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 			}
+			e.Details = details
 			displayEvent = e
 		case *github.PullRequestEvent:
-			displayEvent = event{
+			e := event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitPullRequest,
-				Action:     fmt.Sprintf("%v a pull request in", *p.Action),
 			}
+			details := iconLinkDetails{
+				Text:  *p.PullRequest.Title,
+				URL:   *p.PullRequest.HTMLURL,
+				Black: true,
+			}
+			switch {
+			case !*p.PullRequest.Merged && *p.PullRequest.State == "open":
+				e.Action = "opened a pull request in"
+				details.Icon = octiconssvg.GitPullRequest
+				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+			case !*p.PullRequest.Merged && *p.PullRequest.State == "closed":
+				e.Action = "closed a pull request in"
+				details.Icon = octiconssvg.GitPullRequest
+				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+			case *p.PullRequest.Merged:
+				e.Action = "merged a pull request in"
+				details.Icon = octiconssvg.GitMerge
+				details.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
+			}
+			e.Details = details
+			displayEvent = e
 
 		case *github.IssueCommentEvent:
 			e := event{
@@ -240,7 +269,11 @@ func (a activity) Render() []*html.Node {
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.RepoForked,
 				Action:     "forked",
-				//p.Forkee.FullName
+				Details: iconLinkDetails{
+					Text: "github.com/" + *p.Forkee.FullName,
+					URL:  *p.Forkee.HTMLURL,
+					Icon: octiconssvg.Repo,
+				},
 			}
 
 		case *github.WatchEvent:
@@ -255,14 +288,19 @@ func (a activity) Render() []*html.Node {
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitBranch,
 				Action:     fmt.Sprintf("created %v in", *p.RefType),
-				//*p.Ref
+				Details: codeDetails{
+					Text: *p.Ref,
+				},
 			}
 		case *github.DeleteEvent:
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Trashcan,
 				Action:     fmt.Sprintf("deleted %v in", *p.RefType),
-				//*p.Ref
+				Details: codeDetails{
+					Text:          *p.Ref,
+					Strikethrough: true,
+				},
 			}
 
 		default:
@@ -296,8 +334,9 @@ type basicEvent struct {
 
 type event struct {
 	*basicEvent
-	Icon   func() *html.Node
-	Action string
+	Icon    func() *html.Node
+	Action  string
+	Details htmlg.Component
 }
 
 func (e event) Render() []*html.Node {
@@ -332,7 +371,65 @@ func (e event) Render() []*html.Node {
 			FirstChild: htmlg.Text(humanize.Time(e.Time)),
 		},
 	)
+	if e.Details != nil {
+		for _, n := range e.Details.Render() {
+			div.AppendChild(n)
+		}
+	}
 	return []*html.Node{div}
 }
 
 const timeFormat = "Jan _2, 2006, 3:04 PM MST"
+
+// TODO: Dedup.
+//
+// RGB represents a 24-bit color without alpha channel.
+type RGB struct {
+	R, G, B uint8
+}
+
+// HexString returns a hexadecimal color string. For example, "#ff0000" for red.
+func (c RGB) HexString() string {
+	return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B)
+}
+
+type iconLinkDetails struct {
+	Text  string
+	URL   string
+	Black bool // Black link.
+	Icon  func() *html.Node
+	Color RGB
+}
+
+func (d iconLinkDetails) Render() []*html.Node {
+	icon := htmlg.Span(d.Icon())
+	icon.Attr = append(icon.Attr, html.Attribute{
+		Key: atom.Style.String(), Val: fmt.Sprintf("color: %s; margin-right: 4px;", d.Color.HexString()),
+	})
+	link := htmlg.A(d.Text, template.URL(d.URL))
+	if d.Black {
+		link.Attr = append(link.Attr, html.Attribute{Key: atom.Class.String(), Val: "black"})
+	}
+	div := htmlg.DivClass("details",
+		icon,
+		link,
+	)
+	return []*html.Node{div}
+}
+
+type codeDetails struct {
+	Text          string
+	Strikethrough bool
+}
+
+func (d codeDetails) Render() []*html.Node {
+	code := &html.Node{Type: html.ElementNode, Data: atom.Code.String()}
+	if d.Strikethrough {
+		code.Attr = append(code.Attr, html.Attribute{Key: atom.Style.String(), Val: "text-decoration: line-through; color: gray;"})
+	}
+	code.AppendChild(htmlg.Text(d.Text))
+	div := htmlg.DivClass("details",
+		code,
+	)
+	return []*html.Node{div}
+}
