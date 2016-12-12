@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,9 +43,9 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 	}
 	go func() {
 		for {
-			events, _, err := unauthenticatedGitHubClient.Activity.ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 100})
+			events, commits, err := fetchActivity()
 			h.mu.Lock()
-			h.events, h.eventsError = events, err
+			h.events, h.commits, h.activityError = events, commits, err
 			h.mu.Unlock()
 
 			time.Sleep(time.Minute)
@@ -53,13 +54,35 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 	return userMiddleware{httputil.ErrorHandler(h.ServeHTTP)}
 }
 
+func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, error) {
+	events, _, err := unauthenticatedGitHubClient.Activity.ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 100})
+	if err != nil {
+		return nil, nil, err
+	}
+	commits := make(map[string]*github.RepositoryCommit)
+	for _, e := range events {
+		switch p := e.Payload().(type) {
+		case *github.PushEvent:
+			for _, c := range p.Commits {
+				rc, err := fetchCommit(*c.URL)
+				if err != nil {
+					return nil, nil, fmt.Errorf("fetchCommit: %v", err)
+				}
+				commits[*c.SHA] = rc
+			}
+		}
+	}
+	return events, commits, nil
+}
+
 type indexHandler struct {
 	notifications notifications.Service
 	users         users.Service
 
-	mu          sync.Mutex
-	events      []*github.Event
-	eventsError error
+	mu            sync.Mutex
+	events        []*github.Event
+	commits       map[string]*github.RepositoryCommit // SHA -> Commit.
+	activityError error
 }
 
 func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
@@ -68,7 +91,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	}
 
 	h.mu.Lock()
-	events, err := h.events, h.eventsError
+	events, commits, err := h.events, h.commits, h.activityError
 	h.mu.Unlock()
 	if err != nil {
 		return err
@@ -100,6 +123,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 
 	activity := activity{
 		Events:  events,
+		Commits: commits,
 		ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool,
 	}
 	activity.ShowRaw, _ = strconv.ParseBool(req.URL.Query().Get("raw"))
@@ -119,6 +143,8 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 
 type activity struct {
 	Events  []*github.Event
+	Commits map[string]*github.RepositoryCommit // SHA -> Commit.
+
 	ShowWIP bool // Controls whether all events are displayed, including WIP ones.
 	ShowRaw bool // Controls whether full raw payload are available as titles.
 }
@@ -258,10 +284,18 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case *github.PushEvent:
+			var commits []*github.RepositoryCommit
+			for _, c := range p.Commits {
+				commits = append(commits, a.Commits[*c.SHA])
+			}
+
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
 				Action:     "pushed to",
+				Details: &commitsDetails{
+					Commits: commits,
+				},
 			}
 
 		case *github.ForkEvent:
@@ -438,4 +472,71 @@ border-radius: 3px;`
 		code,
 	)
 	return []*html.Node{div}
+}
+
+type commitsDetails struct {
+	Commits []*github.RepositoryCommit
+}
+
+func (d commitsDetails) Render() []*html.Node {
+	var nodes []*html.Node
+
+	for _, c := range d.Commits {
+		img := &html.Node{
+			Type: html.ElementNode, Data: atom.Img.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Src.String(), Val: *c.Author.AvatarURL},
+				{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 6px;"},
+			},
+		}
+		a := &html.Node{
+			Type: html.ElementNode, Data: atom.A.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Href.String(), Val: *c.HTMLURL},
+				{Key: atom.Style.String(), Val: "margin-right: 6px;"},
+			},
+			FirstChild: &html.Node{
+				Type: html.ElementNode, Data: atom.Code.String(),
+				FirstChild: htmlg.Text(shortSHA(*c.SHA)),
+			},
+		}
+		span := &html.Node{
+			Type: html.ElementNode, Data: atom.Span.String(),
+			Attr:       []html.Attribute{},
+			FirstChild: htmlg.Text(firstParagraph(*c.Commit.Message)),
+		}
+
+		div := htmlg.Div(img, a, span)
+		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
+		nodes = append(nodes, div)
+	}
+
+	div := htmlg.DivClass("details", nodes...)
+	return []*html.Node{div}
+}
+
+func shortSHA(sha string) string {
+	return sha[:8]
+}
+
+// firstParagraph returns the first paragraph of text s.
+func firstParagraph(s string) string {
+	i := strings.Index(s, "\n\n")
+	if i == -1 {
+		return s
+	}
+	return s[:i]
+}
+
+func fetchCommit(commitAPIURL string) (*github.RepositoryCommit, error) {
+	req, err := unauthenticatedGitHubClient.NewRequest("GET", commitAPIURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	commit := new(github.RepositoryCommit)
+	_, err = unauthenticatedGitHubClient.Do(req, commit)
+	if err != nil {
+		return nil, err
+	}
+	return commit, nil
 }
