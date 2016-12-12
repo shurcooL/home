@@ -423,9 +423,15 @@ type codeDetails struct {
 }
 
 func (d codeDetails) Render() []*html.Node {
-	code := &html.Node{Type: html.ElementNode, Data: atom.Code.String()}
+	codeStyle := `padding: 2px 6px;
+background-color: rgb(232, 241, 246);
+border-radius: 3px;`
 	if d.Strikethrough {
-		code.Attr = append(code.Attr, html.Attribute{Key: atom.Style.String(), Val: "text-decoration: line-through; color: gray;"})
+		codeStyle += `text-decoration: line-through; color: gray;`
+	}
+	code := &html.Node{
+		Type: html.ElementNode, Data: atom.Code.String(),
+		Attr: []html.Attribute{{Key: atom.Style.String(), Val: codeStyle}},
 	}
 	code.AppendChild(htmlg.Text(d.Text))
 	div := htmlg.DivClass("details",

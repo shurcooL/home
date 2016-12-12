@@ -60,8 +60,3 @@ div.activity {
 .activity div.details a.black:hover {
 	color: #4183c4;
 }
-.activity div.details code {
-	padding: 2px 6px;
-	background-color: rgb(232, 241, 246);
-	border-radius: 3px;
-}
