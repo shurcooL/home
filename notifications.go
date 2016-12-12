@@ -85,7 +85,9 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		},
 		// TODO: Update and unify octicons.css.
 		//       But be mindful of https://github.com/shurcooL/notifications/blob/c38c34c46358723f7f329fa80f9a4ae105b60985/notifications.go#L39.
-		HeadPre: `<link href="//cdnjs.cloudflare.com/ajax/libs/octicons/3.1.0/octicons.css" media="all" rel="stylesheet" type="text/css" />
+		HeadPre: `<title>Notifications</title>
+<link href="/icon.png" rel="icon" type="image/png">
+<link href="//cdnjs.cloudflare.com/ajax/libs/octicons/3.1.0/octicons.css" media="all" rel="stylesheet" type="text/css" />
 <style type="text/css">
 	body {
 		margin: 20px;

@@ -17,6 +17,7 @@ import (
 var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape": func(s string) template.HTML { return template.HTML(s) }}).Parse(`<html>
 	<head>
 		<title>Dmitri Shuralyov - Resume</title>
+		<link href="/icon.png" rel="icon" type="image/png">
 		<link href="/blog/assets/octicons/octicons.min.css" rel="stylesheet" type="text/css">
 		<link href="/resume.css" rel="stylesheet" type="text/css">
 

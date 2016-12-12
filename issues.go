@@ -50,7 +50,8 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 				},
 			}
 		},
-		HeadPre: `<style type="text/css">
+		HeadPre: `<link href="/icon.png" rel="icon" type="image/png">
+<style type="text/css">
 	body {
 		margin: 20px;
 		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;

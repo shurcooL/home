@@ -41,7 +41,9 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 				},
 			}
 		},
-		HeadPre: `<style type="text/css">
+		HeadPre: `<title>Dmitri Shuralyov - Blog</title>
+<link href="/icon.png" rel="icon" type="image/png">
+<style type="text/css">
 	body {
 		margin: 20px;
 		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;

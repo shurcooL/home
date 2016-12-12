@@ -283,6 +283,7 @@ var titlesContext = present.Context{
 var talksDirHTML = template.Must(template.New("").Parse(`<html>
 	<head>
 		<title>Dmitri Shuralyov - Talks</title>
+		<link href="/icon.png" rel="icon" type="image/png">
 		<style type="text/css">
 			body {
 				margin: 20px;
