@@ -167,9 +167,9 @@ func (a activity) Render() []*html.Node {
 			Text string
 			End  time.Time
 		}{
-			{Text: "Today", End: now.Truncate(24 * time.Hour).Add(24 * time.Hour)},
-			{Text: "Yesterday", End: now.Truncate(24 * time.Hour)},
-			{Text: "This week", End: now.Truncate(24 * time.Hour).Add(-24 * time.Hour)},
+			{Text: "Today", End: timeutil.StartOfDay(now).Add(24 * time.Hour)},
+			{Text: "Yesterday", End: timeutil.StartOfDay(now)},
+			{Text: "This week", End: timeutil.StartOfDay(now).Add(-24 * time.Hour)},
 			{Text: "Last week", End: timeutil.StartOfWeek(now)},
 			{Text: "Earlier", End: timeutil.StartOfWeek(now).Add(-7 * 24 * time.Hour)},
 		}
