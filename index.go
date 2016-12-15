@@ -91,16 +91,9 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return httputil.MethodError{Allowed: []string{"GET"}}
 	}
 
-	h.mu.Lock()
-	events, commits, err := h.events, h.commits, h.activityError
-	h.mu.Unlock()
-	if err != nil {
-		return err
-	}
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	data := struct{ Production bool }{*productionFlag}
-	err = indexHTML.Execute(w, data)
+	err := indexHTML.Execute(w, data)
 	if err != nil {
 		return err
 	}
@@ -122,9 +115,13 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return err
 	}
 
+	h.mu.Lock()
+	events, commits, activityError := h.events, h.commits, h.activityError
+	h.mu.Unlock()
 	activity := activity{
 		Events:  events,
 		Commits: commits,
+		Error:   activityError,
 		ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool,
 	}
 	activity.ShowRaw, _ = strconv.ParseBool(req.URL.Query().Get("raw"))
@@ -145,6 +142,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 type activity struct {
 	Events  []*github.Event
 	Commits map[string]*github.RepositoryCommit // SHA -> Commit.
+	Error   error
 
 	ShowWIP bool // Controls whether all events are displayed, including WIP ones.
 	ShowRaw bool // Controls whether full raw payload are available as titles.
@@ -152,6 +150,15 @@ type activity struct {
 
 func (a activity) Render() []*html.Node {
 	var nodes []*html.Node
+
+	if a.Error != nil {
+		nodes = append(nodes,
+			htmlg.H3(htmlg.Text("Activity Error")),
+			htmlg.P(htmlg.Text(a.Error.Error())),
+		)
+
+		return []*html.Node{htmlg.DivClass("activity", nodes...)}
+	}
 
 	if len(a.Events) == 0 {
 		nodes = append(nodes,
