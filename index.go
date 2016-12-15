@@ -66,6 +66,9 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 		case *github.PushEvent:
 			for _, c := range p.Commits {
 				rc, err := fetchCommit(*c.URL)
+				if err, ok := err.(*github.ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
+					continue
+				}
 				if err != nil {
 					return nil, nil, fmt.Errorf("fetchCommit: %v", err)
 				}
@@ -294,7 +297,20 @@ func (a activity) Render() []*html.Node {
 		case *github.PushEvent:
 			var commits []*github.RepositoryCommit
 			for _, c := range p.Commits {
-				commits = append(commits, a.Commits[*c.SHA])
+				commit := a.Commits[*c.SHA]
+				if commit == nil {
+					avatarURL := "https://secure.gravatar.com/avatar?d=mm&f=y&s=96"
+					if *c.Author.Email == "shurcooL@gmail.com" {
+						// TODO: Can we de-dup this in a good way? It's in users service.
+						avatarURL = "https://dmitri.shuralyov.com/avatar-s.jpg"
+					}
+					commit = &github.RepositoryCommit{
+						SHA:    c.SHA,
+						Commit: &github.Commit{Message: c.Message},
+						Author: &github.User{AvatarURL: &avatarURL},
+					}
+				}
+				commits = append(commits, commit)
 			}
 
 			displayEvent = event{
@@ -490,31 +506,35 @@ func (d commitsDetails) Render() []*html.Node {
 	var nodes []*html.Node
 
 	for _, c := range d.Commits {
-		img := &html.Node{
+		avatar := &html.Node{
 			Type: html.ElementNode, Data: atom.Img.String(),
 			Attr: []html.Attribute{
 				{Key: atom.Src.String(), Val: *c.Author.AvatarURL},
 				{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 6px;"},
 			},
 		}
-		a := &html.Node{
-			Type: html.ElementNode, Data: atom.A.String(),
-			Attr: []html.Attribute{
-				{Key: atom.Href.String(), Val: *c.HTMLURL},
-				{Key: atom.Style.String(), Val: "margin-right: 6px;"},
-			},
-			FirstChild: &html.Node{
-				Type: html.ElementNode, Data: atom.Code.String(),
-				FirstChild: htmlg.Text(shortSHA(*c.SHA)),
-			},
+		sha := &html.Node{
+			Type: html.ElementNode, Data: atom.Code.String(),
+			FirstChild: htmlg.Text(shortSHA(*c.SHA)),
 		}
-		span := &html.Node{
+		if c.HTMLURL != nil {
+			sha = &html.Node{
+				Type: html.ElementNode, Data: atom.A.String(),
+				Attr: []html.Attribute{
+					{Key: atom.Href.String(), Val: *c.HTMLURL},
+				},
+				FirstChild: sha,
+			}
+		}
+		message := &html.Node{
 			Type: html.ElementNode, Data: atom.Span.String(),
-			Attr:       []html.Attribute{},
+			Attr: []html.Attribute{
+				{Key: atom.Style.String(), Val: "margin-left: 6px;"},
+			},
 			FirstChild: htmlg.Text(firstParagraph(*c.Commit.Message)),
 		}
 
-		div := htmlg.Div(img, a, span)
+		div := htmlg.Div(avatar, sha, message)
 		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
 		nodes = append(nodes, div)
 	}
