@@ -2,11 +2,10 @@ package httphandler
 
 import (
 	"net/http"
-	"strconv"
 
+	"github.com/gorilla/schema"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/issues"
-	"github.com/shurcooL/reactions"
 )
 
 // Issues is an API handler for issues.Service.
@@ -18,9 +17,15 @@ func (h Issues) List(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return httputil.MethodError{Allowed: []string{"GET"}}
 	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	opt := issues.IssueListOptions{State: issues.StateFilter(q.Get("OptState"))}
+	var q struct {
+		RepoURI  string
+		OptState issues.StateFilter
+	}
+	if err := schema.NewDecoder().Decode(&q, req.URL.Query()); err != nil {
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
+	}
+	repo := issues.RepoSpec{URI: q.RepoURI}
+	opt := issues.IssueListOptions{State: q.OptState}
 	is, err := h.Issues.List(req.Context(), repo, opt)
 	if err != nil {
 		return err
@@ -32,9 +37,15 @@ func (h Issues) Count(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return httputil.MethodError{Allowed: []string{"GET"}}
 	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	opt := issues.IssueListOptions{State: issues.StateFilter(q.Get("OptState"))}
+	var q struct {
+		RepoURI  string
+		OptState issues.StateFilter
+	}
+	if err := schema.NewDecoder().Decode(&q, req.URL.Query()); err != nil {
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
+	}
+	repo := issues.RepoSpec{URI: q.RepoURI}
+	opt := issues.IssueListOptions{State: q.OptState}
 	count, err := h.Issues.Count(req.Context(), repo, opt)
 	if err != nil {
 		return err
@@ -46,26 +57,26 @@ func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return httputil.MethodError{Allowed: []string{"GET"}}
 	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
-	if err != nil {
+	var q struct {
+		RepoURI string
+		ID      uint64
+		Opt     *struct {
+			Start  int
+			Length int
+		}
+	}
+	if err := schema.NewDecoder().Decode(&q, req.URL.Query()); err != nil {
 		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
+	repo := issues.RepoSpec{URI: q.RepoURI}
 	var opt *issues.ListOptions
-	if s, err := strconv.Atoi(q.Get("Opt.Start")); err == nil {
-		if opt == nil {
-			opt = new(issues.ListOptions)
+	if q.Opt != nil {
+		opt = &issues.ListOptions{
+			Start:  q.Opt.Start,
+			Length: q.Opt.Length,
 		}
-		opt.Start = s
 	}
-	if l, err := strconv.Atoi(q.Get("Opt.Length")); err == nil {
-		if opt == nil {
-			opt = new(issues.ListOptions)
-		}
-		opt.Length = l
-	}
-	is, err := h.Issues.ListComments(req.Context(), repo, id, opt)
+	is, err := h.Issues.ListComments(req.Context(), repo, q.ID, opt)
 	if err != nil {
 		return err
 	}
@@ -76,28 +87,22 @@ func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "POST" {
 		return httputil.MethodError{Allowed: []string{"POST"}}
 	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
-	if err != nil {
+	var q struct {
+		RepoURI string
+		ID      uint64
+	}
+	if err := schema.NewDecoder().Decode(&q, req.URL.Query()); err != nil {
 		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
+	repo := issues.RepoSpec{URI: q.RepoURI}
 	if err := req.ParseForm(); err != nil {
 		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
 	var cr issues.CommentRequest
-	cr.ID, err = strconv.ParseUint(req.PostForm.Get("ID"), 10, 64) // TODO: Automate this conversion process.
-	if err != nil {
+	if err := schema.NewDecoder().Decode(&cr, req.PostForm); err != nil {
 		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
-	if body := req.PostForm["Body"]; len(body) != 0 {
-		cr.Body = &body[0]
-	}
-	if reaction := req.PostForm["Reaction"]; len(reaction) != 0 {
-		r := reactions.EmojiID(reaction[0])
-		cr.Reaction = &r
-	}
-	is, err := h.Issues.EditComment(req.Context(), repo, id, cr)
+	is, err := h.Issues.EditComment(req.Context(), repo, q.ID, cr)
 	if err != nil {
 		return err
 	}
