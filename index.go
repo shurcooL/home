@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -234,6 +235,9 @@ func (a activity) Render() []*html.Node {
 			case "closed":
 				details.Icon = octiconssvg.IssueClosed
 				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+			default:
+				log.Println("activity.Render: unsupported *github.IssuesEvent action:", *p.Action)
+				details.Icon = octiconssvg.IssueOpened
 			}
 			e.Details = details
 			displayEvent = e
@@ -260,6 +264,9 @@ func (a activity) Render() []*html.Node {
 				e.Action = "merged a pull request in"
 				details.Icon = octiconssvg.GitMerge
 				details.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
+			default:
+				log.Println("activity.Render: unsupported *github.PullRequestEvent action:", *p.Action)
+				details.Icon = octiconssvg.GitPullRequest
 			}
 			e.Details = details
 			displayEvent = e
@@ -451,11 +458,13 @@ func (c RGB) HexString() string {
 	return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B)
 }
 
+// iconLinkDetails are details consisting of an icon and a text link.
+// Icon must be not nil.
 type iconLinkDetails struct {
 	Text  string
 	URL   string
-	Black bool // Black link.
-	Icon  func() *html.Node
+	Black bool              // Black link.
+	Icon  func() *html.Node // Must be not nil.
 	Color RGB
 }
 
