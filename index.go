@@ -235,6 +235,9 @@ func (a activity) Render() []*html.Node {
 			case "closed":
 				details.Icon = octiconssvg.IssueClosed
 				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+			case "reopened":
+				details.Icon = octiconssvg.IssueReopened
+				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			default:
 				log.Println("activity.Render: unsupported *github.IssuesEvent action:", *p.Action)
 				details.Icon = octiconssvg.IssueOpened
