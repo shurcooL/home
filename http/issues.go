@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/shurcooL/go/ctxhttp"
 	"github.com/shurcooL/issues"
 )
 
@@ -30,7 +31,7 @@ type Issues struct {
 	issuesURL *url.URL
 }
 
-func (i *Issues) List(_ context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
+func (i *Issues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
 	u := url.URL{
 		Path: "list",
 		RawQuery: url.Values{
@@ -38,7 +39,7 @@ func (i *Issues) List(_ context.Context, repo issues.RepoSpec, opt issues.IssueL
 			"OptState": {string(opt.State)},
 		}.Encode(),
 	}
-	resp, err := http.Get(i.issuesURL.ResolveReference(&u).String())
+	resp, err := ctxhttp.Get(ctx, nil, i.issuesURL.ResolveReference(&u).String())
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func (*Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.I
 	return issues.Issue{}, fmt.Errorf("Get: not implemented")
 }
 
-func (i *Issues) ListComments(_ context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Comment, error) {
+func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Comment, error) {
 	u := url.URL{
 		Path: "list-comments",
 		RawQuery: url.Values{
@@ -68,7 +69,7 @@ func (i *Issues) ListComments(_ context.Context, repo issues.RepoSpec, id uint64
 			"ID":      {fmt.Sprint(id)},
 		}.Encode(),
 	}
-	resp, err := http.Get(i.issuesURL.ResolveReference(&u).String())
+	resp, err := ctxhttp.Get(ctx, nil, i.issuesURL.ResolveReference(&u).String())
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func (*Issues) Edit(_ context.Context, repo issues.RepoSpec, id uint64, ir issue
 	return issues.Issue{}, nil, fmt.Errorf("Edit: not implemented")
 }
 
-func (i *Issues) EditComment(_ context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
+func (i *Issues) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
 	u := url.URL{
 		Path: "edit-comment",
 		RawQuery: url.Values{
@@ -115,7 +116,7 @@ func (i *Issues) EditComment(_ context.Context, repo issues.RepoSpec, id uint64,
 	if cr.Reaction != nil {
 		data.Set("Reaction", string(*cr.Reaction))
 	}
-	resp, err := http.PostForm(i.issuesURL.ResolveReference(&u).String(), data)
+	resp, err := ctxhttp.PostForm(ctx, nil, i.issuesURL.ResolveReference(&u).String(), data)
 	if err != nil {
 		return issues.Comment{}, err
 	}
