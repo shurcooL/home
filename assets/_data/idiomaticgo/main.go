@@ -28,7 +28,7 @@ func main() {
 }
 
 func setup() {
-	issuesService := http.Issues{}
+	issuesService := http.NewIssues("", "")
 	reactionsService := idiomaticgo.IssuesReactions{Issues: issuesService}
 	authenticatedUser, err := http.Users{}.GetAuthenticated(context.TODO())
 	if err != nil {

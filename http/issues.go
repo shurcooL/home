@@ -11,18 +11,34 @@ import (
 	"github.com/shurcooL/issues"
 )
 
-// Issues implements issues.Service remotely over HTTP.
-type Issues struct{}
+// NewIssues creates a client that implements issues.Service remotely over HTTP.
+// scheme and host can be empty strings to target local service.
+func NewIssues(scheme, host string) *Issues {
+	return &Issues{
+		issuesURL: &url.URL{
+			Scheme: scheme,
+			Host:   host,
+			Path:   "/api/" + "issues/",
+		},
+	}
+}
 
-func (Issues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
+// Issues implements issues.Service remotely over HTTP.
+// Use NewIssues for creation, zero value of Issues is unfit for use.
+type Issues struct {
+	// Base URL for API requests, including common "issues/" prefix for issues endpoints.
+	issuesURL *url.URL
+}
+
+func (i *Issues) List(_ context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
 	u := url.URL{
-		Path: "/api/issues/list",
+		Path: "list",
 		RawQuery: url.Values{
 			"RepoURI":  {repo.URI},
 			"OptState": {string(opt.State)},
 		}.Encode(),
 	}
-	resp, err := http.Get(u.String())
+	resp, err := http.Get(i.issuesURL.ResolveReference(&u).String())
 	if err != nil {
 		return nil, err
 	}
@@ -36,23 +52,23 @@ func (Issues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueLi
 	return is, err
 }
 
-func (Issues) Count(_ context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
+func (*Issues) Count(_ context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
 	return 0, fmt.Errorf("Count: not implemented")
 }
 
-func (Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
+func (*Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
 	return issues.Issue{}, fmt.Errorf("Get: not implemented")
 }
 
-func (Issues) ListComments(_ context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Comment, error) {
+func (i *Issues) ListComments(_ context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Comment, error) {
 	u := url.URL{
-		Path: "/api/issues/list-comments",
+		Path: "list-comments",
 		RawQuery: url.Values{
 			"RepoURI": {repo.URI},
 			"ID":      {fmt.Sprint(id)},
 		}.Encode(),
 	}
-	resp, err := http.Get(u.String())
+	resp, err := http.Get(i.issuesURL.ResolveReference(&u).String())
 	if err != nil {
 		return nil, err
 	}
@@ -66,25 +82,25 @@ func (Issues) ListComments(_ context.Context, repo issues.RepoSpec, id uint64, o
 	return cs, err
 }
 
-func (Issues) ListEvents(_ context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Event, error) {
+func (*Issues) ListEvents(_ context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Event, error) {
 	return nil, fmt.Errorf("ListEvents: not implemented")
 }
 
-func (Issues) Create(_ context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+func (*Issues) Create(_ context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
 	return issues.Issue{}, fmt.Errorf("Create: not implemented")
 }
 
-func (Issues) CreateComment(_ context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
+func (*Issues) CreateComment(_ context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
 	return issues.Comment{}, fmt.Errorf("CreateComment: not implemented")
 }
 
-func (Issues) Edit(_ context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
+func (*Issues) Edit(_ context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
 	return issues.Issue{}, nil, fmt.Errorf("Edit: not implemented")
 }
 
-func (Issues) EditComment(_ context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
+func (i *Issues) EditComment(_ context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
 	u := url.URL{
-		Path: "/api/issues/edit-comment",
+		Path: "edit-comment",
 		RawQuery: url.Values{
 			"RepoURI": {repo.URI},
 			"ID":      {fmt.Sprint(id)},
@@ -99,7 +115,7 @@ func (Issues) EditComment(_ context.Context, repo issues.RepoSpec, id uint64, cr
 	if cr.Reaction != nil {
 		data.Set("Reaction", string(*cr.Reaction))
 	}
-	resp, err := http.PostForm(u.String(), data)
+	resp, err := http.PostForm(i.issuesURL.ResolveReference(&u).String(), data)
 	if err != nil {
 		return issues.Comment{}, err
 	}

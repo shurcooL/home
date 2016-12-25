@@ -65,10 +65,10 @@ func init() {
 	http.Handle("/api/issues/list-comments", httputil.ErrorHandler(issuesAPIHandler.ListComments))
 }
 
-var issuesClient = httpapi.Issues{}
+var issuesClient = httpapi.NewIssues("", "")
 
 func ExampleIssues() {
-	issuesClient := httpapi.Issues{}
+	issuesClient := httpapi.NewIssues("http", "localhost:8080")
 
 	// Now you can use any of issuesClient methods.
 

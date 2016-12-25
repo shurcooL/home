@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	_ issues.Service        = http.Issues{}
+	_ issues.Service        = http.NewIssues("", "")
 	_ notifications.Service = http.Notifications{}
 	_ reactions.Service     = http.Reactions{}
 	_ users.Service         = http.Users{}
