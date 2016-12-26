@@ -29,6 +29,20 @@ func (h Issues) List(w http.ResponseWriter, req *http.Request) error {
 	return httputil.JSONResponse{V: is}
 }
 
+func (h Issues) Count(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return httputil.MethodError{Allowed: []string{"GET"}}
+	}
+	q := req.URL.Query() // TODO: Automate this conversion process.
+	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
+	opt := issues.IssueListOptions{State: issues.StateFilter(q.Get("OptState"))}
+	count, err := h.Issues.Count(req.Context(), repo, opt)
+	if err != nil {
+		return err
+	}
+	return httputil.JSONResponse{V: count}
+}
+
 func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return httputil.MethodError{Allowed: []string{"GET"}}

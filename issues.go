@@ -28,6 +28,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 	// Register HTTP API endpoint.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.List)})
+	http.Handle("/api/issues/count", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.Count)})
 	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.ListComments)})
 	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.EditComment)})
 

@@ -62,6 +62,7 @@ func init() {
 	// Register the issues API handler.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	http.Handle("/api/issues/list", httputil.ErrorHandler(issuesAPIHandler.List))
+	http.Handle("/api/issues/count", httputil.ErrorHandler(issuesAPIHandler.Count))
 	http.Handle("/api/issues/list-comments", httputil.ErrorHandler(issuesAPIHandler.ListComments))
 }
 
@@ -115,6 +116,20 @@ func ExampleIssues_List() {
 	// 		"Replies": 2
 	// 	}
 	// ]
+}
+
+func ExampleIssues_Count() {
+	count, err := issuesClient.Count(context.Background(), issues.RepoSpec{URI: "example.org/repo"}, issues.IssueListOptions{
+		State: issues.StateFilter(issues.AllStates),
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	printJSON(count)
+
+	// Output:
+	// 1
 }
 
 func ExampleIssues_ListComments() {

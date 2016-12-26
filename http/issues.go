@@ -53,8 +53,26 @@ func (i *Issues) List(ctx context.Context, repo issues.RepoSpec, opt issues.Issu
 	return is, err
 }
 
-func (*Issues) Count(_ context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
-	return 0, fmt.Errorf("Count: not implemented")
+func (i *Issues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
+	u := url.URL{
+		Path: "count",
+		RawQuery: url.Values{
+			"RepoURI":  {repo.URI},
+			"OptState": {string(opt.State)},
+		}.Encode(),
+	}
+	resp, err := ctxhttp.Get(ctx, nil, i.issuesURL.ResolveReference(&u).String())
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return 0, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var count uint64
+	err = json.NewDecoder(resp.Body).Decode(&count)
+	return count, err
 }
 
 func (*Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
