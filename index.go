@@ -278,12 +278,23 @@ func (a activity) Render() []*html.Node {
 			e := event{
 				basicEvent: &basicEvent,
 			}
-			switch *p.Action {
-			case "created":
-				e.Action = "commented on an issue in"
-			default:
-				basicEvent.WIP = true
-				e.Action = fmt.Sprintf("%v on an issue in", *p.Action)
+			switch p.Issue.PullRequestLinks {
+			case nil: // Issue.
+				switch *p.Action {
+				case "created":
+					e.Action = "commented on an issue in"
+				default:
+					basicEvent.WIP = true
+					e.Action = fmt.Sprintf("%v on an issue in", *p.Action)
+				}
+			default: // Pull Request.
+				switch *p.Action {
+				case "created":
+					e.Action = "commented on a pull request in"
+				default:
+					basicEvent.WIP = true
+					e.Action = fmt.Sprintf("%v on a pull request in", *p.Action)
+				}
 			}
 			displayEvent = e
 		case *github.PullRequestReviewCommentEvent:
