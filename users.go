@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
-	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/users"
 )
 
@@ -35,26 +34,6 @@ var unauthenticatedGitHubClient = func() *github.Client {
 
 func newUsersService() users.Service {
 	return Users{gh: unauthenticatedGitHubClient}
-}
-
-type usersAPIHandler struct {
-	users users.Service
-}
-
-func (h usersAPIHandler) GetAuthenticatedSpec(w http.ResponseWriter, req *http.Request) error {
-	us, err := h.users.GetAuthenticatedSpec(req.Context())
-	if err != nil {
-		return err
-	}
-	return httputil.JSONResponse{V: us}
-}
-
-func (h usersAPIHandler) GetAuthenticated(w http.ResponseWriter, req *http.Request) error {
-	u, err := h.users.GetAuthenticated(req.Context())
-	if err != nil {
-		return err
-	}
-	return httputil.JSONResponse{V: u}
 }
 
 // Users implements users.Service.

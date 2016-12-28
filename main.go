@@ -12,6 +12,7 @@ import (
 
 	"github.com/shurcooL/go/httpstoppable"
 	"github.com/shurcooL/home/assets"
+	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
@@ -59,11 +60,12 @@ func run() error {
 	http.Handle("/login", sessionsHandler)
 	http.Handle("/sessions", sessionsHandler)
 
-	usersAPIHandler := usersAPIHandler{users: users}
+	usersAPIHandler := httphandler.Users{Users: users}
 	http.Handle("/api/userspec", userMiddleware{httputil.ErrorHandler(usersAPIHandler.GetAuthenticatedSpec)})
 	http.Handle("/api/user", userMiddleware{httputil.ErrorHandler(usersAPIHandler.GetAuthenticated)})
 
-	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler(reactionsAPIHandler{reactions}.ServeHTTP)})
+	reactionsAPIHandler := httphandler.Reactions{Reactions: reactions}
+	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler(reactionsAPIHandler.GetOrToggle)})
 
 	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
