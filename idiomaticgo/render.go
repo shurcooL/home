@@ -15,6 +15,7 @@ import (
 	resumecomponent "github.com/shurcooL/resume/component"
 	"github.com/shurcooL/sanitized_anchor_name"
 	"github.com/shurcooL/users"
+	"golang.org/x/net/html"
 )
 
 const idiomaticGoURI = "dmitri.shuralyov.com/idiomatic-go"
@@ -42,7 +43,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 	}
 
 	// TODO: This is messy rendering code, clean it up.
-	fmt.Fprint(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 60px;">`)
+	io.WriteString(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 60px;">`)
 	w.Write(github_flavored_markdown.Markdown([]byte(`# Idiomatic Go
 
 When reviewing Go code, if I run into a situation where I see an unnecessary deviation from
@@ -64,14 +65,16 @@ It'll show up here when I add an "Accepted" label.`)))
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(w, "<ul>")
+	io.WriteString(w, "<ul>")
 	for _, issue := range is {
 		if issue.State != issues.OpenState || !accepted(issue) {
 			continue
 		}
-		fmt.Fprint(w, "<li>"+htmlg.Render(htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))))+"</li>")
+		io.WriteString(w, "<li>")
+		html.Render(w, htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))))
+		io.WriteString(w, "</li>")
 	}
-	fmt.Fprint(w, "</ul>")
+	io.WriteString(w, "</ul>")
 
 	openProposals := 0
 	for _, issue := range is {
@@ -82,7 +85,7 @@ It'll show up here when I add an "Accepted" label.`)))
 	if openProposals > 0 {
 		w.Write(github_flavored_markdown.Markdown([]byte(fmt.Sprintf("There are also [%d open proposals](/issues/dmitri.shuralyov.com/idiomatic-go) being considered.", openProposals))))
 	}
-	fmt.Fprint(w, `</div>`)
+	io.WriteString(w, `</div>`)
 
 	for _, issue := range is {
 		if issue.State != issues.OpenState || !accepted(issue) {
@@ -98,14 +101,14 @@ It'll show up here when I add an "Accepted" label.`)))
 		}
 		comment := cs[commentID]
 
-		fmt.Fprint(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 12px;">`)
+		io.WriteString(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 12px;">`)
 		w.Write(github_flavored_markdown.Markdown([]byte("### " + issue.Title)))
-		fmt.Fprint(w, `</div>`)
-		fmt.Fprint(w, `<div class="markdown-body" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px;">`)
+		io.WriteString(w, `</div>`)
+		io.WriteString(w, `<div class="markdown-body" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px;">`)
 		w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
-		fmt.Fprint(w, `</div>`)
+		io.WriteString(w, `</div>`)
 
-		fmt.Fprint(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
+		io.WriteString(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
 		err = htmlg.RenderComponentsContext(ctx, w, resumecomponent.ReactionsBar{
 			Reactions:    IssuesReactions{Issues: issuesService},
 			ReactableURL: ReactableURL,
@@ -115,10 +118,10 @@ It'll show up here when I add an "Accepted" label.`)))
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
+		io.WriteString(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
 		fmt.Fprintf(w, `<a href="/issues/%v/%v" style="line-height: 30px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%v comments</a>`, idiomaticGoURI, issue.ID, issue.Replies)
-		fmt.Fprint(w, `</span>`)
-		fmt.Fprint(w, `</div>`)
+		io.WriteString(w, `</span>`)
+		io.WriteString(w, `</div>`)
 	}
 
 	_, err = io.WriteString(w, `</div>`)
