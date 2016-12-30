@@ -10,7 +10,8 @@ import (
 )
 
 // IssuesReactions implements reactions.Service on top of issues.Service,
-// specifically for use by Idiomatic Go page. It hardcodes comment ID value of 0.
+// specifically for use by Idiomatic Go page.
+// It hardcodes comment ID value of 0, see issuesReactionsCommentID.
 type IssuesReactions struct {
 	Issues issues.Service
 }
@@ -49,4 +50,12 @@ func (ir IssuesReactions) Toggle(ctx context.Context, uri string, id string, tr 
 		return nil, err
 	}
 	return comment.Reactions, nil
+}
+
+type fetchedReactions struct {
+	Reactions []reactions.Reaction
+}
+
+func (f fetchedReactions) Get(ctx context.Context, uri string, id string) ([]reactions.Reaction, error) {
+	return f.Reactions, nil
 }
