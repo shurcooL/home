@@ -52,7 +52,8 @@ func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
-	is, err := h.Issues.ListComments(req.Context(), repo, id, nil)
+	var opt *issues.ListOptions // TODO: Decode options.
+	is, err := h.Issues.ListComments(req.Context(), repo, id, opt)
 	if err != nil {
 		return err
 	}

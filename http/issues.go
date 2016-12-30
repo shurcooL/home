@@ -79,13 +79,14 @@ func (*Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.I
 	return issues.Issue{}, fmt.Errorf("Get: not implemented")
 }
 
-func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Comment, error) {
+func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
 	u := url.URL{
 		Path: "list-comments",
 		RawQuery: url.Values{
 			"RepoURI": {repo.URI},
 			"ID":      {fmt.Sprint(id)},
 		}.Encode(),
+		// TODO: Encode and send opt.
 	}
 	resp, err := ctxhttp.Get(ctx, nil, i.issuesURL.ResolveReference(&u).String())
 	if err != nil {
@@ -101,7 +102,7 @@ func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint
 	return cs, err
 }
 
-func (*Issues) ListEvents(_ context.Context, repo issues.RepoSpec, id uint64, opt interface{}) ([]issues.Event, error) {
+func (*Issues) ListEvents(_ context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
 	return nil, fmt.Errorf("ListEvents: not implemented")
 }
 
