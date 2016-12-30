@@ -91,7 +91,7 @@ It'll show up here when I add an "Accepted" label.`)))
 		if issue.State != issues.OpenState || !accepted(issue) {
 			continue
 		}
-		cs, err := issuesService.ListComments(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issue.ID, nil)
+		cs, err := issuesService.ListComments(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issue.ID, &issues.ListOptions{Start: 0, Length: 1})
 		if err != nil {
 			return err
 		}

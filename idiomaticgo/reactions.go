@@ -24,14 +24,14 @@ func (ir IssuesReactions) Get(ctx context.Context, uri string, id string) ([]rea
 	if err != nil {
 		return nil, err
 	}
-	cs, err := ir.Issues.ListComments(ctx, issues.RepoSpec{URI: uri}, issueID, nil)
+	cs, err := ir.Issues.ListComments(ctx, issues.RepoSpec{URI: uri}, issueID, &issues.ListOptions{Start: issuesReactionsCommentID, Length: 1})
 	if err != nil {
 		return nil, err
 	}
-	if issuesReactionsCommentID >= len(cs) {
+	if len(cs) == 0 {
 		return nil, fmt.Errorf("id not found")
 	}
-	comment := cs[issuesReactionsCommentID]
+	comment := cs[0]
 	return comment.Reactions, nil
 }
 
