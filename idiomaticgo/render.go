@@ -16,6 +16,7 @@ import (
 	"github.com/shurcooL/sanitized_anchor_name"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 const idiomaticGoURI = "dmitri.shuralyov.com/idiomatic-go"
@@ -102,7 +103,7 @@ It'll show up here when I add an "Accepted" label.`)))
 		comment := cs[commentID]
 
 		io.WriteString(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 12px;">`)
-		w.Write(github_flavored_markdown.Markdown([]byte("### " + issue.Title)))
+		html.Render(w, github_flavored_markdown.Header(atom.H3, issue.Title))
 		io.WriteString(w, `</div>`)
 		io.WriteString(w, `<div class="markdown-body" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px;">`)
 		w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
@@ -113,13 +114,13 @@ It'll show up here when I add an "Accepted" label.`)))
 			Reactions:    fetchedReactions{Reactions: comment.Reactions},
 			ReactableURL: ReactableURL,
 			CurrentUser:  authenticatedUser,
-			ID:           fmt.Sprintf("%v", issue.ID), // TODO: "/0"?
+			ID:           fmt.Sprintf("%d", issue.ID), // TODO: "/0"?
 		})
 		if err != nil {
 			return err
 		}
 		io.WriteString(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
-		fmt.Fprintf(w, `<a href="/issues/%v/%v" style="line-height: 30px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%v comments</a>`, idiomaticGoURI, issue.ID, issue.Replies)
+		fmt.Fprintf(w, `<a href="/issues/%s/%d" style="line-height: 30px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%d comments</a>`, idiomaticGoURI, issue.ID, issue.Replies)
 		io.WriteString(w, `</span>`)
 		io.WriteString(w, `</div>`)
 	}
