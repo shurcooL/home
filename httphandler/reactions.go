@@ -1,7 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -30,10 +29,7 @@ func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 		if err != nil {
 			return err
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(reactions)
-		return err
+		return httputil.JSONResponse{V: reactions}
 	case "POST":
 		tr := reactions.ToggleRequest{
 			Reaction: reactions.EmojiID(req.PostForm.Get("reaction")),
@@ -42,10 +38,7 @@ func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 		if err != nil {
 			return err
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(reactions)
-		return err
+		return httputil.JSONResponse{V: reactions}
 	default:
 		panic("unreachable")
 	}
