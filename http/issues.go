@@ -80,13 +80,17 @@ func (*Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.I
 }
 
 func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
+	q := url.Values{
+		"RepoURI": {repo.URI},
+		"ID":      {fmt.Sprint(id)},
+	}
+	if opt != nil {
+		q.Set("Opt.Start", fmt.Sprint(opt.Start))
+		q.Set("Opt.Length", fmt.Sprint(opt.Length))
+	}
 	u := url.URL{
-		Path: "list-comments",
-		RawQuery: url.Values{
-			"RepoURI": {repo.URI},
-			"ID":      {fmt.Sprint(id)},
-		}.Encode(),
-		// TODO: Encode and send opt.
+		Path:     "list-comments",
+		RawQuery: q.Encode(),
 	}
 	resp, err := ctxhttp.Get(ctx, nil, i.issuesURL.ResolveReference(&u).String())
 	if err != nil {

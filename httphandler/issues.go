@@ -52,7 +52,19 @@ func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
 	}
-	var opt *issues.ListOptions // TODO: Decode options.
+	var opt *issues.ListOptions
+	if s, err := strconv.Atoi(q.Get("Opt.Start")); err == nil {
+		if opt == nil {
+			opt = new(issues.ListOptions)
+		}
+		opt.Start = s
+	}
+	if l, err := strconv.Atoi(q.Get("Opt.Length")); err == nil {
+		if opt == nil {
+			opt = new(issues.ListOptions)
+		}
+		opt.Length = l
+	}
 	is, err := h.Issues.ListComments(req.Context(), repo, id, opt)
 	if err != nil {
 		return err
