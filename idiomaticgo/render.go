@@ -92,11 +92,11 @@ It'll show up here when I add an "Accepted" label.`)))
 		if issue.State != issues.OpenState || !accepted(issue) {
 			continue
 		}
-		cs, err := issuesService.ListComments(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issue.ID, &issues.ListOptions{Start: 0, Length: 1})
+		const commentID = 0
+		cs, err := issuesService.ListComments(ctx, issues.RepoSpec{URI: idiomaticGoURI}, issue.ID, &issues.ListOptions{Start: commentID, Length: 1})
 		if err != nil {
 			return err
 		}
-		const commentID = 0
 		if commentID >= len(cs) {
 			return fmt.Errorf("issue has no body")
 		}
