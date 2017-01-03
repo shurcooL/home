@@ -84,7 +84,11 @@ It'll show up here when I add an "Accepted" label.`)))
 		}
 	}
 	if openProposals > 0 {
-		w.Write(github_flavored_markdown.Markdown([]byte(fmt.Sprintf("There are also [%d open proposals](/issues/dmitri.shuralyov.com/idiomatic-go) being considered.", openProposals))))
+		html.Render(w, htmlg.P(
+			htmlg.Text("There are also "),
+			htmlg.A(fmt.Sprintf("%d open proposals", openProposals), "/issues/dmitri.shuralyov.com/idiomatic-go"),
+			htmlg.Text(" being considered."),
+		))
 	}
 	io.WriteString(w, `</div>`)
 
