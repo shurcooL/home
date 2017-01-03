@@ -66,16 +66,16 @@ It'll show up here when I add an "Accepted" label.`)))
 	if err != nil {
 		return err
 	}
-	io.WriteString(w, "<ul>")
+	var lis []*html.Node
 	for _, issue := range is {
 		if issue.State != issues.OpenState || !accepted(issue) {
 			continue
 		}
-		io.WriteString(w, "<li>")
-		html.Render(w, htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))))
-		io.WriteString(w, "</li>")
+		lis = append(lis, htmlg.LI(
+			htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))),
+		))
 	}
-	io.WriteString(w, "</ul>")
+	html.Render(w, htmlg.UL(lis...))
 
 	openProposals := 0
 	for _, issue := range is {
