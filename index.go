@@ -80,6 +80,19 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 	return events, commits, nil
 }
 
+func fetchCommit(commitAPIURL string) (*github.RepositoryCommit, error) {
+	req, err := unauthenticatedGitHubClient.NewRequest("GET", commitAPIURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	commit := new(github.RepositoryCommit)
+	_, err = unauthenticatedGitHubClient.Do(req, commit)
+	if err != nil {
+		return nil, err
+	}
+	return commit, nil
+}
+
 type indexHandler struct {
 	notifications notifications.Service
 	users         users.Service
@@ -382,6 +395,17 @@ func (a activity) Render() []*html.Node {
 				},
 			}
 
+		case *github.GollumEvent:
+			displayEvent = event{
+				basicEvent: &basicEvent,
+				Icon:       octiconssvg.Book,
+				Action:     "edited the wiki in",
+				Details: &pagesDetails{
+					Actor: e.Actor,
+					Pages: p.Pages,
+				},
+			}
+
 		default:
 			basicEvent.WIP = true
 			displayEvent = event{
@@ -579,15 +603,52 @@ func firstParagraph(s string) string {
 	return s[:i]
 }
 
-func fetchCommit(commitAPIURL string) (*github.RepositoryCommit, error) {
-	req, err := unauthenticatedGitHubClient.NewRequest("GET", commitAPIURL, nil)
-	if err != nil {
-		return nil, err
+type pagesDetails struct {
+	Actor *github.User   // Actor that acted on the pages.
+	Pages []*github.Page // Wiki pages that are affected.
+}
+
+func (d pagesDetails) Render() []*html.Node {
+	var nodes []*html.Node
+
+	for _, p := range d.Pages {
+		avatar := &html.Node{
+			Type: html.ElementNode, Data: atom.Img.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Src.String(), Val: *d.Actor.AvatarURL},
+				{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 6px;"},
+			},
+		}
+		action := &html.Node{
+			Type: html.ElementNode, Data: atom.Span.String(),
+			FirstChild: htmlg.Text(*p.Action),
+		}
+		switch *p.Action {
+		case "edited":
+			action = &html.Node{
+				Type: html.ElementNode, Data: atom.A.String(),
+				Attr: []html.Attribute{
+					{Key: atom.Href.String(), Val: "https://github.com" + *p.HTMLURL + "/_compare/" + *p.SHA + "^..." + *p.SHA},
+				},
+				FirstChild: action,
+			}
+		}
+		title := &html.Node{
+			Type: html.ElementNode, Data: atom.A.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Href.String(), Val: "https://github.com" + *p.HTMLURL},
+			},
+			FirstChild: &html.Node{
+				Type: html.ElementNode, Data: atom.Span.String(),
+				FirstChild: htmlg.Text(*p.Title),
+			},
+		}
+
+		div := htmlg.Div(avatar, action, htmlg.Text(" page "), title)
+		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
+		nodes = append(nodes, div)
 	}
-	commit := new(github.RepositoryCommit)
-	_, err = unauthenticatedGitHubClient.Do(req, commit)
-	if err != nil {
-		return nil, err
-	}
-	return commit, nil
+
+	div := htmlg.DivClass("details", nodes...)
+	return []*html.Node{div}
 }
