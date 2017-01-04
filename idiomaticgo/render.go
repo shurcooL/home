@@ -106,10 +106,10 @@ It'll show up here when I add an "Accepted" label.`)))
 		}
 		comment := cs[commentID]
 
-		io.WriteString(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 12px;">`)
+		io.WriteString(w, `<div class="markdown-body markdown-header-anchor" style="margin-bottom: 16px;">`)
 		html.Render(w, github_flavored_markdown.Header(atom.H3, issue.Title))
 		io.WriteString(w, `</div>`)
-		io.WriteString(w, `<div class="markdown-body" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px;">`)
+		io.WriteString(w, `<div class="markdown-body" style="padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 8px;">`)
 		w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
 		io.WriteString(w, `</div>`)
 
