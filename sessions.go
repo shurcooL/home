@@ -142,26 +142,6 @@ func getUser(req *http.Request) (*user, error) {
 	return u, nil // Existing user.
 }
 
-// HeaderWriter interface is used to construct an HTTP response header and trailer.
-type HeaderWriter interface {
-	// Header returns the header map that will be sent by
-	// WriteHeader. Changing the header after a call to
-	// WriteHeader (or Write) has no effect unless the modified
-	// headers were declared as trailers by setting the
-	// "Trailer" header before the call to WriteHeader (see example).
-	// To suppress implicit response headers, set their value to nil.
-	Header() http.Header
-}
-
-// SetCookie adds a Set-Cookie header to the provided HeaderWriter's headers.
-// The provided cookie must have a valid Name. Invalid cookies may be
-// silently dropped.
-func SetCookie(w HeaderWriter, cookie *http.Cookie) {
-	if v := cookie.String(); v != "" {
-		w.Header().Add("Set-Cookie", v)
-	}
-}
-
 // userMiddleware parses authentication information from request headers,
 // and sets authenticated user as a context value.
 type userMiddleware struct {
@@ -178,7 +158,7 @@ func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type handler struct {
-	handler func(w HeaderWriter, req *http.Request, user *user) ([]*html.Node, error)
+	handler func(w httputil.HeaderWriter, req *http.Request, user *user) ([]*html.Node, error)
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -264,7 +244,7 @@ type SessionsHandler struct {
 	users users.Service
 }
 
-func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
+func (h SessionsHandler) Serve(w httputil.HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
 	// Simple switch-based router for now. For a larger project, a more sophisticated router should be used.
 	switch {
 	case req.Method == "POST" && req.URL.Path == "/login/github":
@@ -275,10 +255,10 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 		}
 
 		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ascii bytes in state, so use base64.
-		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true, Secure: *productionFlag})
+		httputil.SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true, Secure: *productionFlag})
 
 		// TODO, THINK.
-		SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: *productionFlag})
+		httputil.SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: *productionFlag})
 
 		url := githubConfig.AuthCodeURL(state)
 		return nil, httputil.Redirect{URL: url}
@@ -294,7 +274,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 			if err != nil {
 				return nil, err
 			}
-			SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, MaxAge: -1})
+			httputil.SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, MaxAge: -1})
 			state := req.FormValue("state")
 			if cookie.Value != state {
 				return nil, errors.New("state doesn't match")
@@ -348,7 +328,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 			if err != nil {
 				return "", err
 			}
-			SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, MaxAge: -1})
+			httputil.SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, MaxAge: -1})
 			return sanitizeReturn(cookie.Value), nil
 		}()
 		if err != nil {
@@ -358,7 +338,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 
 		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
-		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: true, Secure: *productionFlag})
+		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: true, Secure: *productionFlag})
 		return nil, httputil.Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
@@ -368,7 +348,7 @@ func (h SessionsHandler) Serve(w HeaderWriter, req *http.Request, u *user) ([]*h
 			sessions.mu.Unlock()
 		}
 
-		SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 		return nil, httputil.Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
 
 	case req.Method == "GET" && req.URL.Path == "/login":
