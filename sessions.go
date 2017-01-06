@@ -197,6 +197,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 	case os.IsPermission(err):
+		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible.
 		if u == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",

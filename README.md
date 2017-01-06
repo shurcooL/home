@@ -18,6 +18,7 @@ Directories
 | Path                                                                  | Synopsis                                                                             |
 |-----------------------------------------------------------------------|--------------------------------------------------------------------------------------|
 | [assets](https://godoc.org/github.com/shurcooL/home/assets)           | Package assets contains assets for home.                                             |
+| [blog](https://godoc.org/github.com/shurcooL/home/blog)               | Package blog contains functionality for rendering /blog page.                        |
 | [component](https://godoc.org/github.com/shurcooL/home/component)     | Package component contains individual components that can render themselves as HTML. |
 | [http](https://godoc.org/github.com/shurcooL/home/http)               | Package http contains service implementations over HTTP.                             |
 | [httphandler](https://godoc.org/github.com/shurcooL/home/httphandler) | Package httphandler contains API handlers used by home.                              |

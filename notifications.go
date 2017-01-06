@@ -123,7 +123,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		rr := httptest.NewRecorder()
 		rr.HeaderMap = w.Header()
 		notificationsApp.ServeHTTP(rr, req)
-		if rr.Code == http.StatusUnauthorized && u == nil {
+		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible.
+		if u := req.Context().Value(userContextKey).(*user); rr.Code == http.StatusUnauthorized && u == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
 				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
