@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 
+	blogpkg "github.com/shurcooL/home/blog"
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issuesapp"
@@ -15,6 +19,18 @@ import (
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 )
+
+var blogHTML = template.Must(template.New("").Parse(`<html>
+	<head>
+		<title>Dmitri Shuralyov - Blog</title>
+		<link href="/icon.png" rel="icon" type="image/png">
+		<link href="/blog/assets/octicons/octicons.min.css" rel="stylesheet" type="text/css">
+		<link href="/blog/assets/gfm/gfm.css" rel="stylesheet" type="text/css">
+		<link href="/assets/blog/style.css" rel="stylesheet" type="text/css">
+		<script async src="/assets/blog/blog.js"></script>
+		{{if .Production}}` + googleAnalytics + `{{end}}
+	</head>
+	<body>`))
 
 // initBlog registers a blog handler with blog URI as blog content source.
 func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications notifications.Service, users users.Service) error {
@@ -130,7 +146,36 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		if req.URL.Path == "" {
 			req.URL.Path = "/"
 		}
-		issuesApp.ServeHTTP(w, req)
+		switch req.URL.Path {
+		case "/":
+			httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
+				if req.Method != "GET" {
+					return httputil.MethodError{Allowed: []string{"GET"}}
+				}
+
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				data := struct{ Production bool }{*productionFlag}
+				err := blogHTML.Execute(w, data)
+				if err != nil {
+					return err
+				}
+
+				authenticatedUser, err := users.GetAuthenticated(req.Context())
+				if err != nil {
+					return err // THINK: Should it be a fatal error or not? What about on frontend vs backend?
+				}
+				returnURL := req.RequestURI
+				err = blogpkg.RenderBodyInnerHTML(req.Context(), w, issuesService, blog, notifications, authenticatedUser, returnURL)
+				if err != nil {
+					return err
+				}
+
+				_, err = io.WriteString(w, `</body></html>`)
+				return err
+			}).ServeHTTP(w, req)
+		default:
+			issuesApp.ServeHTTP(w, req)
+		}
 	})
 	http.Handle("/blog", blogHandler)
 	http.Handle("/blog/", blogHandler)

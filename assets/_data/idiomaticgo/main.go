@@ -17,7 +17,7 @@ var document = dom.GetWindow().Document().(dom.HTMLDocument)
 func main() {
 	switch readyState := document.ReadyState(); readyState {
 	case "loading":
-		document.AddEventListener("DOMContentLoaded", false, func(_ dom.Event) {
+		document.AddEventListener("DOMContentLoaded", false, func(dom.Event) {
 			go setup()
 		})
 	case "interactive", "complete":
