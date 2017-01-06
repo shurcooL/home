@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -92,7 +93,11 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		if reqPath == "/" {
 			reqPath = "" // This is needed so that absolute URL for root view, i.e., /issues, is "/issues" and not "/issues/" because of "/issues" + "/".
 		}
-		returnURL := (&url.URL{Path: baseURI + reqPath, RawQuery: req.URL.RawQuery}).String()
+		// TODO: See if this can't be simplified to returnURL := req.RequestURI.
+		returnURL := req.RequestURI
+		if returnURL != (&url.URL{Path: baseURI + reqPath, RawQuery: req.URL.RawQuery}).String() {
+			log.Println("warning: issues returnURL != req.RequestURI:", returnURL, req)
+		}
 		header := component.Header{
 			CurrentUser:   authenticatedUser,
 			ReturnURL:     returnURL,
