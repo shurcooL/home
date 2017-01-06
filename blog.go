@@ -111,9 +111,6 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	issuesApp := issuesapp.New(onlyShurcoolCreatePosts, users, opt)
 
 	blogHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, blog))
-		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/blog"))
-
 		prefixLen := len("/blog")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
@@ -155,6 +152,8 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 				return err
 			}).ServeHTTP(w, req)
 		default:
+			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, blog))
+			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/blog"))
 			issuesApp.ServeHTTP(w, req)
 		}
 	})}

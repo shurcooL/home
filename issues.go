@@ -103,11 +103,6 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 	} {
 		repoSpec := repoSpec
 		issuesHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			req = req.WithContext(context.WithValue(req.Context(),
-				issuesapp.RepoSpecContextKey, repoSpec))
-			req = req.WithContext(context.WithValue(req.Context(),
-				issuesapp.BaseURIContextKey, "/issues/"+repoSpec.URI))
-
 			prefixLen := len("/issues/") + len(repoSpec.URI)
 			if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 				baseURL := prefix
@@ -121,6 +116,8 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 			if req.URL.Path == "" {
 				req.URL.Path = "/"
 			}
+			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, repoSpec))
+			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/issues/"+repoSpec.URI))
 			issuesApp.ServeHTTP(w, req)
 		})}
 		http.Handle("/issues/"+repoSpec.URI, issuesHandler)
