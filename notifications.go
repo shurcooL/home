@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -96,15 +95,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		if err != nil {
 			return nil, err
 		}
-		reqPath := req.URL.Path
-		if reqPath == "/" {
-			reqPath = "" // This is needed so that absolute URL for root view, i.e., /notifications, is "/notifications" and not "/notifications/" because of "/notifications" + "/".
-		}
-		// TODO: See if this can't be simplified to returnURL := req.RequestURI.
 		returnURL := req.RequestURI
-		if returnURL != (&url.URL{Path: "/notifications" + reqPath, RawQuery: req.URL.RawQuery}).String() {
-			log.Println("warning: notifications returnURL != req.RequestURI:", returnURL, req)
-		}
 		header := component.Header{
 			CurrentUser:   authenticatedUser,
 			ReturnURL:     returnURL,

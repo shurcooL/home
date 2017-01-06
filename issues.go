@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httphandler"
@@ -88,16 +86,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		if err != nil {
 			return nil, err
 		}
-		baseURI := req.Context().Value(issuesapp.BaseURIContextKey).(string)
-		reqPath := req.URL.Path
-		if reqPath == "/" {
-			reqPath = "" // This is needed so that absolute URL for root view, i.e., /issues, is "/issues" and not "/issues/" because of "/issues" + "/".
-		}
-		// TODO: See if this can't be simplified to returnURL := req.RequestURI.
 		returnURL := req.RequestURI
-		if returnURL != (&url.URL{Path: baseURI + reqPath, RawQuery: req.URL.RawQuery}).String() {
-			log.Println("warning: issues returnURL != req.RequestURI:", returnURL, req)
-		}
 		header := component.Header{
 			CurrentUser:   authenticatedUser,
 			ReturnURL:     returnURL,
