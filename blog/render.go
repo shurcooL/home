@@ -125,7 +125,7 @@ func (it iconText) Render() []*html.Node {
 		Key: atom.Style.String(), Val: "margin-right: 4px;",
 	})
 	text := htmlg.Text(it.Text)
-	return []*html.Node{htmlg.Span(icon, text)}
+	return []*html.Node{icon, text}
 }
 
 // imageText is an image with text on the right.
@@ -144,7 +144,7 @@ func (it imageText) Render() []*html.Node {
 		},
 	}
 	text := htmlg.Text(it.Text)
-	return []*html.Node{htmlg.Span(image, text)}
+	return []*html.Node{image, text}
 }
 
 type fetchedReactions struct {
