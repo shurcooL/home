@@ -105,15 +105,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	}
 	notificationsApp := notificationsapp.New(service, users, opt)
 
-	notificationsHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// TODO: Factor this out?
-		u, err := getUser(req)
-		if err == errBadAccessToken {
-			// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
-			http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
-		}
-		req = withUser(req, u)
-
+	notificationsHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		prefixLen := len("/notifications")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
@@ -141,7 +133,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		}
 		w.WriteHeader(rr.Code)
 		io.Copy(w, rr.Body)
-	})
+	})}
 	http.Handle("/notifications", notificationsHandler)
 	http.Handle("/notifications/", notificationsHandler)
 

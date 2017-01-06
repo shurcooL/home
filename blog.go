@@ -110,15 +110,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	}
 	issuesApp := issuesapp.New(onlyShurcoolCreatePosts, users, opt)
 
-	blogHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// TODO: Factor this out?
-		u, err := getUser(req)
-		if err == errBadAccessToken {
-			// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
-			http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
-		}
-		req = withUser(req, u)
-
+	blogHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, blog))
 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/blog"))
 
@@ -165,7 +157,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		default:
 			issuesApp.ServeHTTP(w, req)
 		}
-	})
+	})}
 	http.Handle("/blog", blogHandler)
 	http.Handle("/blog/", blogHandler)
 

@@ -102,15 +102,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		{URI: "dmitri.shuralyov.com/idiomatic-go"},
 	} {
 		repoSpec := repoSpec
-		issuesHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// TODO: Factor this out?
-			u, err := getUser(req)
-			if err == errBadAccessToken {
-				// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
-				http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
-			}
-			req = withUser(req, u)
-
+		issuesHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			req = req.WithContext(context.WithValue(req.Context(),
 				issuesapp.RepoSpecContextKey, repoSpec))
 			req = req.WithContext(context.WithValue(req.Context(),
@@ -130,7 +122,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 				req.URL.Path = "/"
 			}
 			issuesApp.ServeHTTP(w, req)
-		})
+		})}
 		http.Handle("/issues/"+repoSpec.URI, issuesHandler)
 		http.Handle("/issues/"+repoSpec.URI+"/", issuesHandler)
 	}
