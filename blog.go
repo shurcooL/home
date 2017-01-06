@@ -110,15 +110,14 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	}
 	issuesApp := issuesapp.New(onlyShurcoolCreatePosts, users, opt)
 
-	blogHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	blogHandler := userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/blog")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
 			if req.URL.RawQuery != "" {
 				baseURL += "?" + req.URL.RawQuery
 			}
-			http.Redirect(w, req, baseURL, http.StatusMovedPermanently)
-			return
+			return httputil.Redirect{URL: baseURL}
 		}
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
@@ -126,35 +125,34 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		}
 		switch req.URL.Path {
 		case "/":
-			httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
-				if req.Method != "GET" {
-					return httputil.MethodError{Allowed: []string{"GET"}}
-				}
+			if req.Method != "GET" {
+				return httputil.MethodError{Allowed: []string{"GET"}}
+			}
 
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				data := struct{ Production bool }{*productionFlag}
-				err := blogHTML.Execute(w, data)
-				if err != nil {
-					return err
-				}
-
-				authenticatedUser, err := users.GetAuthenticated(req.Context())
-				if err != nil {
-					return err // THINK: Should it be a fatal error or not? What about on frontend vs backend?
-				}
-				returnURL := req.RequestURI
-				err = blogpkg.RenderBodyInnerHTML(req.Context(), w, issuesService, blog, notifications, authenticatedUser, returnURL)
-				if err != nil {
-					return err
-				}
-
-				_, err = io.WriteString(w, `</body></html>`)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			data := struct{ Production bool }{*productionFlag}
+			err := blogHTML.Execute(w, data)
+			if err != nil {
 				return err
-			}).ServeHTTP(w, req)
+			}
+
+			authenticatedUser, err := users.GetAuthenticated(req.Context())
+			if err != nil {
+				return err // THINK: Should it be a fatal error or not? What about on frontend vs backend?
+			}
+			returnURL := req.RequestURI
+			err = blogpkg.RenderBodyInnerHTML(req.Context(), w, issuesService, blog, notifications, authenticatedUser, returnURL)
+			if err != nil {
+				return err
+			}
+
+			_, err = io.WriteString(w, `</body></html>`)
+			return err
 		default:
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, blog))
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/blog"))
 			issuesApp.ServeHTTP(w, req)
+			return nil
 		}
 	})}
 	http.Handle("/blog", blogHandler)

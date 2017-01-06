@@ -105,15 +105,14 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	}
 	notificationsApp := notificationsapp.New(service, users, opt)
 
-	notificationsHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	notificationsHandler := userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/notifications")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
 			if req.URL.RawQuery != "" {
 				baseURL += "?" + req.URL.RawQuery
 			}
-			http.Redirect(w, req, baseURL, http.StatusMovedPermanently)
-			return
+			return httputil.Redirect{URL: baseURL}
 		}
 		returnURL := req.RequestURI
 		req.URL.Path = req.URL.Path[prefixLen:]
@@ -129,11 +128,11 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 				Path:     "/login",
 				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
 			}).String()
-			http.Redirect(w, req, loginURL, http.StatusSeeOther)
-			return
+			return httputil.Redirect{URL: loginURL}
 		}
 		w.WriteHeader(rr.Code)
-		io.Copy(w, rr.Body)
+		_, err := io.Copy(w, rr.Body)
+		return err
 	})}
 	http.Handle("/notifications", notificationsHandler)
 	http.Handle("/notifications/", notificationsHandler)

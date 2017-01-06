@@ -102,15 +102,14 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		{URI: "dmitri.shuralyov.com/idiomatic-go"},
 	} {
 		repoSpec := repoSpec
-		issuesHandler := userMiddleware{http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		issuesHandler := userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
 			prefixLen := len("/issues/") + len(repoSpec.URI)
 			if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 				baseURL := prefix
 				if req.URL.RawQuery != "" {
 					baseURL += "?" + req.URL.RawQuery
 				}
-				http.Redirect(w, req, baseURL, http.StatusMovedPermanently)
-				return
+				return httputil.Redirect{URL: baseURL}
 			}
 			req.URL.Path = req.URL.Path[prefixLen:]
 			if req.URL.Path == "" {
@@ -119,6 +118,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, repoSpec))
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/issues/"+repoSpec.URI))
 			issuesApp.ServeHTTP(w, req)
+			return nil
 		})}
 		http.Handle("/issues/"+repoSpec.URI, issuesHandler)
 		http.Handle("/issues/"+repoSpec.URI+"/", issuesHandler)
