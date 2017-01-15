@@ -98,6 +98,8 @@ func run() error {
 
 	initIdiomaticGo(issuesService, notifications, users)
 
+	initPackages(notifications, users)
+
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
 	staticFiles := httpgzip.FileServer(

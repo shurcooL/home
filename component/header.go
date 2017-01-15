@@ -30,6 +30,7 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 			Logo{}
 
 			<ul class="nav">
+				<li class="nav"><a href="/packages">Packages</a></li>
 				<li class="nav"><a href="/blog">Blog</a></li>
 				<li class="nav smaller"><a href="/idiomatic-go">Idiomatic Go</a></li>
 				<li class="nav"><a href="/talks">Talks</a></li>
@@ -100,6 +101,7 @@ header.header .user {
 	}
 
 	header.AppendChild(htmlg.ULClass("nav",
+		htmlg.LIClass("nav", htmlg.A("Packages", "/packages")),
 		htmlg.LIClass("nav", htmlg.A("Blog", "/blog")),
 		htmlg.LIClass("nav smaller", htmlg.A("Idiomatic Go", "/idiomatic-go")),
 		htmlg.LIClass("nav", htmlg.A("Talks", "/talks")),
