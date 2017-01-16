@@ -157,11 +157,11 @@ func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	mw.Handler.ServeHTTP(w, withUser(req, user))
 }
 
-type handler struct {
-	handler func(w httputil.HeaderWriter, req *http.Request, user *user) ([]*html.Node, error)
+type SessionsHandler struct {
+	users users.Service
 }
 
-func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// HACK: Manually check that method is allowed for the given path.
 	switch req.URL.Path {
 	default:
@@ -187,7 +187,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	req = withUser(req, u)
 
-	nodes, err := h.handler(w, req, u)
+	nodes, err := h.serve(w, req, u)
 	switch {
 	case httputil.IsRedirect(err):
 		http.Redirect(w, req, err.(httputil.Redirect).URL, http.StatusSeeOther)
@@ -226,26 +226,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// TODO, THINK: Clean this up.
-func sanitizeReturn(returnURL string) string {
-	u, err := url.Parse(returnURL)
-	if err != nil {
-		return "/"
-	}
-	if u.Scheme != "" || u.Opaque != "" || u.User != nil || u.Host != "" {
-		return "/"
-	}
-	if u.Path == "" {
-		return "/"
-	}
-	return (&url.URL{Path: u.Path, RawQuery: u.RawQuery}).String()
-}
-
-type SessionsHandler struct {
-	users users.Service
-}
-
-func (h SessionsHandler) Serve(w httputil.HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
+func (h *SessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
 	// Simple switch-based router for now. For a larger project, a more sophisticated router should be used.
 	switch {
 	case req.Method == "POST" && req.URL.Path == "/login/github":
@@ -412,4 +393,19 @@ func (h SessionsHandler) Serve(w httputil.HeaderWriter, req *http.Request, u *us
 	default:
 		return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrNotExist}
 	}
+}
+
+// TODO, THINK: Clean this up.
+func sanitizeReturn(returnURL string) string {
+	u, err := url.Parse(returnURL)
+	if err != nil {
+		return "/"
+	}
+	if u.Scheme != "" || u.Opaque != "" || u.User != nil || u.Host != "" {
+		return "/"
+	}
+	if u.Path == "" {
+		return "/"
+	}
+	return (&url.URL{Path: u.Path, RawQuery: u.RawQuery}).String()
 }

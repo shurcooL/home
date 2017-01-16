@@ -53,7 +53,7 @@ func run() error {
 		return err
 	}
 
-	sessionsHandler := handler{handler: SessionsHandler{users}.Serve}
+	sessionsHandler := &SessionsHandler{users}
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
