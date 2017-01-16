@@ -157,11 +157,11 @@ func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	mw.Handler.ServeHTTP(w, withUser(req, user))
 }
 
-type SessionsHandler struct {
+type sessionsHandler struct {
 	users users.Service
 }
 
-func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// HACK: Manually check that method is allowed for the given path.
 	switch req.URL.Path {
 	default:
@@ -226,7 +226,7 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *SessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
+func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
 	// Simple switch-based router for now. For a larger project, a more sophisticated router should be used.
 	switch {
 	case req.Method == "POST" && req.URL.Path == "/login/github":
@@ -286,17 +286,16 @@ func (h *SessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			return nil, httputil.HTTPError{Code: http.StatusUnauthorized, Err: err}
 		}
 
+		// Add new session.
 		accessToken := string(cryptoRandBytes())
 		expiry := time.Now().Add(7 * 24 * time.Hour)
 		sessions.mu.Lock()
-		// Clean up expired sesions.
-		for token, user := range sessions.sessions {
+		for token, user := range sessions.sessions { // Clean up expired sesions.
 			if time.Now().Before(user.Expiry) {
 				continue
 			}
 			delete(sessions.sessions, token)
 		}
-		// Add new session.
 		sessions.sessions[accessToken] = user{
 			ID:          uint64(*ghUser.ID),
 			Expiry:      expiry,

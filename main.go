@@ -53,7 +53,7 @@ func run() error {
 		return err
 	}
 
-	sessionsHandler := &SessionsHandler{users}
+	sessionsHandler := &sessionsHandler{users}
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)
@@ -120,7 +120,10 @@ func run() error {
 
 	if *statefileFlag != "" {
 		err := sessions.LoadAndRemove(*statefileFlag)
-		log.Println("sessions.LoadAndRemove:", err)
+		sessions.mu.Lock()
+		n := len(sessions.sessions)
+		sessions.mu.Unlock()
+		log.Println("sessions.LoadAndRemove:", n, err)
 	}
 
 	log.Println("Started.")
