@@ -275,7 +275,24 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			if err != nil {
 				return users.User{}, err
 			}
-			return ghUserToUser(ghUser)
+			if ghUser.ID == nil || *ghUser.ID == 0 {
+				return users.User{}, errors.New("GitHub user ID is nil/0")
+			}
+			if ghUser.Login == nil || *ghUser.Login == "" {
+				return users.User{}, errors.New("GitHub user Login is nil/empty")
+			}
+			if ghUser.AvatarURL == nil {
+				return users.User{}, errors.New("GitHub user AvatarURL is nil")
+			}
+			if ghUser.HTMLURL == nil {
+				return users.User{}, errors.New("GitHub user HTMLURL is nil")
+			}
+			return users.User{
+				UserSpec:  users.UserSpec{ID: uint64(*ghUser.ID), Domain: "github.com"},
+				Login:     *ghUser.Login,
+				AvatarURL: template.URL(*ghUser.AvatarURL),
+				HTMLURL:   template.URL(*ghUser.HTMLURL),
+			}, nil
 		}()
 		if err != nil {
 			log.Println(err)
@@ -398,27 +415,6 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 	default:
 		return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrNotExist}
 	}
-}
-
-func ghUserToUser(ghUser *github.User) (users.User, error) {
-	if ghUser.ID == nil || *ghUser.ID == 0 {
-		return users.User{}, errors.New("GitHub user ID is nil/0")
-	}
-	if ghUser.Login == nil || *ghUser.Login == "" {
-		return users.User{}, errors.New("GitHub user Login is nil/empty")
-	}
-	if ghUser.AvatarURL == nil {
-		return users.User{}, errors.New("GitHub user AvatarURL is nil")
-	}
-	if ghUser.HTMLURL == nil {
-		return users.User{}, errors.New("GitHub user HTMLURL is nil")
-	}
-	return users.User{
-		UserSpec:  users.UserSpec{ID: uint64(*ghUser.ID), Domain: "github.com"},
-		Login:     *ghUser.Login,
-		AvatarURL: template.URL(*ghUser.AvatarURL),
-		HTMLURL:   template.URL(*ghUser.HTMLURL),
-	}, nil
 }
 
 // TODO, THINK: Clean this up.

@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
-	"reflect"
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
@@ -40,14 +38,12 @@ func newUsersService(root webdav.FileSystem) (users.Service, users.Store, error)
 	if err != nil {
 		return nil, nil, err
 	}
-	u := Users{store: s, gh: unauthenticatedGitHubClient}
-	return u, s, nil
+	return Users{store: s}, s, nil
 }
 
 // Users implements users.Service.
 type Users struct {
 	store users.Store
-	gh    *github.Client
 }
 
 func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
@@ -71,32 +67,7 @@ func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error)
 		}, nil
 
 	case user.Domain == "github.com":
-		user1, err := s.store.Get(ctx, user)
-		if err != nil {
-			log.Println("user store Get error:", err)
-			return users.User{}, err
-		}
-
-		// Validation.
-		go func() {
-			err := func() error {
-				ghUser, _, err := s.gh.Users.GetByID(int(user.ID))
-				if err != nil {
-					return err
-				}
-				user2, err := ghUserToUser(ghUser)
-				if err != nil {
-					return err
-				}
-				if !reflect.DeepEqual(user1, user2) {
-					return fmt.Errorf("user mismatch:\n\t%#v\n\t%#v", user1, user2)
-				}
-				return nil
-			}()
-			log.Println("user validation (local store vs GitHub):", user1.Login, err)
-		}()
-
-		return user1, nil
+		return s.store.Get(ctx, user)
 
 	case user == users.UserSpec{ID: 2, Domain: ds}: // Bernardo.
 		return users.User{
