@@ -113,9 +113,11 @@ type user struct {
 
 var errBadAccessToken = errors.New("bad access token")
 
-// getUser either returns a valid user (possibly nil) and nil error,
+// lookUpUser retrieves the user from req by looking up
+// the request's access token in the sessions map.
+// It returns a valid user (possibly nil) and nil error,
 // or nil user and errBadAccessToken.
-func getUser(req *http.Request) (*user, error) {
+func lookUpUser(req *http.Request) (*user, error) {
 	cookie, err := req.Cookie(accessTokenCookieName)
 	if err == http.ErrNoCookie {
 		return nil, nil // No user.
@@ -150,7 +152,7 @@ type userMiddleware struct {
 }
 
 func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	user, err := getUser(req)
+	user, err := lookUpUser(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
@@ -181,7 +183,7 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// TODO: Factor this out into user middleware?
-	u, err := getUser(req)
+	u, err := lookUpUser(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens, then a successful login results in setting accessTokenCookieName to a new value.
