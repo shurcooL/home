@@ -47,60 +47,7 @@ type Users struct {
 }
 
 func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
-	const (
-		ds = "dmitri.shuralyov.com"
-		gh = "github.com"
-		tw = "twitter.com"
-	)
-
-	switch {
-	// TODO: Consider using UserSpec{ID: 1, Domain: ds} as well.
-	case user == users.UserSpec{ID: 1924134, Domain: gh}: // Dmitri Shuralyov.
-		return users.User{
-			UserSpec:  user,
-			Elsewhere: []users.UserSpec{{ID: 21361484, Domain: tw}},
-			Login:     "shurcooL",
-			Name:      "Dmitri Shuralyov",
-			AvatarURL: "https://dmitri.shuralyov.com/avatar-s.jpg",
-			HTMLURL:   "https://dmitri.shuralyov.com",
-			SiteAdmin: true,
-		}, nil
-
-	case user.Domain == "github.com":
-		return s.store.Get(ctx, user)
-
-	case user == users.UserSpec{ID: 2, Domain: ds}: // Bernardo.
-		return users.User{
-			UserSpec:  user,
-			Login:     "Bernardo",
-			Name:      "Bernardo",
-			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
-		}, nil
-	case user == users.UserSpec{ID: 3, Domain: ds}: // Michal Marcinkowski.
-		return users.User{
-			UserSpec:  user,
-			Elsewhere: []users.UserSpec{{ID: 15185890, Domain: tw}},
-			Login:     "Michal Marcinkowski",
-			Name:      "Michal Marcinkowski",
-			AvatarURL: "https://pbs.twimg.com/profile_images/699932252764037123/MZUgYRn5_400x400.jpg", // TODO: Use Twitter API?
-		}, nil
-	case user == users.UserSpec{ID: 4, Domain: ds}: // Anders Elfgren.
-		return users.User{
-			UserSpec:  user,
-			Login:     "Anders Elfgren",
-			Name:      "Anders Elfgren",
-			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
-		}, nil
-	case user == users.UserSpec{ID: 5, Domain: ds}: // benp.
-		return users.User{
-			UserSpec:  user,
-			Login:     "benp",
-			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
-		}, nil
-
-	default:
-		return users.User{}, fmt.Errorf("user %v not found", user)
-	}
+	return s.store.Get(ctx, user)
 }
 
 // userContextKey is a context key. It can be used to access the user
