@@ -33,7 +33,12 @@ func run() error {
 		return err
 	}
 
-	users := newUsersService()
+	users, userStore, err := newUsersService(
+		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "users")),
+	)
+	if err != nil {
+		return err
+	}
 	reactions, err := newReactionsService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions")),
 		users)
@@ -53,7 +58,7 @@ func run() error {
 		return err
 	}
 
-	sessionsHandler := &sessionsHandler{users}
+	sessionsHandler := &sessionsHandler{users, userStore}
 	http.Handle("/login/github", sessionsHandler)
 	http.Handle("/callback/github", sessionsHandler)
 	http.Handle("/logout", sessionsHandler)

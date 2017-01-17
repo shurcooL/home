@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"html/template"
+	"log"
 	"net/http"
+	"reflect"
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/users"
+	"github.com/shurcooL/users/fs"
+	"golang.org/x/net/webdav"
 )
 
 var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
@@ -32,16 +35,22 @@ var unauthenticatedGitHubClient = func() *github.Client {
 	return github.NewClient(&http.Client{Transport: transport})
 }()
 
-func newUsersService() users.Service {
-	return Users{gh: unauthenticatedGitHubClient}
+func newUsersService(root webdav.FileSystem) (users.Service, users.Store, error) {
+	s, err := fs.NewStore(root)
+	if err != nil {
+		return nil, nil, err
+	}
+	u := Users{store: s, gh: unauthenticatedGitHubClient}
+	return u, s, nil
 }
 
 // Users implements users.Service.
 type Users struct {
-	gh *github.Client
+	store users.Store
+	gh    *github.Client
 }
 
-func (s Users) Get(_ context.Context, user users.UserSpec) (users.User, error) {
+func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
 	const (
 		ds = "dmitri.shuralyov.com"
 		gh = "github.com"
@@ -62,19 +71,32 @@ func (s Users) Get(_ context.Context, user users.UserSpec) (users.User, error) {
 		}, nil
 
 	case user.Domain == "github.com":
-		ghUser, _, err := s.gh.Users.GetByID(int(user.ID))
+		user1, err := s.store.Get(ctx, user)
 		if err != nil {
+			log.Println("user store Get error:", err)
 			return users.User{}, err
 		}
-		if ghUser.Login == nil || ghUser.AvatarURL == nil || ghUser.HTMLURL == nil {
-			return users.User{}, fmt.Errorf("github user missing fields: %#v", ghUser)
-		}
-		return users.User{
-			UserSpec:  user,
-			Login:     *ghUser.Login,
-			AvatarURL: template.URL(*ghUser.AvatarURL),
-			HTMLURL:   template.URL(*ghUser.HTMLURL),
-		}, nil
+
+		// Validation.
+		go func() {
+			err := func() error {
+				ghUser, _, err := s.gh.Users.GetByID(int(user.ID))
+				if err != nil {
+					return err
+				}
+				user2, err := ghUserToUser(ghUser)
+				if err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(user1, user2) {
+					return fmt.Errorf("user mismatch:\n\t%#v\n\t%#v", user1, user2)
+				}
+				return nil
+			}()
+			log.Println("user validation (local store vs GitHub):", user1.Login, err)
+		}()
+
+		return user1, nil
 
 	case user == users.UserSpec{ID: 2, Domain: ds}: // Bernardo.
 		return users.User{

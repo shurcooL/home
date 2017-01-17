@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -158,7 +159,8 @@ func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type sessionsHandler struct {
-	users users.Service
+	users     users.Service
+	userStore users.Store
 }
 
 func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -250,40 +252,44 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			return nil, httputil.Redirect{URL: "/"}
 		}
 
-		ghUser, err := func() (*github.User, error) {
+		us, err := func() (users.User, error) {
 			// Validate state (to prevent CSRF).
 			cookie, err := req.Cookie(stateCookieName)
 			if err != nil {
-				return nil, err
+				return users.User{}, err
 			}
 			httputil.SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, MaxAge: -1})
 			state := req.FormValue("state")
 			if cookie.Value != state {
-				return nil, errors.New("state doesn't match")
+				return users.User{}, errors.New("state doesn't match")
 			}
 
 			token, err := githubConfig.Exchange(req.Context(), req.FormValue("code"))
 			if err != nil {
-				return nil, err
+				return users.User{}, err
 			}
 			tc := githubConfig.Client(req.Context(), token)
 			gh := github.NewClient(tc)
 
-			user, _, err := gh.Users.Get("")
+			ghUser, _, err := gh.Users.Get("")
 			if err != nil {
-				return nil, err
+				return users.User{}, err
 			}
-			if user.ID == nil || *user.ID == 0 {
-				return nil, errors.New("user id is nil/0")
-			}
-			if user.Login == nil || *user.Login == "" {
-				return nil, errors.New("user login is unset/empty")
-			}
-			return user, nil
+			return ghUserToUser(ghUser)
 		}()
 		if err != nil {
 			log.Println(err)
 			return nil, httputil.HTTPError{Code: http.StatusUnauthorized, Err: err}
+		}
+
+		// If the user doesn't already exist, create it.
+		err = h.userStore.Create(req.Context(), us)
+		switch err {
+		case nil, os.ErrExist:
+			// Do nothing.
+		default:
+			log.Println("/callback/github: error creating user:", err)
+			return nil, httputil.HTTPError{Code: http.StatusInternalServerError, Err: err}
 		}
 
 		// Add new session.
@@ -297,7 +303,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			delete(sessions.sessions, token)
 		}
 		sessions.sessions[accessToken] = user{
-			ID:          uint64(*ghUser.ID),
+			ID:          us.ID,
 			Expiry:      expiry,
 			AccessToken: accessToken,
 		}
@@ -392,6 +398,27 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 	default:
 		return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrNotExist}
 	}
+}
+
+func ghUserToUser(ghUser *github.User) (users.User, error) {
+	if ghUser.ID == nil || *ghUser.ID == 0 {
+		return users.User{}, errors.New("GitHub user ID is nil/0")
+	}
+	if ghUser.Login == nil || *ghUser.Login == "" {
+		return users.User{}, errors.New("GitHub user Login is nil/empty")
+	}
+	if ghUser.AvatarURL == nil {
+		return users.User{}, errors.New("GitHub user AvatarURL is nil")
+	}
+	if ghUser.HTMLURL == nil {
+		return users.User{}, errors.New("GitHub user HTMLURL is nil")
+	}
+	return users.User{
+		UserSpec:  users.UserSpec{ID: uint64(*ghUser.ID), Domain: "github.com"},
+		Login:     *ghUser.Login,
+		AvatarURL: template.URL(*ghUser.AvatarURL),
+		HTMLURL:   template.URL(*ghUser.HTMLURL),
+	}, nil
 }
 
 // TODO, THINK: Clean this up.
