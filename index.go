@@ -45,9 +45,12 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 	}
 	go func() {
 		for {
-			events, commits, err := fetchActivity()
+			events, commits, activityError := fetchActivity()
+			if activityError != nil {
+				log.Println("fetchActivity:", activityError)
+			}
 			h.mu.Lock()
-			h.events, h.commits, h.activityError = events, commits, err
+			h.events, h.commits, h.activityError = events, commits, activityError
 			h.mu.Unlock()
 
 			time.Sleep(time.Minute)
@@ -135,10 +138,17 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	h.mu.Lock()
 	events, commits, activityError := h.events, h.commits, h.activityError
 	h.mu.Unlock()
+	var error string
+	if activityError != nil {
+		error = "There's been a problem fetching activity from GitHub."
+		if authenticatedUser.SiteAdmin {
+			error += "\n\n" + activityError.Error()
+		}
+	}
 	activity := activity{
 		Events:  events,
 		Commits: commits,
-		Error:   activityError,
+		Error:   error,
 		ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool,
 	}
 	activity.ShowRaw, _ = strconv.ParseBool(req.URL.Query().Get("raw"))
@@ -159,7 +169,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 type activity struct {
 	Events  []*github.Event
 	Commits map[string]*github.RepositoryCommit // SHA -> Commit.
-	Error   error
+	Error   string
 
 	ShowWIP bool // Controls whether all events are displayed, including WIP ones.
 	ShowRaw bool // Controls whether full raw payload are available as titles.
@@ -168,10 +178,10 @@ type activity struct {
 func (a activity) Render() []*html.Node {
 	var nodes []*html.Node
 
-	if a.Error != nil {
+	if a.Error != "" {
 		nodes = append(nodes,
 			htmlg.H3(htmlg.Text("Activity Error")),
-			htmlg.P(htmlg.Text(a.Error.Error())),
+			htmlg.P(htmlg.Text(a.Error)),
 		)
 
 		return []*html.Node{htmlg.DivClass("activity", nodes...)}
