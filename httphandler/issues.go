@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -50,7 +51,7 @@ func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
 	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
 	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID query parameter: %v", err)}
 	}
 	var opt *issues.ListOptions
 	if s, err := strconv.Atoi(q.Get("Opt.Start")); err == nil {
@@ -80,7 +81,7 @@ func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
 	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
 	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID query parameter: %v", err)}
 	}
 	if err := req.ParseForm(); err != nil {
 		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
@@ -88,7 +89,7 @@ func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
 	var cr issues.CommentRequest
 	cr.ID, err = strconv.ParseUint(req.PostForm.Get("ID"), 10, 64) // TODO: Automate this conversion process.
 	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
+		return httputil.HTTPError{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID form parameter: %v", err)}
 	}
 	if body := req.PostForm["Body"]; len(body) != 0 {
 		cr.Body = &body[0]
