@@ -27,7 +27,7 @@ var packagesHTML = template.Must(template.New("").Parse(`<html>
 	<body>`))
 
 func initPackages(notifications notifications.Service, usersService users.Service) {
-	http.Handle("/packages", userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
+	http.Handle("/packages", userMiddleware{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httputil.MethodError{Allowed: []string{"GET"}}
 		}

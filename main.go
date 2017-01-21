@@ -26,6 +26,13 @@ var (
 	statefileFlag  = flag.String("statefile", "", "File to save/load state (file is deleted after loading).")
 )
 
+func main() {
+	err := run()
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
 func run() error {
 	flag.Parse()
 
@@ -66,18 +73,18 @@ func run() error {
 	http.Handle("/sessions", sessionsHandler)
 
 	usersAPIHandler := httphandler.Users{Users: users}
-	http.Handle("/api/userspec", userMiddleware{httputil.ErrorHandler(usersAPIHandler.GetAuthenticatedSpec)})
-	http.Handle("/api/user", userMiddleware{httputil.ErrorHandler(usersAPIHandler.GetAuthenticated)})
+	http.Handle("/api/userspec", userMiddleware{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticatedSpec)})
+	http.Handle("/api/user", userMiddleware{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticated)})
 
 	reactionsAPIHandler := httphandler.Reactions{Reactions: reactions}
-	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler(reactionsAPIHandler.GetOrToggle)})
+	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler(users, reactionsAPIHandler.GetOrToggle)})
 
 	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
 		users: users,
 	}
-	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler(userContentHandler.Upload)})
-	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(userContentHandler.Serve)}))
+	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Upload)})
+	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Serve)}))
 
 	indexHandler := initIndex(notifications, users)
 
@@ -151,11 +158,4 @@ func run() error {
 	}
 
 	return nil
-}
-
-func main() {
-	err := run()
-	if err != nil {
-		log.Fatalln(err)
-	}
 }

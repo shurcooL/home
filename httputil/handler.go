@@ -6,14 +6,23 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/shurcooL/users"
 )
 
 // ErrorHandler factors error handling out of the HTTP handler.
-type ErrorHandler func(w http.ResponseWriter, req *http.Request) error
+func ErrorHandler(users users.Service, handler func(w http.ResponseWriter, req *http.Request) error) http.Handler {
+	return &errorHandler{handler: handler, users: users}
+}
 
-func (h ErrorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+type errorHandler struct {
+	handler func(w http.ResponseWriter, req *http.Request) error
+	users   users.Service
+}
+
+func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	rw := &responseWriter{ResponseWriter: w}
-	err := h(rw, req)
+	err := h.handler(rw, req)
 	switch {
 	case err != nil && rw.WroteHeader:
 		// The header has already been written, so it's too late to send

@@ -56,7 +56,7 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 			time.Sleep(time.Minute)
 		}
 	}()
-	return userMiddleware{httputil.ErrorHandler(h.ServeHTTP)}
+	return userMiddleware{httputil.ErrorHandler(users, h.ServeHTTP)}
 }
 
 func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, error) {

@@ -26,10 +26,10 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoint.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.List)})
-	http.Handle("/api/issues/count", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.Count)})
-	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.ListComments)})
-	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler(issuesAPIHandler.EditComment)})
+	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.List)})
+	http.Handle("/api/issues/count", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
+	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
+	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,
@@ -102,7 +102,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		{URI: "dmitri.shuralyov.com/idiomatic-go"},
 	} {
 		repoSpec := repoSpec
-		issuesHandler := userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
+		issuesHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 			prefixLen := len("/issues/") + len(repoSpec.URI)
 			if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 				baseURL := prefix

@@ -53,17 +53,19 @@ func (m mockUsers) GetAuthenticated(ctx context.Context) (users.User, error) {
 }
 
 func init() {
+	users := mockUsers{}
+
 	// Create a mock backend service implementation with sample data.
-	issuesService, err := fs.NewService(webdav.Dir(filepath.Join("testdata", "issues")), nil, mockUsers{})
+	issuesService, err := fs.NewService(webdav.Dir(filepath.Join("testdata", "issues")), nil, users)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	// Register the issues API handler.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle("/api/issues/list", httputil.ErrorHandler(issuesAPIHandler.List))
-	http.Handle("/api/issues/count", httputil.ErrorHandler(issuesAPIHandler.Count))
-	http.Handle("/api/issues/list-comments", httputil.ErrorHandler(issuesAPIHandler.ListComments))
+	http.Handle("/api/issues/list", httputil.ErrorHandler(users, issuesAPIHandler.List))
+	http.Handle("/api/issues/count", httputil.ErrorHandler(users, issuesAPIHandler.Count))
+	http.Handle("/api/issues/list-comments", httputil.ErrorHandler(users, issuesAPIHandler.ListComments))
 }
 
 var issuesClient = httpapi.NewIssues("", "")

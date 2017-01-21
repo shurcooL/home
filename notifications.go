@@ -50,7 +50,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 
 	// Register HTTP API endpoint.
 	notificationsAPIHandler := httphandler.Notifications{Notifications: service}
-	http.Handle("/api/notifications/count", userMiddleware{httputil.ErrorHandler(notificationsAPIHandler.Count)})
+	http.Handle("/api/notifications/count", userMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
@@ -105,7 +105,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	}
 	notificationsApp := notificationsapp.New(service, users, opt)
 
-	notificationsHandler := userMiddleware{httputil.ErrorHandler(func(w http.ResponseWriter, req *http.Request) error {
+	notificationsHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/notifications")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
