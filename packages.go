@@ -757,11 +757,11 @@ var packages = []struct {
 	//	Command:    false,
 	//	Doc:        "",
 	//},
-	{
-		ImportPath: "github.com/shurcooL/octicons",
-		Command:    false,
-		Doc:        "Package octicons provides GitHub Octicons.",
-	},
+	//{
+	//	ImportPath: "github.com/shurcooL/octicons",
+	//	Command:    false,
+	//	Doc:        "Package octicons provides GitHub Octicons.",
+	//},
 	{
 		ImportPath: "github.com/shurcooL/octiconssvg",
 		Command:    false,
