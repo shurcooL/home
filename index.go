@@ -50,7 +50,10 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 				log.Println("fetchActivity:", activityError)
 			}
 			h.mu.Lock()
-			h.events, h.commits, h.activityError = events, commits, activityError
+			if activityError == nil {
+				h.events, h.commits = events, commits
+			}
+			h.activityError = activityError
 			h.mu.Unlock()
 
 			time.Sleep(time.Minute)
@@ -140,7 +143,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	h.mu.Unlock()
 	var error string
 	if activityError != nil {
-		error = "There's been a problem fetching activity from GitHub."
+		error = "There's been a problem fetching latest activity from GitHub."
 		if authenticatedUser.SiteAdmin {
 			error += "\n\n" + activityError.Error()
 		}
@@ -180,11 +183,12 @@ func (a activity) Render() []*html.Node {
 
 	if a.Error != "" {
 		nodes = append(nodes,
-			htmlg.H3(htmlg.Text("Activity Error")),
-			htmlg.P(htmlg.Text(a.Error)),
+			&html.Node{
+				Type: html.ElementNode, Data: atom.P.String(),
+				Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "white-space: pre;"}},
+				FirstChild: htmlg.Text(a.Error),
+			},
 		)
-
-		return []*html.Node{htmlg.DivClass("activity", nodes...)}
 	}
 
 	if len(a.Events) == 0 {
