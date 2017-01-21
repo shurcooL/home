@@ -212,7 +212,7 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		http.Error(w, error, http.StatusNotFound)
 	case os.IsPermission(err):
-		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible.
+		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible. (But this shouldn't apply for APIs.)
 		if u == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
@@ -316,6 +316,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		}()
 		if err != nil {
 			log.Println(err)
+			// TODO: Redirect to an "problem with logging in" page, if, for example, error came from gh.Users.Get("") due to GitHub being down.
 			return nil, httputil.HTTPError{Code: http.StatusUnauthorized, Err: err}
 		}
 

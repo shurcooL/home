@@ -60,6 +60,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		http.Error(w, error, http.StatusNotFound)
 	case os.IsPermission(err):
+		// TODO: Factor in a GetAuthenticatedSpec.ID == 0 check out here. (But this shouldn't apply for APIs.)
 		log.Println(err)
 		error := "403 Forbidden"
 		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
