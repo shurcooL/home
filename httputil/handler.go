@@ -2,6 +2,7 @@ package httputil
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -30,11 +31,19 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 	case IsMethodError(err):
 		w.Header().Set("Allow", strings.Join(err.(MethodError).Allowed, ", "))
-		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
+		error := fmt.Sprintf("405 Method Not Allowed\n\n%v", err)
+		http.Error(w, error, http.StatusMethodNotAllowed)
 	case IsRedirect(err):
 		http.Redirect(w, req, err.(Redirect).URL, http.StatusSeeOther)
 	case IsHTTPError(err):
-		http.Error(w, err.Error(), err.(HTTPError).Code)
+		code := err.(HTTPError).Code
+		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
+		if code == http.StatusBadRequest {
+			error += "\n\n" + err.Error()
+		} else if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, code)
 	case IsJSONResponse(err):
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
@@ -45,16 +54,27 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	case os.IsNotExist(err):
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusNotFound)
+		error := "404 Not Found"
+		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, http.StatusNotFound)
 	case os.IsPermission(err):
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		error := "403 Forbidden"
+		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, http.StatusUnauthorized)
 	default:
 		// Do nothing.
 	case err != nil:
 		log.Println(err)
-		// TODO: Only display error details to SiteAdmin users?
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		error := "500 Internal Server Error"
+		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, http.StatusInternalServerError)
 	}
 }
 

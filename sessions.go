@@ -196,10 +196,21 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case httputil.IsRedirect(err):
 		http.Redirect(w, req, err.(httputil.Redirect).URL, http.StatusSeeOther)
 	case httputil.IsHTTPError(err):
-		http.Error(w, err.Error(), err.(httputil.HTTPError).Code)
+		code := err.(httputil.HTTPError).Code
+		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
+		if code == http.StatusBadRequest {
+			error += "\n\n" + err.Error()
+		} else if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, code)
 	case os.IsNotExist(err):
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusNotFound)
+		error := "404 Not Found"
+		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, http.StatusNotFound)
 	case os.IsPermission(err):
 		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible.
 		if u == nil {
@@ -211,7 +222,11 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		error := "403 Forbidden"
+		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, http.StatusUnauthorized)
 	default:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, string(htmlg.Render(nodes...)))
@@ -225,8 +240,11 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	case err != nil:
 		log.Println(err)
-		// TODO: Only display error details to SiteAdmin users?
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		error := "500 Internal Server Error"
+		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+			error += "\n\n" + err.Error()
+		}
+		http.Error(w, error, http.StatusInternalServerError)
 	}
 }
 
