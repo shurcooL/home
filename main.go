@@ -17,6 +17,7 @@ import (
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/reactions/emojis"
+	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 )
 
@@ -100,10 +101,10 @@ func run() error {
 		return err
 	}
 
-	emojisHandler := httpgzip.FileServer(emojis.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
+	emojisHandler := userMiddleware{httpgzip.FileServer(emojis.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
 
-	assetsHandler := httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed})
+	assetsHandler := userMiddleware{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
 
 	initResume(assetsHandler, reactions, notifications, users)
@@ -114,13 +115,13 @@ func run() error {
 
 	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
 
-	staticFiles := httpgzip.FileServer(
+	staticFiles := userMiddleware{httpgzip.FileServer(
 		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
 		httpgzip.FileServerOptions{
 			IndexHTML:  true,
-			ServeError: httpgzip.Detailed,
+			ServeError: detailedForAdmin{Users: users}.ServeError,
 		},
-	)
+	)}
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		switch req.URL.Path {
 		case "/":
@@ -158,4 +159,19 @@ func run() error {
 	}
 
 	return nil
+}
+
+// detailedForAdmin serves detailed errors for admin users,
+// but non-specific errors for others.
+type detailedForAdmin struct {
+	Users users.Service
+}
+
+func (d detailedForAdmin) ServeError(w http.ResponseWriter, req *http.Request, err error) {
+	switch user, e := d.Users.GetAuthenticated(req.Context()); {
+	case e == nil && user.SiteAdmin:
+		httpgzip.Detailed(w, req, err)
+	default:
+		httpgzip.NonSpecific(w, req, err)
+	}
 }

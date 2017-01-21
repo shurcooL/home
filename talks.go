@@ -27,7 +27,7 @@ import (
 // initTalks registers a talks handler with root as talks content source.
 func initTalks(root http.FileSystem, notifications notifications.Service, users users.Service) {
 	// Host static files that slides need.
-	http.Handle("/static/", httpgzip.FileServer(presentdata.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed}))
+	http.Handle("/static/", userMiddleware{httpgzip.FileServer(presentdata.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})})
 
 	// Create a template for slides.
 	tmpl := present.Template()
