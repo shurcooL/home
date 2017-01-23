@@ -171,13 +171,13 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	default:
 		if req.Method != "GET" {
 			w.Header().Set("Allow", "GET")
-			http.Error(w, "method should be GET", http.StatusMethodNotAllowed)
+			http.Error(w, "405 Method Not Allowed\n\nmethod should be GET", http.StatusMethodNotAllowed)
 			return
 		}
 	case "/login/github", "/logout":
 		if req.Method != "POST" {
 			w.Header().Set("Allow", "POST")
-			http.Error(w, "method should be POST", http.StatusMethodNotAllowed)
+			http.Error(w, "405 Method Not Allowed\n\nmethod should be POST", http.StatusMethodNotAllowed)
 			return
 		}
 	}
@@ -204,6 +204,14 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, code)
+	case httputil.IsJSONResponse(err):
+		w.Header().Set("Content-Type", "application/json")
+		jw := json.NewEncoder(w)
+		jw.SetIndent("", "\t")
+		err := jw.Encode(err.(httputil.JSONResponse).V)
+		if err != nil {
+			log.Println("error encoding JSONResponse:", err)
+		}
 	case os.IsNotExist(err):
 		log.Println(err)
 		error := "404 Not Found"
@@ -230,14 +238,6 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	default:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, string(htmlg.Render(nodes...)))
-	case httputil.IsJSONResponse(err):
-		w.Header().Set("Content-Type", "application/json")
-		jw := json.NewEncoder(w)
-		jw.SetIndent("", "\t")
-		err := jw.Encode(err.(httputil.JSONResponse).V)
-		if err != nil {
-			log.Println("error encoding JSONResponse:", err)
-		}
 	case err != nil:
 		log.Println(err)
 		error := "500 Internal Server Error"
