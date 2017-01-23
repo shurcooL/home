@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
@@ -38,8 +39,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		MarkCachedResponses: true,
 	}
 	shurcoolGitHubNotifications := githubapi.NewService(
-		github.NewClient(&http.Client{Transport: authTransport}),
-		github.NewClient(&http.Client{Transport: cacheTransport}),
+		github.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second}),
+		github.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
 	)
 
 	service := shurcoolSeeHisGitHubNotifications{

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
@@ -30,7 +31,7 @@ var unauthenticatedGitHubClient = func() *github.Client {
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
-	return github.NewClient(&http.Client{Transport: transport})
+	return github.NewClient(&http.Client{Transport: transport, Timeout: 5 * time.Second})
 }()
 
 func newUsersService(root webdav.FileSystem) (users.Service, users.Store, error) {

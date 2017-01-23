@@ -288,8 +288,9 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			if err != nil {
 				return users.User{}, err
 			}
-			tc := githubConfig.Client(req.Context(), token)
-			gh := github.NewClient(tc)
+			c := githubConfig.Client(req.Context(), token)
+			c.Timeout = 5 * time.Second
+			gh := github.NewClient(c)
 
 			ghUser, _, err := gh.Users.Get("")
 			if err != nil {
