@@ -60,3 +60,6 @@ div.activity {
 .activity div.details a.black:hover {
 	color: #4183c4;
 }
+.activity div.details code {
+	font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
