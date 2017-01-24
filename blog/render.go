@@ -2,6 +2,7 @@
 package blog
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"html/template"
@@ -95,8 +96,9 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		if err != nil {
 			return err
 		}
+		// TODO: Use iconText or similar component here?
 		io.WriteString(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
-		fmt.Fprintf(w, `<a href="/blog/%d" style="line-height: 30px;"><span class="octicon octicon-comment-discussion" style="margin-right: 6px;"></span>%d comments</a>`, issue.ID, issue.Replies)
+		fmt.Fprintf(w, `<a href="/blog/%d" style="line-height: 30px;"><span style="margin-right: 6px; position: relative; top: 7px;">%s</span>%d comments</a>`, issue.ID, octiconsCommentDiscussion, issue.Replies)
 		io.WriteString(w, `</span>`)
 		io.WriteString(w, `</div>`)
 	}
@@ -154,3 +156,12 @@ type fetchedReactions struct {
 func (f fetchedReactions) Get(ctx context.Context, uri string, id string) ([]reactions.Reaction, error) {
 	return f.Reactions, nil
 }
+
+var octiconsCommentDiscussion = func() string {
+	var buf bytes.Buffer
+	err := html.Render(&buf, octiconssvg.CommentDiscussion())
+	if err != nil {
+		panic(err)
+	}
+	return buf.String()
+}()

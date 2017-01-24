@@ -22,7 +22,6 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 	<head>
 		<title>Dmitri Shuralyov - Blog</title>
 		<link href="/icon.png" rel="icon" type="image/png">
-		<link href="/blog/assets/octicons/octicons.min.css" rel="stylesheet" type="text/css">
 		<link href="/blog/assets/gfm/gfm.css" rel="stylesheet" type="text/css">
 		<link href="/assets/blog/style.css" rel="stylesheet" type="text/css">
 		<script async src="/assets/blog/blog.js"></script>

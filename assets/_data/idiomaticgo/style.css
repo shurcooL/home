@@ -74,7 +74,7 @@ div.new-reaction {
 	cursor: pointer;
 	display: none;
 	box-sizing: border-box;
-	padding: 5px 2px 5px 4px;
+	padding: 5px 4px;
 	height: 30px;
 	color: #aaa;
 	border: 1px solid #e0e0e0;
@@ -82,20 +82,18 @@ div.new-reaction {
 	margin-top: 4px;
 	vertical-align: top;
 }
-div.new-reaction i {
-	font-size: 18px;
+div.new-reaction .smiley {
+	width: 18px;
+	height: 18px;
+}
+div.new-reaction .plus {
+	top: -4px;
+	width: 6px;
+	position: relative;
 }
 div.new-reaction:hover {
 	color: #eda000;
 	border: 1px solid #92def9;
-}
-
-sup {
-	top: -0.5em;
-	position: relative;
-	font-size: 75%;
-	line-height: 0;
-	vertical-align: baseline;
 }
 
 span.rm-emoji {

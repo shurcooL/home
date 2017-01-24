@@ -18,7 +18,6 @@ var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape
 	<head>
 		<title>Dmitri Shuralyov - Resume</title>
 		<link href="/icon.png" rel="icon" type="image/png">
-		<link href="/blog/assets/octicons/octicons.min.css" rel="stylesheet" type="text/css">
 		<link href="/resume.css" rel="stylesheet" type="text/css">
 
 		{{noescape "<!-- Unminified source is at https://github.com/shurcooL/resume. -->"}}
