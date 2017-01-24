@@ -88,6 +88,7 @@ func (h *talksHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		if err != nil {
 			return err
 		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		return doc.Render(w, h.slides)
 
 	// Serve regular files (assets).
