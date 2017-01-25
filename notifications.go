@@ -20,7 +20,6 @@ import (
 	"github.com/shurcooL/notifications/fs"
 	"github.com/shurcooL/notifications/githubapi"
 	"github.com/shurcooL/notificationsapp"
-	"github.com/shurcooL/notificationsapp/common"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 	"golang.org/x/oauth2"
@@ -55,21 +54,6 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
-		BaseURI: func(req *http.Request) string {
-			return "/notifications"
-		},
-		BaseState: func(req *http.Request) notificationsapp.BaseState {
-			reqPath := req.URL.Path
-			if reqPath == "/" {
-				reqPath = "" // This is needed so that absolute URL for root view, i.e., /notifications, is "/notifications" and not "/notifications/" because of "/notifications" + "/".
-			}
-			return notificationsapp.BaseState{
-				State: common.State{
-					BaseURI: "/notifications",
-					ReqPath: reqPath,
-				},
-			}
-		},
 		// TODO: Update and unify octicons.css.
 		//       But be mindful of https://github.com/shurcooL/notifications/blob/c38c34c46358723f7f329fa80f9a4ae105b60985/notifications.go#L39.
 		HeadPre: `<title>Notifications</title>
@@ -122,6 +106,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		}
 		rr := httptest.NewRecorder()
 		rr.HeaderMap = w.Header()
+		req = req.WithContext(context.WithValue(req.Context(), notificationsapp.BaseURIContextKey, "/notifications"))
 		notificationsApp.ServeHTTP(rr, req)
 		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible. (But this shouldn't apply for APIs.)
 		if u := req.Context().Value(userContextKey).(*user); rr.Code == http.StatusUnauthorized && u == nil {
