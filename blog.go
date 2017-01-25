@@ -13,7 +13,6 @@ import (
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issuesapp"
-	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 )
@@ -39,22 +38,6 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	opt := issuesapp.Options{
 		Notifications: notifications,
 
-		RepoSpec: func(req *http.Request) issues.RepoSpec {
-			return req.Context().Value(issuesapp.RepoSpecContextKey).(issues.RepoSpec)
-		},
-		BaseURI: func(req *http.Request) string { return req.Context().Value(issuesapp.BaseURIContextKey).(string) },
-		BaseState: func(req *http.Request) issuesapp.BaseState {
-			reqPath := req.URL.Path
-			if reqPath == "/" {
-				reqPath = "" // This is needed so that absolute URL for root view, i.e., /blog, is "/blog" and not "/blog/" because of "/blog" + "/".
-			}
-			return issuesapp.BaseState{
-				State: common.State{
-					BaseURI: req.Context().Value(issuesapp.BaseURIContextKey).(string),
-					ReqPath: reqPath,
-				},
-			}
-		},
 		HeadPre: `<title>Dmitri Shuralyov - Blog</title>
 <link href="/icon.png" rel="icon" type="image/png">
 <style type="text/css">
