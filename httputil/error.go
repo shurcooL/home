@@ -3,6 +3,8 @@ package httputil
 import (
 	"fmt"
 	"strings"
+
+	"github.com/shurcooL/httperror"
 )
 
 // MethodError is an error type used for methods that aren't allowed.
@@ -15,6 +17,9 @@ func (m MethodError) Error() string {
 }
 
 func IsMethodError(err error) (MethodError, bool) {
+	if e, ok := httperror.IsMethod(err); ok {
+		return MethodError(e), true
+	}
 	e, ok := err.(MethodError)
 	return e, ok
 }
@@ -27,6 +32,9 @@ type Redirect struct {
 func (r Redirect) Error() string { return fmt.Sprintf("redirecting to %s", r.URL) }
 
 func IsRedirect(err error) (Redirect, bool) {
+	if e, ok := httperror.IsRedirect(err); ok {
+		return Redirect(e), true
+	}
 	e, ok := err.(Redirect)
 	return e, ok
 }
@@ -41,6 +49,9 @@ type HTTPError struct {
 func (h HTTPError) Error() string { return h.Err.Error() }
 
 func IsHTTPError(err error) (HTTPError, bool) {
+	if e, ok := httperror.IsHTTP(err); ok {
+		return HTTPError(e), true
+	}
 	e, ok := err.(HTTPError)
 	return e, ok
 }
@@ -53,6 +64,9 @@ type JSONResponse struct {
 func (JSONResponse) Error() string { return "JSONResponse" }
 
 func IsJSONResponse(err error) (JSONResponse, bool) {
+	if e, ok := httperror.IsJSONResponse(err); ok {
+		return JSONResponse(e), true
+	}
 	e, ok := err.(JSONResponse)
 	return e, ok
 }
