@@ -388,14 +388,24 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case *github.CreateEvent:
-			displayEvent = event{
+			e := event{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.GitBranch,
-				Action:     fmt.Sprintf("created %v in", *p.RefType),
-				Details: codeDetails{
-					Text: *p.Ref,
-				},
 			}
+			switch *p.RefType {
+			case "repository":
+				e.Icon = octiconssvg.Repo
+				e.Action = "created repository"
+				e.Details = textDetails{
+					Text: *p.Description,
+				}
+			default:
+				e.Icon = octiconssvg.GitBranch
+				e.Action = fmt.Sprintf("created %v in", *p.RefType)
+				e.Details = codeDetails{
+					Text: *p.Ref,
+				}
+			}
+			displayEvent = e
 		case *github.DeleteEvent:
 			displayEvent = event{
 				basicEvent: &basicEvent,
@@ -534,6 +544,22 @@ func (d iconLinkDetails) Render() []*html.Node {
 	return []*html.Node{div}
 }
 
+type textDetails struct {
+	Text string
+}
+
+func (d textDetails) Render() []*html.Node {
+	text := &html.Node{
+		Type: html.ElementNode, Data: atom.Span.String(),
+		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "font-size: small;"}},
+		FirstChild: htmlg.Text(d.Text),
+	}
+	div := htmlg.DivClass("details",
+		text,
+	)
+	return []*html.Node{div}
+}
+
 type codeDetails struct {
 	Text          string
 	Strikethrough bool
@@ -548,9 +574,9 @@ border-radius: 3px;`
 	}
 	code := &html.Node{
 		Type: html.ElementNode, Data: atom.Code.String(),
-		Attr: []html.Attribute{{Key: atom.Style.String(), Val: codeStyle}},
+		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: codeStyle}},
+		FirstChild: htmlg.Text(d.Text),
 	}
-	code.AppendChild(htmlg.Text(d.Text))
 	div := htmlg.DivClass("details",
 		code,
 	)
