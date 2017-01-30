@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/shurcooL/go/ctxhttp"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 )
@@ -18,8 +19,8 @@ func (Notifications) List(_ context.Context, opt notifications.ListOptions) (not
 	return nil, fmt.Errorf("List: not implemented")
 }
 
-func (Notifications) Count(_ context.Context, opt interface{}) (uint64, error) {
-	resp, err := http.Get("/api/notifications/count")
+func (Notifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
+	resp, err := ctxhttp.Get(ctx, nil, "/api/notifications/count")
 	if err != nil {
 		return 0, err
 	}

@@ -8,15 +8,16 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/shurcooL/go/ctxhttp"
 	"github.com/shurcooL/reactions"
 )
 
 // Reactions implements reactions.Service remotely over HTTP.
 type Reactions struct{}
 
-func (Reactions) Get(_ context.Context, uri string, id string) ([]reactions.Reaction, error) {
+func (Reactions) Get(ctx context.Context, uri string, id string) ([]reactions.Reaction, error) {
 	u := url.URL{Path: "/api/react", RawQuery: url.Values{"reactableURL": {uri}, "reactableID": {id}}.Encode()}
-	resp, err := http.Get(u.String())
+	resp, err := ctxhttp.Get(ctx, nil, u.String())
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +31,8 @@ func (Reactions) Get(_ context.Context, uri string, id string) ([]reactions.Reac
 	return rs, err
 }
 
-func (Reactions) Toggle(_ context.Context, uri string, id string, tr reactions.ToggleRequest) ([]reactions.Reaction, error) {
-	resp, err := http.PostForm("/api/react", url.Values{"reactableURL": {uri}, "reactableID": {id}, "reaction": {string(tr.Reaction)}})
+func (Reactions) Toggle(ctx context.Context, uri string, id string, tr reactions.ToggleRequest) ([]reactions.Reaction, error) {
+	resp, err := ctxhttp.PostForm(ctx, nil, "/api/react", url.Values{"reactableURL": {uri}, "reactableID": {id}, "reaction": {string(tr.Reaction)}})
 	if err != nil {
 		return nil, err
 	}
