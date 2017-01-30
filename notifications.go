@@ -13,13 +13,14 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/home/component"
-	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/notifications/fs"
 	"github.com/shurcooL/notifications/githubapi"
 	"github.com/shurcooL/notificationsapp"
+	"github.com/shurcooL/notificationsapp/httphandler"
+	"github.com/shurcooL/notificationsapp/httproute"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 	"golang.org/x/oauth2"
@@ -48,9 +49,11 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		users: users,
 	}
 
-	// Register HTTP API endpoint.
+	// Register HTTP API endpoints.
 	notificationsAPIHandler := httphandler.Notifications{Notifications: service}
-	http.Handle("/api/notifications/count", userMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
+	http.Handle(httproute.Count, userMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
+	http.Handle(httproute.MarkRead, userMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkRead)})
+	http.Handle(httproute.MarkAllRead, userMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkAllRead)})
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
@@ -108,6 +111,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		rr.HeaderMap = w.Header()
 		req = req.WithContext(context.WithValue(req.Context(), notificationsapp.BaseURIContextKey, "/notifications"))
 		notificationsApp.ServeHTTP(rr, req)
+		// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
 		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible. (But this shouldn't apply for APIs.)
 		if u := req.Context().Value(userContextKey).(*user); rr.Code == http.StatusUnauthorized && u == nil {
 			loginURL := (&url.URL{
