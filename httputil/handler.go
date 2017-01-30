@@ -24,19 +24,28 @@ type errorHandler struct {
 func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	rw := &responseWriter{ResponseWriter: w}
 	err := h.handler(rw, req)
-	switch {
-	case err != nil && rw.WroteHeader:
+	if err == nil {
+		// Do nothing.
+		return
+	}
+	if err != nil && rw.WroteHeader {
 		// The header has already been written, so it's too late to send
 		// a different status code. Just log the error and move on.
 		log.Println(err)
-	case IsMethodError(err):
-		w.Header().Set("Allow", strings.Join(err.(MethodError).Allowed, ", "))
+		return
+	}
+	if err, ok := IsMethodError(err); ok {
+		w.Header().Set("Allow", strings.Join(err.Allowed, ", "))
 		error := fmt.Sprintf("405 Method Not Allowed\n\n%v", err)
 		http.Error(w, error, http.StatusMethodNotAllowed)
-	case IsRedirect(err):
-		http.Redirect(w, req, err.(Redirect).URL, http.StatusSeeOther)
-	case IsHTTPError(err):
-		code := err.(HTTPError).Code
+		return
+	}
+	if err, ok := IsRedirect(err); ok {
+		http.Redirect(w, req, err.URL, http.StatusSeeOther)
+		return
+	}
+	if err, ok := IsHTTPError(err); ok {
+		code := err.Code
 		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
 		if code == http.StatusBadRequest {
 			error += "\n\n" + err.Error()
@@ -44,22 +53,28 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, code)
-	case IsJSONResponse(err):
+		return
+	}
+	if err, ok := IsJSONResponse(err); ok {
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
 		jw.SetIndent("", "\t")
-		err := jw.Encode(err.(JSONResponse).V)
+		err := jw.Encode(err.V)
 		if err != nil {
 			log.Println("error encoding JSONResponse:", err)
 		}
-	case os.IsNotExist(err):
+		return
+	}
+	if os.IsNotExist(err) {
 		log.Println(err)
 		error := "404 Not Found"
 		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, http.StatusNotFound)
-	case os.IsPermission(err):
+		return
+	}
+	if os.IsPermission(err) {
 		// TODO: Factor in a GetAuthenticatedSpec.ID == 0 check out here. (But this shouldn't apply for APIs.)
 		log.Println(err)
 		error := "403 Forbidden"
@@ -67,16 +82,15 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, http.StatusUnauthorized)
-	default:
-		// Do nothing.
-	case err != nil:
-		log.Println(err)
-		error := "500 Internal Server Error"
-		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
-			error += "\n\n" + err.Error()
-		}
-		http.Error(w, error, http.StatusInternalServerError)
+		return
 	}
+
+	log.Println(err)
+	error := "500 Internal Server Error"
+	if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+		error += "\n\n" + err.Error()
+	}
+	http.Error(w, error, http.StatusInternalServerError)
 }
 
 // responseWriter wraps a real http.ResponseWriter and captures

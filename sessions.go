@@ -192,11 +192,17 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	req = withUser(req, u)
 
 	nodes, err := h.serve(w, req, u)
-	switch {
-	case httputil.IsRedirect(err):
-		http.Redirect(w, req, err.(httputil.Redirect).URL, http.StatusSeeOther)
-	case httputil.IsHTTPError(err):
-		code := err.(httputil.HTTPError).Code
+	if err == nil {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		io.WriteString(w, string(htmlg.Render(nodes...)))
+		return
+	}
+	if err, ok := httputil.IsRedirect(err); ok {
+		http.Redirect(w, req, err.URL, http.StatusSeeOther)
+		return
+	}
+	if err, ok := httputil.IsHTTPError(err); ok {
+		code := err.Code
 		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
 		if code == http.StatusBadRequest {
 			error += "\n\n" + err.Error()
@@ -204,22 +210,28 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, code)
-	case httputil.IsJSONResponse(err):
+		return
+	}
+	if err, ok := httputil.IsJSONResponse(err); ok {
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
 		jw.SetIndent("", "\t")
-		err := jw.Encode(err.(httputil.JSONResponse).V)
+		err := jw.Encode(err.V)
 		if err != nil {
 			log.Println("error encoding JSONResponse:", err)
 		}
-	case os.IsNotExist(err):
+		return
+	}
+	if os.IsNotExist(err) {
 		log.Println(err)
 		error := "404 Not Found"
 		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, http.StatusNotFound)
-	case os.IsPermission(err):
+		return
+	}
+	if os.IsPermission(err) {
 		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible. (But this shouldn't apply for APIs.)
 		if u == nil {
 			loginURL := (&url.URL{
@@ -235,17 +247,15 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, http.StatusUnauthorized)
-	default:
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		io.WriteString(w, string(htmlg.Render(nodes...)))
-	case err != nil:
-		log.Println(err)
-		error := "500 Internal Server Error"
-		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
-			error += "\n\n" + err.Error()
-		}
-		http.Error(w, error, http.StatusInternalServerError)
+		return
 	}
+
+	log.Println(err)
+	error := "500 Internal Server Error"
+	if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+		error += "\n\n" + err.Error()
+	}
+	http.Error(w, error, http.StatusInternalServerError)
 }
 
 func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {

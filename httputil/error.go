@@ -14,9 +14,9 @@ func (m MethodError) Error() string {
 	return fmt.Sprintf("method should be %v", strings.Join(m.Allowed, " or "))
 }
 
-func IsMethodError(err error) bool {
-	_, ok := err.(MethodError)
-	return ok
+func IsMethodError(err error) (MethodError, bool) {
+	e, ok := err.(MethodError)
+	return e, ok
 }
 
 // Redirect is an error type used for representing a simple HTTP redirection.
@@ -26,9 +26,9 @@ type Redirect struct {
 
 func (r Redirect) Error() string { return fmt.Sprintf("redirecting to %s", r.URL) }
 
-func IsRedirect(err error) bool {
-	_, ok := err.(Redirect)
-	return ok
+func IsRedirect(err error) (Redirect, bool) {
+	e, ok := err.(Redirect)
+	return e, ok
 }
 
 // HTTPError is an error type used for representing a non-nil error with a status code.
@@ -37,12 +37,12 @@ type HTTPError struct {
 	Err  error // Not nil.
 }
 
-// Error returns HTTPError.err.Error().
+// Error returns HTTPError.Err.Error().
 func (h HTTPError) Error() string { return h.Err.Error() }
 
-func IsHTTPError(err error) bool {
-	_, ok := err.(HTTPError)
-	return ok
+func IsHTTPError(err error) (HTTPError, bool) {
+	e, ok := err.(HTTPError)
+	return e, ok
 }
 
 // JSONResponse is an error type used for representing a JSON response.
@@ -52,7 +52,7 @@ type JSONResponse struct {
 
 func (JSONResponse) Error() string { return "JSONResponse" }
 
-func IsJSONResponse(err error) bool {
-	_, ok := err.(JSONResponse)
-	return ok
+func IsJSONResponse(err error) (JSONResponse, bool) {
+	e, ok := err.(JSONResponse)
+	return e, ok
 }
