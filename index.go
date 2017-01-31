@@ -302,12 +302,17 @@ func (a activity) Render() []*html.Node {
 		case *github.IssueCommentEvent:
 			e := event{
 				basicEvent: &basicEvent,
+				Icon:       octiconssvg.CommentDiscussion,
 			}
 			switch p.Issue.PullRequestLinks {
 			case nil: // Issue.
 				switch *p.Action {
 				case "created":
 					e.Action = "commented on an issue in"
+					e.Details = imageTextDetails{
+						ImageURL: *p.Comment.User.AvatarURL,
+						Text:     shortBody(*p.Comment.Body),
+					}
 				default:
 					basicEvent.WIP = true
 					e.Action = fmt.Sprintf("%v on an issue in", *p.Action)
@@ -316,6 +321,10 @@ func (a activity) Render() []*html.Node {
 				switch *p.Action {
 				case "created":
 					e.Action = "commented on a pull request in"
+					e.Details = imageTextDetails{
+						ImageURL: *p.Comment.User.AvatarURL,
+						Text:     shortBody(*p.Comment.Body),
+					}
 				default:
 					basicEvent.WIP = true
 					e.Action = fmt.Sprintf("%v on a pull request in", *p.Action)
@@ -325,10 +334,15 @@ func (a activity) Render() []*html.Node {
 		case *github.PullRequestReviewCommentEvent:
 			e := event{
 				basicEvent: &basicEvent,
+				Icon:       octiconssvg.CommentDiscussion,
 			}
 			switch *p.Action {
 			case "created":
 				e.Action = "commented on a pull request in"
+				e.Details = imageTextDetails{
+					ImageURL: *p.Comment.User.AvatarURL,
+					Text:     shortBody(*p.Comment.Body),
+				}
 			default:
 				basicEvent.WIP = true
 				e.Action = fmt.Sprintf("%v on a pull request in", *p.Action)
@@ -337,7 +351,12 @@ func (a activity) Render() []*html.Node {
 		case *github.CommitCommentEvent:
 			displayEvent = event{
 				basicEvent: &basicEvent,
+				Icon:       octiconssvg.CommentDiscussion,
 				Action:     "commented on a commit in",
+				Details: imageTextDetails{
+					ImageURL: *p.Comment.User.AvatarURL,
+					Text:     shortBody(*p.Comment.Body),
+				},
 			}
 
 		case *github.PushEvent:
@@ -551,13 +570,46 @@ type textDetails struct {
 func (d textDetails) Render() []*html.Node {
 	text := &html.Node{
 		Type: html.ElementNode, Data: atom.Span.String(),
-		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "font-size: small;"}},
+		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "font-size: 13px; color: #666;"}},
 		FirstChild: htmlg.Text(d.Text),
 	}
 	div := htmlg.DivClass("details",
 		text,
 	)
 	return []*html.Node{div}
+}
+
+type imageTextDetails struct {
+	ImageURL string
+	Text     string
+}
+
+func (d imageTextDetails) Render() []*html.Node {
+	image := &html.Node{
+		Type: html.ElementNode, Data: atom.Img.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Src.String(), Val: d.ImageURL},
+			{Key: atom.Style.String(), Val: "width: 28px; height: 28px; margin-right: 6px; flex-shrink: 0;"},
+		},
+	}
+	text := &html.Node{
+		Type: html.ElementNode, Data: atom.Span.String(),
+		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "font-size: 13px; color: #666; flex-grow: 1;"}},
+		FirstChild: htmlg.Text(d.Text),
+	}
+	div := htmlg.DivClass("details",
+		image,
+		text,
+	)
+	div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "display: flex;"})
+	return []*html.Node{div}
+}
+
+func shortBody(s string) string {
+	if len(s) <= 200 {
+		return s
+	}
+	return s[:199] + "…"
 }
 
 type codeDetails struct {
