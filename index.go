@@ -70,6 +70,9 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 		switch p := e.Payload().(type) {
 		case *github.PushEvent:
 			for _, c := range p.Commits {
+				if _, ok := commits[*c.SHA]; ok {
+					continue
+				}
 				rc, err := fetchCommit(*c.URL)
 				if err, ok := err.(*github.ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
 					continue
@@ -84,8 +87,9 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 	return events, commits, nil
 }
 
-func fetchCommit(commitAPIURL string) (*github.RepositoryCommit, error) {
-	req, err := unauthenticatedGitHubClient.NewRequest("GET", commitAPIURL, nil)
+// fetchCommit fetches the commit at the API URL.
+func fetchCommit(commitURL string) (*github.RepositoryCommit, error) {
+	req, err := unauthenticatedGitHubClient.NewRequest("GET", commitURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +297,7 @@ func (a activity) Render() []*html.Node {
 				details.Icon = octiconssvg.GitMerge
 				details.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 			default:
-				log.Println("activity.Render: unsupported *github.PullRequestEvent action:", *p.Action)
+				log.Println("activity.Render: unsupported *github.PullRequestEvent PullRequest.State:", *p.PullRequest.State, "PullRequest.Merged:", *p.PullRequest.Merged)
 				details.Icon = octiconssvg.GitPullRequest
 			}
 			e.Details = details
@@ -382,7 +386,7 @@ func (a activity) Render() []*html.Node {
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
 				Action:     "pushed to",
-				Details: &commitsDetails{
+				Details: commitsDetails{
 					Commits: commits,
 				},
 			}
