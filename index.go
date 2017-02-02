@@ -15,8 +15,9 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/google/go-github/github"
+	"github.com/shurcooL/component"
 	"github.com/shurcooL/go/timeutil"
-	"github.com/shurcooL/home/component"
+	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/notifications"
@@ -82,6 +83,19 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 				}
 				commits[*c.SHA] = rc
 			}
+		case *github.CommitCommentEvent:
+			if _, ok := commits[*p.Comment.CommitID]; ok {
+				continue
+			}
+			commitURL := *e.Repo.URL + "/commits/" + *p.Comment.CommitID // commitURL is "{repoURL}/commits/{commitID}".
+			rc, err := fetchCommit(commitURL)
+			if err, ok := err.(*github.ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
+				continue
+			}
+			if err != nil {
+				return nil, nil, fmt.Errorf("fetchCommit: %v", err)
+			}
+			commits[*p.Comment.CommitID] = rc
 		}
 	}
 	return events, commits, nil
@@ -130,7 +144,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	returnURL := req.RequestURI
 
 	// Render the header.
-	header := component.Header{
+	header := homecomponent.Header{
 		CurrentUser:   authenticatedUser,
 		ReturnURL:     returnURL,
 		Notifications: h.notifications,
@@ -250,9 +264,9 @@ func (a activity) Render() []*html.Node {
 			e := event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.IssueOpened,
-				Action:     fmt.Sprintf("%v an issue in", *p.Action),
+				Action:     component.Text(fmt.Sprintf("%v an issue in", *p.Action)),
 			}
-			details := iconLinkDetails{
+			details := iconLink{
 				Text:  *p.Issue.Title,
 				URL:   *p.Issue.HTMLURL,
 				Black: true,
@@ -278,22 +292,22 @@ func (a activity) Render() []*html.Node {
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitPullRequest,
 			}
-			details := iconLinkDetails{
+			details := iconLink{
 				Text:  *p.PullRequest.Title,
 				URL:   *p.PullRequest.HTMLURL,
 				Black: true,
 			}
 			switch {
 			case !*p.PullRequest.Merged && *p.PullRequest.State == "open":
-				e.Action = "opened a pull request in"
+				e.Action = component.Text("opened a pull request in")
 				details.Icon = octiconssvg.GitPullRequest
 				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case !*p.PullRequest.Merged && *p.PullRequest.State == "closed":
-				e.Action = "closed a pull request in"
+				e.Action = component.Text("closed a pull request in")
 				details.Icon = octiconssvg.GitPullRequest
 				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 			case *p.PullRequest.Merged:
-				e.Action = "merged a pull request in"
+				e.Action = component.Text("merged a pull request in")
 				details.Icon = octiconssvg.GitMerge
 				details.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 			default:
@@ -312,26 +326,26 @@ func (a activity) Render() []*html.Node {
 			case nil: // Issue.
 				switch *p.Action {
 				case "created":
-					e.Action = "commented on an issue in"
-					e.Details = imageTextDetails{
+					e.Action = component.Join("commented on ", issueName(p), " in")
+					e.Details = imageText{
 						ImageURL: *p.Comment.User.AvatarURL,
 						Text:     shortBody(*p.Comment.Body),
 					}
 				default:
 					basicEvent.WIP = true
-					e.Action = fmt.Sprintf("%v on an issue in", *p.Action)
+					e.Action = component.Text(fmt.Sprintf("%v on an issue in", *p.Action))
 				}
 			default: // Pull Request.
 				switch *p.Action {
 				case "created":
-					e.Action = "commented on a pull request in"
-					e.Details = imageTextDetails{
+					e.Action = component.Join("commented on ", prName(p), " in")
+					e.Details = imageText{
 						ImageURL: *p.Comment.User.AvatarURL,
 						Text:     shortBody(*p.Comment.Body),
 					}
 				default:
 					basicEvent.WIP = true
-					e.Action = fmt.Sprintf("%v on a pull request in", *p.Action)
+					e.Action = component.Text(fmt.Sprintf("%v on a pull request in", *p.Action))
 				}
 			}
 			displayEvent = e
@@ -342,29 +356,29 @@ func (a activity) Render() []*html.Node {
 			}
 			switch *p.Action {
 			case "created":
-				e.Action = "commented on a pull request in"
-				e.Details = imageTextDetails{
+				e.Action = component.Join("commented on ", prrName(p), " in")
+				e.Details = imageText{
 					ImageURL: *p.Comment.User.AvatarURL,
 					Text:     shortBody(*p.Comment.Body),
 				}
 			default:
 				basicEvent.WIP = true
-				e.Action = fmt.Sprintf("%v on a pull request in", *p.Action)
+				e.Action = component.Text(fmt.Sprintf("%v on a pull request in", *p.Action))
 			}
 			displayEvent = e
 		case *github.CommitCommentEvent:
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
-				Action:     "commented on a commit in",
-				Details: imageTextDetails{
+				Action:     component.Join("commented on ", commitName(p, a.Commits), " in"),
+				Details: imageText{
 					ImageURL: *p.Comment.User.AvatarURL,
 					Text:     shortBody(*p.Comment.Body),
 				},
 			}
 
 		case *github.PushEvent:
-			var commits []*github.RepositoryCommit
+			var cs []*github.RepositoryCommit
 			for _, c := range p.Commits {
 				commit := a.Commits[*c.SHA]
 				if commit == nil {
@@ -379,15 +393,15 @@ func (a activity) Render() []*html.Node {
 						Author: &github.User{AvatarURL: &avatarURL},
 					}
 				}
-				commits = append(commits, commit)
+				cs = append(cs, commit)
 			}
 
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
-				Action:     "pushed to",
-				Details: commitsDetails{
-					Commits: commits,
+				Action:     component.Text("pushed to"),
+				Details: commits{
+					Commits: cs,
 				},
 			}
 
@@ -395,8 +409,8 @@ func (a activity) Render() []*html.Node {
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.RepoForked,
-				Action:     "forked",
-				Details: iconLinkDetails{
+				Action:     component.Text("forked"),
+				Details: iconLink{
 					Text: "github.com/" + *p.Forkee.FullName,
 					URL:  *p.Forkee.HTMLURL,
 					Icon: octiconssvg.Repo,
@@ -407,7 +421,7 @@ func (a activity) Render() []*html.Node {
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Star,
-				Action:     "starred",
+				Action:     component.Text("starred"),
 			}
 
 		case *github.CreateEvent:
@@ -417,14 +431,20 @@ func (a activity) Render() []*html.Node {
 			switch *p.RefType {
 			case "repository":
 				e.Icon = octiconssvg.Repo
-				e.Action = "created repository"
-				e.Details = textDetails{
+				e.Action = component.Text("created repository")
+				e.Details = text{
 					Text: *p.Description,
 				}
-			default:
+			case "branch":
 				e.Icon = octiconssvg.GitBranch
-				e.Action = fmt.Sprintf("created %v in", *p.RefType)
-				e.Details = codeDetails{
+				e.Action = component.Text("created branch in")
+				e.Details = code{
+					Text: *p.Ref,
+				}
+			default:
+				basicEvent.WIP = true
+				e.Action = component.Text(fmt.Sprintf("created %v in", *p.RefType))
+				e.Details = code{
 					Text: *p.Ref,
 				}
 			}
@@ -433,8 +453,8 @@ func (a activity) Render() []*html.Node {
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Trashcan,
-				Action:     fmt.Sprintf("deleted %v in", *p.RefType),
-				Details: codeDetails{
+				Action:     component.Text(fmt.Sprintf("deleted %v in", *p.RefType)),
+				Details: code{
 					Text:          *p.Ref,
 					Strikethrough: true,
 				},
@@ -444,8 +464,8 @@ func (a activity) Render() []*html.Node {
 			displayEvent = event{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Book,
-				Action:     "edited the wiki in",
-				Details: &pagesDetails{
+				Action:     component.Text("edited the wiki in"),
+				Details: &pages{
 					Actor: e.Actor,
 					Pages: p.Pages,
 				},
@@ -455,7 +475,7 @@ func (a activity) Render() []*html.Node {
 			basicEvent.WIP = true
 			displayEvent = event{
 				basicEvent: &basicEvent,
-				Action:     *e.Type,
+				Action:     component.Text(*e.Type),
 			}
 		}
 		if displayEvent == nil {
@@ -471,6 +491,78 @@ func (a activity) Render() []*html.Node {
 	return []*html.Node{htmlg.DivClass("activity", nodes...)}
 }
 
+func issueName(p *github.IssueCommentEvent) htmlg.Component {
+	n := iconLink{
+		Text:    shortTitle(*p.Issue.Title),
+		Tooltip: *p.Issue.Title,
+		URL:     *p.Comment.HTMLURL,
+		Black:   true,
+	}
+	switch *p.Issue.State {
+	case "open":
+		n.Icon = octiconssvg.IssueOpened
+		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+	case "closed":
+		n.Icon = octiconssvg.IssueClosed
+		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+	default:
+		log.Println("activity.Render: unsupported *github.IssueCommentEvent Issue.State:", *p.Issue.State)
+		n.Icon = octiconssvg.IssueOpened
+	}
+	return n
+}
+func prName(p *github.IssueCommentEvent) htmlg.Component {
+	n := iconLink{
+		Text:    shortTitle(*p.Issue.Title),
+		Tooltip: *p.Issue.Title,
+		URL:     *p.Comment.HTMLURL,
+		Black:   true,
+	}
+	switch *p.Issue.State {
+	case "open":
+		n.Icon = octiconssvg.GitPullRequest
+		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+	case "closed":
+		n.Icon = octiconssvg.GitPullRequest
+		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+	// TODO: Detect merged somehow? It's likely going to require making an API call.
+	default:
+		log.Println("activity.Render: unsupported *github.IssueCommentEvent Issue.State:", *p.Issue.State)
+		n.Icon = octiconssvg.GitPullRequest
+	}
+	return n
+}
+func prrName(p *github.PullRequestReviewCommentEvent) htmlg.Component {
+	n := iconLink{
+		Text:    shortTitle(*p.PullRequest.Title),
+		Tooltip: *p.PullRequest.Title,
+		URL:     *p.Comment.HTMLURL,
+		Black:   true,
+	}
+	switch {
+	case p.PullRequest.MergedAt == nil && *p.PullRequest.State == "open":
+		n.Icon = octiconssvg.GitPullRequest
+		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+	case p.PullRequest.MergedAt == nil && *p.PullRequest.State == "closed":
+		n.Icon = octiconssvg.GitPullRequest
+		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+	case p.PullRequest.MergedAt != nil:
+		n.Icon = octiconssvg.GitMerge
+		n.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
+	default:
+		log.Println("activity.Render: unsupported *github.PullRequestReviewCommentEvent PullRequest.State:", *p.PullRequest.State)
+		n.Icon = octiconssvg.GitPullRequest
+	}
+	return n
+}
+func commitName(p *github.CommitCommentEvent, commits map[string]*github.RepositoryCommit) htmlg.Component {
+	c := commits[*p.Comment.CommitID]
+	if c == nil {
+		return component.Text("a commit")
+	}
+	return commit{C: c, Short: true}
+}
+
 type basicEvent struct {
 	Time      time.Time
 	Actor     string
@@ -480,10 +572,12 @@ type basicEvent struct {
 	Raw string // Raw event for debugging to display as title. Empty string excludes it.
 }
 
+// An event within the activity stream.
+// Action must be not nil.
 type event struct {
 	*basicEvent
 	Icon    func() *html.Node
-	Action  string
+	Action  htmlg.Component // Not nil.
 	Details htmlg.Component
 }
 
@@ -495,19 +589,18 @@ func (e event) Render() []*html.Node {
 	if e.Icon == nil {
 		e.Icon = func() *html.Node { return &html.Node{Type: html.TextNode} }
 	}
-	var actionAttr []html.Attribute
+	action := &html.Node{Type: html.ElementNode, Data: atom.Span.String()}
 	if e.Raw != "" {
-		actionAttr = []html.Attribute{{Key: atom.Title.String(), Val: e.Raw}}
+		action.Attr = append(action.Attr, html.Attribute{Key: atom.Title.String(), Val: e.Raw})
+	}
+	for _, n := range e.Action.Render() {
+		action.AppendChild(n)
 	}
 	div := htmlg.DivClass(divClass,
 		htmlg.SpanClass("icon", e.Icon()),
 		htmlg.Text(e.Actor),
 		htmlg.Text(" "),
-		&html.Node{
-			Type: html.ElementNode, Data: atom.Span.String(),
-			Attr:       actionAttr,
-			FirstChild: htmlg.Text(e.Action),
-		},
+		action,
 		htmlg.Text(" "),
 		htmlg.A(e.Container, template.URL("https://"+e.Container)),
 		&html.Node{
@@ -520,9 +613,7 @@ func (e event) Render() []*html.Node {
 		},
 	)
 	if e.Details != nil {
-		for _, n := range e.Details.Render() {
-			div.AppendChild(n)
-		}
+		div.AppendChild(htmlg.DivClass("details", e.Details.Render()...))
 	}
 	return []*html.Node{div}
 }
@@ -541,54 +632,51 @@ func (c RGB) HexString() string {
 	return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B)
 }
 
-// iconLinkDetails are details consisting of an icon and a text link.
+// iconLink consists of an icon and a text link.
 // Icon must be not nil.
-type iconLinkDetails struct {
-	Text  string
-	URL   string
-	Black bool              // Black link.
-	Icon  func() *html.Node // Must be not nil.
-	Color RGB
+type iconLink struct {
+	Text    string
+	Tooltip string
+	URL     string
+	Black   bool              // Black link.
+	Icon    func() *html.Node // Not nil.
+	Color   RGB               // Icon color.
 }
 
-func (d iconLinkDetails) Render() []*html.Node {
+func (d iconLink) Render() []*html.Node {
 	icon := htmlg.Span(d.Icon())
 	icon.Attr = append(icon.Attr, html.Attribute{
 		Key: atom.Style.String(), Val: fmt.Sprintf("color: %s; margin-right: 4px;", d.Color.HexString()),
 	})
 	link := htmlg.A(d.Text, template.URL(d.URL))
+	if d.Tooltip != "" {
+		link.Attr = append(link.Attr, html.Attribute{Key: atom.Title.String(), Val: d.Tooltip})
+	}
 	if d.Black {
 		link.Attr = append(link.Attr, html.Attribute{Key: atom.Class.String(), Val: "black"})
 	}
-	div := htmlg.DivClass("details",
-		icon,
-		link,
-	)
-	return []*html.Node{div}
+	return []*html.Node{icon, link}
 }
 
-type textDetails struct {
+type text struct {
 	Text string
 }
 
-func (d textDetails) Render() []*html.Node {
+func (d text) Render() []*html.Node {
 	text := &html.Node{
 		Type: html.ElementNode, Data: atom.Span.String(),
 		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "font-size: 13px; color: #666;"}},
 		FirstChild: htmlg.Text(d.Text),
 	}
-	div := htmlg.DivClass("details",
-		text,
-	)
-	return []*html.Node{div}
+	return []*html.Node{text}
 }
 
-type imageTextDetails struct {
+type imageText struct {
 	ImageURL string
 	Text     string
 }
 
-func (d imageTextDetails) Render() []*html.Node {
+func (d imageText) Render() []*html.Node {
 	image := &html.Node{
 		Type: html.ElementNode, Data: atom.Img.String(),
 		Attr: []html.Attribute{
@@ -601,10 +689,7 @@ func (d imageTextDetails) Render() []*html.Node {
 		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "font-size: 13px; color: #666; flex-grow: 1;"}},
 		FirstChild: htmlg.Text(d.Text),
 	}
-	div := htmlg.DivClass("details",
-		image,
-		text,
-	)
+	div := htmlg.Div(image, text)
 	div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "display: flex;"})
 	return []*html.Node{div}
 }
@@ -616,12 +701,19 @@ func shortBody(s string) string {
 	return s[:199] + "…"
 }
 
-type codeDetails struct {
+func shortTitle(s string) string {
+	if len(s) <= 36 {
+		return s
+	}
+	return s[:35] + "…"
+}
+
+type code struct {
 	Text          string
 	Strikethrough bool
 }
 
-func (d codeDetails) Render() []*html.Node {
+func (d code) Render() []*html.Node {
 	codeStyle := `padding: 2px 6px;
 background-color: rgb(232, 241, 246);
 border-radius: 3px;`
@@ -633,59 +725,76 @@ border-radius: 3px;`
 		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: codeStyle}},
 		FirstChild: htmlg.Text(d.Text),
 	}
-	div := htmlg.DivClass("details",
-		code,
-	)
-	return []*html.Node{div}
+	return []*html.Node{code}
 }
 
-type commitsDetails struct {
+type commits struct {
 	Commits []*github.RepositoryCommit
 }
 
-func (d commitsDetails) Render() []*html.Node {
+func (d commits) Render() []*html.Node {
 	var nodes []*html.Node
 
 	for _, c := range d.Commits {
-		avatar := &html.Node{
-			Type: html.ElementNode, Data: atom.Img.String(),
-			Attr: []html.Attribute{
-				{Key: atom.Src.String(), Val: *c.Author.AvatarURL},
-				{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 6px;"},
-			},
-		}
-		sha := &html.Node{
-			Type: html.ElementNode, Data: atom.Code.String(),
-			FirstChild: htmlg.Text(shortSHA(*c.SHA)),
-		}
-		if c.HTMLURL != nil {
-			sha = &html.Node{
-				Type: html.ElementNode, Data: atom.A.String(),
-				Attr: []html.Attribute{
-					{Key: atom.Href.String(), Val: *c.HTMLURL},
-				},
-				FirstChild: sha,
-			}
-		}
-		message := &html.Node{
-			Type: html.ElementNode, Data: atom.Span.String(),
-			Attr: []html.Attribute{
-				{Key: atom.Style.String(), Val: "margin-left: 6px;"},
-			},
-			FirstChild: htmlg.Text(firstParagraph(*c.Commit.Message)),
-		}
-
-		div := htmlg.Div(avatar, sha, message)
+		div := htmlg.Div(commit{C: c}.Render()...)
 		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
 		nodes = append(nodes, div)
 	}
 
-	div := htmlg.DivClass("details", nodes...)
-	return []*html.Node{div}
+	return nodes
+}
+
+type commit struct {
+	C     *github.RepositoryCommit
+	Short bool
+}
+
+func (c commit) Render() []*html.Node {
+	avatar := &html.Node{
+		Type: html.ElementNode, Data: atom.Img.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Src.String(), Val: *c.C.Author.AvatarURL},
+			{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 4px;"},
+		},
+	}
+	sha := &html.Node{
+		Type: html.ElementNode, Data: atom.Code.String(),
+		FirstChild: htmlg.Text(shortSHA(*c.C.SHA)),
+	}
+	if c.C.HTMLURL != nil {
+		sha = &html.Node{
+			Type: html.ElementNode, Data: atom.A.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Href.String(), Val: *c.C.HTMLURL},
+			},
+			FirstChild: sha,
+		}
+	}
+	message := &html.Node{
+		Type: html.ElementNode, Data: atom.Span.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Style.String(), Val: "margin-left: 4px;"},
+			{Key: atom.Title.String(), Val: *c.C.Commit.Message},
+		},
+	}
+	switch c.Short {
+	case false:
+		message.AppendChild(htmlg.Text(firstParagraph(*c.C.Commit.Message)))
+	case true:
+		message.AppendChild(htmlg.Text(shortCommit(firstParagraph(*c.C.Commit.Message))))
+	}
+	return []*html.Node{avatar, sha, message}
 }
 
 func shortSHA(sha string) string {
 	return sha[:8]
+}
+
+func shortCommit(s string) string {
+	if len(s) <= 24 {
+		return s
+	}
+	return s[:23] + "…"
 }
 
 // firstParagraph returns the first paragraph of text s.
@@ -697,12 +806,12 @@ func firstParagraph(s string) string {
 	return s[:i]
 }
 
-type pagesDetails struct {
+type pages struct {
 	Actor *github.User   // Actor that acted on the pages.
 	Pages []*github.Page // Wiki pages that are affected.
 }
 
-func (d pagesDetails) Render() []*html.Node {
+func (d pages) Render() []*html.Node {
 	var nodes []*html.Node
 
 	for _, p := range d.Pages {
@@ -743,6 +852,5 @@ func (d pagesDetails) Render() []*html.Node {
 		nodes = append(nodes, div)
 	}
 
-	div := htmlg.DivClass("details", nodes...)
-	return []*html.Node{div}
+	return nodes
 }
