@@ -41,7 +41,7 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 
 			{{if h.CurrentUser.ID}}
 				Notifications{Unread: h.Notifications.Count() > 0}
-				<a class="topbar-avatar" href="{{h.CurrentUser.HTMLURL}}" tabindex=-1>
+				<a class="topbar-avatar" href="{{h.CurrentUser.HTMLURL}}">
 					<img class="topbar-avatar" src="{{h.CurrentUser.AvatarURL}}" title="Signed in as {{h.CurrentUser.Login}}.">
 				</a>
 				PostButton{Action: "/logout", Text: "Sign out", ReturnURL: h.ReturnURL}
@@ -135,7 +135,6 @@ header.header .user {
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Href.String(), Val: string(h.CurrentUser.HTMLURL)},
-					{Key: atom.Tabindex.String(), Val: "-1"},
 					{Key: atom.Style.String(), Val: `margin-right: 6px;`},
 				},
 			}
