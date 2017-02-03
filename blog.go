@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 
 	blogpkg "github.com/shurcooL/home/blog"
 	"github.com/shurcooL/home/component"
@@ -105,8 +106,9 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		if req.URL.Path == "" {
 			req.URL.Path = "/"
 		}
-		switch req.URL.Path {
-		case "/":
+		forceIssuesApp, _ := strconv.ParseBool(req.URL.Query().Get("issuesapp"))
+		switch {
+		case req.URL.Path == "/" && !forceIssuesApp:
 			if req.Method != "GET" {
 				return httputil.MethodError{Allowed: []string{"GET"}}
 			}
