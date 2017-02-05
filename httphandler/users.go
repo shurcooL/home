@@ -3,7 +3,7 @@ package httphandler
 import (
 	"net/http"
 
-	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
 )
 
@@ -14,22 +14,22 @@ type Users struct {
 
 func (h Users) GetAuthenticatedSpec(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
+		return httperror.Method{Allowed: []string{"GET"}}
 	}
 	us, err := h.Users.GetAuthenticatedSpec(req.Context())
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{V: us}
+	return httperror.JSONResponse{V: us}
 }
 
 func (h Users) GetAuthenticated(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
+		return httperror.Method{Allowed: []string{"GET"}}
 	}
 	u, err := h.Users.GetAuthenticated(req.Context())
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{V: u}
+	return httperror.JSONResponse{V: u}
 }

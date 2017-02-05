@@ -8,6 +8,7 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 )
@@ -26,7 +27,7 @@ var aboutHTML = template.Must(template.New("").Parse(`<html>
 func initAbout(notifications notifications.Service, users users.Service) {
 	http.Handle("/about", userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
-			return httputil.MethodError{Allowed: []string{"GET"}}
+			return httperror.Method{Allowed: []string{"GET"}}
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -8,6 +8,7 @@ import (
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/issuesapp"
@@ -92,7 +93,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 				if req.URL.RawQuery != "" {
 					baseURL += "?" + req.URL.RawQuery
 				}
-				return httputil.Redirect{URL: baseURL}
+				return httperror.Redirect{URL: baseURL}
 			}
 			req.URL.Path = req.URL.Path[prefixLen:]
 			if req.URL.Path == "" {

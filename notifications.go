@@ -15,6 +15,7 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/notifications/fs"
 	"github.com/shurcooL/notifications/githubapi"
@@ -97,7 +98,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 			if req.URL.RawQuery != "" {
 				baseURL += "?" + req.URL.RawQuery
 			}
-			return httputil.Redirect{URL: baseURL}
+			return httperror.Redirect{URL: baseURL}
 		}
 		returnURL := req.RequestURI
 		req.URL.Path = req.URL.Path[prefixLen:]
@@ -115,7 +116,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 				Path:     "/login",
 				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
 			}).String()
-			return httputil.Redirect{URL: loginURL}
+			return httperror.Redirect{URL: loginURL}
 		}
 		w.WriteHeader(rr.Code)
 		_, err := io.Copy(w, rr.Body)

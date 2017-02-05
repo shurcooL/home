@@ -12,6 +12,7 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/notifications"
@@ -100,7 +101,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 			if req.URL.RawQuery != "" {
 				baseURL += "?" + req.URL.RawQuery
 			}
-			return httputil.Redirect{URL: baseURL}
+			return httperror.Redirect{URL: baseURL}
 		}
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
@@ -110,7 +111,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		switch {
 		case req.URL.Path == "/" && !forceIssuesApp:
 			if req.Method != "GET" {
-				return httputil.MethodError{Allowed: []string{"GET"}}
+				return httperror.Method{Allowed: []string{"GET"}}
 			}
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")

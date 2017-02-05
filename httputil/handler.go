@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
 )
 
@@ -34,17 +34,15 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 		return
 	}
-	if err, ok := IsMethodError(err); ok {
-		w.Header().Set("Allow", strings.Join(err.Allowed, ", "))
-		error := fmt.Sprintf("405 Method Not Allowed\n\n%v", err)
-		http.Error(w, error, http.StatusMethodNotAllowed)
+	if err, ok := httperror.IsMethod(err); ok {
+		httperror.HandleMethod(w, err)
 		return
 	}
-	if err, ok := IsRedirect(err); ok {
+	if err, ok := httperror.IsRedirect(err); ok {
 		http.Redirect(w, req, err.URL, http.StatusSeeOther)
 		return
 	}
-	if err, ok := IsHTTPError(err); ok {
+	if err, ok := httperror.IsHTTP(err); ok {
 		code := err.Code
 		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
 		if code == http.StatusBadRequest {
@@ -55,7 +53,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, error, code)
 		return
 	}
-	if err, ok := IsJSONResponse(err); ok {
+	if err, ok := httperror.IsJSONResponse(err); ok {
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
 		jw.SetIndent("", "\t")

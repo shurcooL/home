@@ -15,6 +15,7 @@ import (
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/presentdata"
 	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/httpfs/html/vfstemplate"
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/shurcooL/httpgzip"
@@ -57,13 +58,13 @@ type talksHandler struct {
 
 func (h *talksHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
+		return httperror.Method{Allowed: []string{"GET"}}
 	}
 	if canonicalURL := pathpkg.Clean(req.RequestURI); canonicalURL != req.RequestURI {
 		if req.URL.RawQuery != "" {
 			canonicalURL += "?" + req.URL.RawQuery
 		}
-		return httputil.Redirect{URL: canonicalURL}
+		return httperror.Redirect{URL: canonicalURL}
 	}
 
 	path := pathpkg.Clean("/" + req.URL.Path)

@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/reactions"
 )
 
@@ -15,11 +15,11 @@ type Reactions struct {
 
 func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" && req.Method != "POST" {
-		return httputil.MethodError{Allowed: []string{"GET", "POST"}}
+		return httperror.Method{Allowed: []string{"GET", "POST"}}
 	}
 	if err := req.ParseForm(); err != nil {
 		log.Println("req.ParseForm:", err)
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
+		return httperror.HTTP{Code: http.StatusBadRequest, Err: err}
 	}
 	reactableURL := req.Form.Get("reactableURL")
 	reactableID := req.Form.Get("reactableID")
@@ -29,7 +29,7 @@ func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 		if err != nil {
 			return err
 		}
-		return httputil.JSONResponse{V: reactions}
+		return httperror.JSONResponse{V: reactions}
 	case "POST":
 		tr := reactions.ToggleRequest{
 			Reaction: reactions.EmojiID(req.PostForm.Get("reaction")),
@@ -38,7 +38,7 @@ func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 		if err != nil {
 			return err
 		}
-		return httputil.JSONResponse{V: reactions}
+		return httperror.JSONResponse{V: reactions}
 	default:
 		panic("unreachable")
 	}

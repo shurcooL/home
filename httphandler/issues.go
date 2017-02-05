@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/reactions"
 )
@@ -17,7 +17,7 @@ type Issues struct {
 
 func (h Issues) List(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
+		return httperror.Method{Allowed: []string{"GET"}}
 	}
 	q := req.URL.Query() // TODO: Automate this conversion process.
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
@@ -26,12 +26,12 @@ func (h Issues) List(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{V: is}
+	return httperror.JSONResponse{V: is}
 }
 
 func (h Issues) Count(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
+		return httperror.Method{Allowed: []string{"GET"}}
 	}
 	q := req.URL.Query() // TODO: Automate this conversion process.
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
@@ -40,18 +40,18 @@ func (h Issues) Count(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{V: count}
+	return httperror.JSONResponse{V: count}
 }
 
 func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
-		return httputil.MethodError{Allowed: []string{"GET"}}
+		return httperror.Method{Allowed: []string{"GET"}}
 	}
 	q := req.URL.Query() // TODO: Automate this conversion process.
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
 	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
 	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID query parameter: %v", err)}
+		return httperror.HTTP{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID query parameter: %v", err)}
 	}
 	var opt *issues.ListOptions
 	if s, err := strconv.Atoi(q.Get("Opt.Start")); err == nil {
@@ -70,26 +70,26 @@ func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{V: is}
+	return httperror.JSONResponse{V: is}
 }
 
 func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "POST" {
-		return httputil.MethodError{Allowed: []string{"POST"}}
+		return httperror.Method{Allowed: []string{"POST"}}
 	}
 	q := req.URL.Query() // TODO: Automate this conversion process.
 	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
 	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
 	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID query parameter: %v", err)}
+		return httperror.HTTP{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID query parameter: %v", err)}
 	}
 	if err := req.ParseForm(); err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: err}
+		return httperror.HTTP{Code: http.StatusBadRequest, Err: err}
 	}
 	var cr issues.CommentRequest
 	cr.ID, err = strconv.ParseUint(req.PostForm.Get("ID"), 10, 64) // TODO: Automate this conversion process.
 	if err != nil {
-		return httputil.HTTPError{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID form parameter: %v", err)}
+		return httperror.HTTP{Code: http.StatusBadRequest, Err: fmt.Errorf("parsing ID form parameter: %v", err)}
 	}
 	if body := req.PostForm["Body"]; len(body) != 0 {
 		cr.Body = &body[0]
@@ -102,5 +102,5 @@ func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return httputil.JSONResponse{V: is}
+	return httperror.JSONResponse{V: is}
 }

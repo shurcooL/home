@@ -21,6 +21,7 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -197,11 +198,11 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, string(htmlg.Render(nodes...)))
 		return
 	}
-	if err, ok := httputil.IsRedirect(err); ok {
+	if err, ok := httperror.IsRedirect(err); ok {
 		http.Redirect(w, req, err.URL, http.StatusSeeOther)
 		return
 	}
-	if err, ok := httputil.IsHTTPError(err); ok {
+	if err, ok := httperror.IsHTTP(err); ok {
 		code := err.Code
 		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
 		if code == http.StatusBadRequest {
@@ -212,7 +213,7 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, error, code)
 		return
 	}
-	if err, ok := httputil.IsJSONResponse(err); ok {
+	if err, ok := httperror.IsJSONResponse(err); ok {
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
 		jw.SetIndent("", "\t")
@@ -265,7 +266,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		returnURL := sanitizeReturn(req.PostFormValue("return"))
 
 		if u != nil {
-			return nil, httputil.Redirect{URL: returnURL}
+			return nil, httperror.Redirect{URL: returnURL}
 		}
 
 		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ascii bytes in state, so use base64.
@@ -275,11 +276,11 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		httputil.SetCookie(w, &http.Cookie{Path: "/callback/github", Name: returnCookieName, Value: returnURL, HttpOnly: true, Secure: *productionFlag})
 
 		url := githubConfig.AuthCodeURL(state)
-		return nil, httputil.Redirect{URL: url}
+		return nil, httperror.Redirect{URL: url}
 
 	case req.Method == "GET" && req.URL.Path == "/callback/github":
 		if u != nil {
-			return nil, httputil.Redirect{URL: "/"}
+			return nil, httperror.Redirect{URL: "/"}
 		}
 
 		us, err := func() (users.User, error) {
@@ -328,7 +329,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		if err != nil {
 			log.Println(err)
 			// TODO: Redirect to an "problem with logging in" page, if, for example, error came from gh.Users.Get("") due to GitHub being down.
-			return nil, httputil.HTTPError{Code: http.StatusUnauthorized, Err: err}
+			return nil, httperror.HTTP{Code: http.StatusUnauthorized, Err: err}
 		}
 
 		// If the user doesn't already exist, create it.
@@ -338,7 +339,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			// Do nothing.
 		default:
 			log.Println("/callback/github: error creating user:", err)
-			return nil, httputil.HTTPError{Code: http.StatusInternalServerError, Err: err}
+			return nil, httperror.HTTP{Code: http.StatusInternalServerError, Err: err}
 		}
 
 		// Add new session.
@@ -375,7 +376,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
 		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: true, Secure: *productionFlag})
-		return nil, httputil.Redirect{URL: returnURL}
+		return nil, httperror.Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
 		if u != nil {
@@ -385,13 +386,13 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		}
 
 		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
-		return nil, httputil.Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
+		return nil, httperror.Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
 
 	case req.Method == "GET" && req.URL.Path == "/login":
 		returnURL := sanitizeReturn(req.URL.Query().Get(returnQueryName))
 
 		if u != nil {
-			return nil, httputil.Redirect{URL: returnURL}
+			return nil, httperror.Redirect{URL: returnURL}
 		}
 
 		centered := &html.Node{
