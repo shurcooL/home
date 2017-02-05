@@ -57,11 +57,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
-		// TODO: Update and unify octicons.css.
-		//       But be mindful of https://github.com/shurcooL/notifications/blob/c38c34c46358723f7f329fa80f9a4ae105b60985/notifications.go#L39.
 		HeadPre: `<title>Notifications</title>
 <link href="/icon.png" rel="icon" type="image/png">
-<link href="//cdnjs.cloudflare.com/ajax/libs/octicons/3.1.0/octicons.css" media="all" rel="stylesheet" type="text/css" />
 <style type="text/css">
 	body {
 		margin: 20px;
@@ -91,7 +88,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		}
 		return []htmlg.ComponentContext{header}, nil
 	}
-	notificationsApp := notificationsapp.New(service, users, opt)
+	notificationsApp := notificationsapp.New(service, opt)
 
 	notificationsHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/notifications")
