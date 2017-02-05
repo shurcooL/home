@@ -3,12 +3,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"mime"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"time"
 
 	"github.com/shurcooL/go/httpstoppable"
 	"github.com/shurcooL/home/assets"
@@ -148,7 +150,7 @@ func run() error {
 		<-interrupt
 		close(stop)
 	}()
-	err = httpstoppable.ListenAndServe(*httpFlag, nil, stop)
+	err = httpstoppable.ListenAndServe(*httpFlag, topMux{}, stop)
 	if err != nil {
 		log.Println("httpstoppable.ListenAndServe:", err)
 	}
@@ -159,6 +161,18 @@ func run() error {
 	}
 
 	return nil
+}
+
+// topMux adds some instrumentation on top of http.DefaultServeMux.
+type topMux struct{}
+
+func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	started := time.Now()
+	http.DefaultServeMux.ServeHTTP(w, req)
+	fmt.Printf("TIMING: %s: %v\n", req.URL.Path, time.Since(started))
+	if _, haveType := w.Header()["Content-Type"]; !haveType {
+		log.Printf("warning: Content-Type header not set for %q\n", req.URL.Path)
+	}
 }
 
 // detailedForAdmin serves detailed errors for admin users,
