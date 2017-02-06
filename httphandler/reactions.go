@@ -19,7 +19,7 @@ func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 	}
 	if err := req.ParseForm(); err != nil {
 		log.Println("req.ParseForm:", err)
-		return httperror.HTTP{Code: http.StatusBadRequest, Err: err}
+		return httperror.BadRequest{Err: err}
 	}
 	reactableURL := req.Form.Get("reactableURL")
 	reactableID := req.Form.Get("reactableID")
