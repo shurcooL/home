@@ -41,15 +41,19 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		if err != nil {
 			return err
 		}
+		nc, err := notifications.Count(req.Context(), nil)
+		if err != nil {
+			return err
+		}
 		returnURL := req.RequestURI
 
 		// Render the header.
 		header := component.Header{
-			CurrentUser:   authenticatedUser,
-			ReturnURL:     returnURL,
-			Notifications: notifications,
+			CurrentUser:       authenticatedUser,
+			NotificationCount: nc,
+			ReturnURL:         returnURL,
 		}
-		err = htmlg.RenderComponentsContext(req.Context(), w, header)
+		err = htmlg.RenderComponents(w, header)
 		if err != nil {
 			return err
 		}

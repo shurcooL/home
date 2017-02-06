@@ -142,15 +142,19 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	if err != nil {
 		return err
 	}
+	nc, err := h.notifications.Count(req.Context(), nil)
+	if err != nil {
+		return err
+	}
 	returnURL := req.RequestURI
 
 	// Render the header.
 	header := homecomponent.Header{
-		CurrentUser:   authenticatedUser,
-		ReturnURL:     returnURL,
-		Notifications: h.notifications,
+		CurrentUser:       authenticatedUser,
+		NotificationCount: nc,
+		ReturnURL:         returnURL,
 	}
-	err = htmlg.RenderComponentsContext(req.Context(), w, header)
+	err = htmlg.RenderComponents(w, header)
 	if err != nil {
 		return err
 	}

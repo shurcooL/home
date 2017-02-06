@@ -77,18 +77,23 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
 	opt.BodyPre = `<div style="max-width: 800px; margin: 0 auto 100px auto;">`
-	opt.BodyTop = func(req *http.Request) ([]htmlg.ComponentContext, error) {
+	opt.BodyTop = func(req *http.Request) ([]htmlg.Component, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())
 		if err != nil {
 			return nil, err
 		}
-		returnURL := req.RequestURI
-		header := component.Header{
-			CurrentUser:   authenticatedUser,
-			ReturnURL:     returnURL,
-			Notifications: service,
+		nc, err := service.Count(req.Context(), nil)
+		if err != nil {
+			return nil, err
 		}
-		return []htmlg.ComponentContext{header}, nil
+		returnURL := req.RequestURI
+
+		header := component.Header{
+			CurrentUser:       authenticatedUser,
+			NotificationCount: nc,
+			ReturnURL:         returnURL,
+		}
+		return []htmlg.Component{header}, nil
 	}
 	notificationsApp := notificationsapp.New(service, opt)
 

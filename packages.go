@@ -45,19 +45,24 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 			return err
 		}
 
-		// Render the header.
 		authenticatedUser, err := usersService.GetAuthenticated(req.Context())
 		if err != nil {
 			log.Println(err)
 			authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 		}
-		returnURL := req.RequestURI
-		header := component.Header{
-			CurrentUser:   authenticatedUser,
-			ReturnURL:     returnURL,
-			Notifications: notifications,
+		nc, err := notifications.Count(req.Context(), nil)
+		if err != nil {
+			return err
 		}
-		err = htmlg.RenderComponentsContext(req.Context(), w, header)
+		returnURL := req.RequestURI
+
+		// Render the header.
+		header := component.Header{
+			CurrentUser:       authenticatedUser,
+			NotificationCount: nc,
+			ReturnURL:         returnURL,
+		}
+		err = htmlg.RenderComponents(w, header)
 		if err != nil {
 			return err
 		}

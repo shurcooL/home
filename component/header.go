@@ -1,12 +1,9 @@
 package component
 
 import (
-	"context"
 	"fmt"
-	"log"
 
 	"github.com/shurcooL/htmlg"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -15,13 +12,13 @@ import (
 
 // Header is a header component that displays current user and notifications.
 type Header struct {
-	CurrentUser   users.User
-	ReturnURL     string
-	Notifications notifications.Service
+	CurrentUser       users.User
+	NotificationCount uint64
+	ReturnURL         string
 }
 
-// RenderContext implements htmlg.ComponentContext.
-func (h Header) RenderContext(ctx context.Context) []*html.Node {
+// Render implements htmlg.Component.
+func (h Header) Render() []*html.Node {
 	// TODO: Make this much nicer.
 	/*
 		<style type="text/css">...</style>
@@ -40,7 +37,7 @@ func (h Header) RenderContext(ctx context.Context) []*html.Node {
 			</ul>
 
 			{{if h.CurrentUser.ID}}
-				Notifications{Unread: h.Notifications.Count() > 0}
+				Notifications{Unread: h.NotificationCount > 0}
 				<a class="topbar-avatar" href="{{h.CurrentUser.HTMLURL}}">
 					<img class="topbar-avatar" src="{{h.CurrentUser.AvatarURL}}" title="Signed in as {{h.CurrentUser.Login}}.">
 				</a>
@@ -113,18 +110,13 @@ header.header .user {
 	userSpan := htmlg.SpanClass("user")
 	if h.CurrentUser.ID != 0 {
 		{ // Notifications icon.
-			n, err := h.Notifications.Count(ctx, nil)
-			if err != nil {
-				log.Println(err)
-				n = 0
-			}
 			span := &html.Node{
 				Type: html.ElementNode, Data: atom.Span.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Style.String(), Val: "margin-right: 10px;"},
 				},
 			}
-			for _, n := range (Notifications{Unread: n > 0}).Render() {
+			for _, n := range (Notifications{Unread: h.NotificationCount > 0}).Render() {
 				span.AppendChild(n)
 			}
 			userSpan.AppendChild(span)

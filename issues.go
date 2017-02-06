@@ -65,18 +65,23 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 	if *productionFlag {
 		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
-	opt.BodyTop = func(req *http.Request) ([]htmlg.ComponentContext, error) {
+	opt.BodyTop = func(req *http.Request) ([]htmlg.Component, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())
 		if err != nil {
 			return nil, err
 		}
-		returnURL := req.RequestURI
-		header := component.Header{
-			CurrentUser:   authenticatedUser,
-			ReturnURL:     returnURL,
-			Notifications: notifications,
+		nc, err := notifications.Count(req.Context(), nil)
+		if err != nil {
+			return nil, err
 		}
-		return []htmlg.ComponentContext{header}, nil
+		returnURL := req.RequestURI
+
+		header := component.Header{
+			CurrentUser:       authenticatedUser,
+			NotificationCount: nc,
+			ReturnURL:         returnURL,
+		}
+		return []htmlg.Component{header}, nil
 	}
 	issuesApp := issuesapp.New(issuesService, users, opt)
 
