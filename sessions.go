@@ -202,6 +202,10 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, err.URL, http.StatusSeeOther)
 		return
 	}
+	if err, ok := httperror.IsBadRequest(err); ok {
+		httperror.HandleBadRequest(w, err)
+		return
+	}
 	if err, ok := httperror.IsHTTP(err); ok {
 		code := err.Code
 		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
