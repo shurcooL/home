@@ -167,11 +167,12 @@ func run() error {
 type topMux struct{}
 
 func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	path := req.URL.Path
 	started := time.Now()
 	http.DefaultServeMux.ServeHTTP(w, req)
-	fmt.Printf("TIMING: %s: %v\n", req.URL.Path, time.Since(started))
+	fmt.Printf("TIMING: %s: %v\n", path, time.Since(started))
 	if _, haveType := w.Header()["Content-Type"]; !haveType {
-		log.Printf("warning: Content-Type header not set for %q\n", req.URL.Path)
+		log.Printf("warning: Content-Type header not set for %q\n", path)
 	}
 }
 
