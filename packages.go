@@ -50,9 +50,12 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 			log.Println(err)
 			authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 		}
-		nc, err := notifications.Count(req.Context(), nil)
-		if err != nil {
-			return err
+		var nc uint64
+		if authenticatedUser.ID != 0 {
+			nc, err = notifications.Count(req.Context(), nil)
+			if err != nil {
+				return err
+			}
 		}
 		returnURL := req.RequestURI
 

@@ -29,12 +29,16 @@ const ReactableURL = idiomaticGoURI
 // RenderBodyInnerHTML renders the inner HTML of the <body> element of the Idiomatic Go page.
 // It's safe for concurrent use.
 func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.Service, notifications notifications.Service, authenticatedUser users.User, returnURL string) error {
-	nc, err := notifications.Count(ctx, nil)
-	if err != nil {
-		return err
+	var nc uint64
+	if authenticatedUser.ID != 0 {
+		var err error
+		nc, err = notifications.Count(ctx, nil)
+		if err != nil {
+			return err
+		}
 	}
 
-	_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
+	_, err := io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
 	if err != nil {
 		return err
 	}

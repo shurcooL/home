@@ -142,9 +142,12 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	if err != nil {
 		return err
 	}
-	nc, err := h.notifications.Count(req.Context(), nil)
-	if err != nil {
-		return err
+	var nc uint64
+	if authenticatedUser.ID != 0 {
+		nc, err = h.notifications.Count(req.Context(), nil)
+		if err != nil {
+			return err
+		}
 	}
 	returnURL := req.RequestURI
 

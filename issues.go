@@ -70,9 +70,12 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		if err != nil {
 			return nil, err
 		}
-		nc, err := notifications.Count(req.Context(), nil)
-		if err != nil {
-			return nil, err
+		var nc uint64
+		if authenticatedUser.ID != 0 {
+			nc, err = notifications.Count(req.Context(), nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 		returnURL := req.RequestURI
 

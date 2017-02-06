@@ -41,9 +41,12 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		if err != nil {
 			return err
 		}
-		nc, err := notifications.Count(req.Context(), nil)
-		if err != nil {
-			return err
+		var nc uint64
+		if authenticatedUser.ID != 0 {
+			nc, err = notifications.Count(req.Context(), nil)
+			if err != nil {
+				return err
+			}
 		}
 		returnURL := req.RequestURI
 

@@ -13,7 +13,7 @@ import (
 // Header is a header component that displays current user and notifications.
 type Header struct {
 	CurrentUser       users.User
-	NotificationCount uint64
+	NotificationCount uint64 // Only needed if CurrentUser.ID != 0.
 	ReturnURL         string
 }
 

@@ -84,9 +84,12 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		if err != nil {
 			return nil, err
 		}
-		nc, err := notifications.Count(req.Context(), nil)
-		if err != nil {
-			return nil, err
+		var nc uint64
+		if authenticatedUser.ID != 0 {
+			nc, err = notifications.Count(req.Context(), nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 		returnURL := req.RequestURI
 

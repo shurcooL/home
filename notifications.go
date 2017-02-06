@@ -82,9 +82,12 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		if err != nil {
 			return nil, err
 		}
-		nc, err := service.Count(req.Context(), nil)
-		if err != nil {
-			return nil, err
+		var nc uint64
+		if authenticatedUser.ID != 0 {
+			nc, err = service.Count(req.Context(), nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 		returnURL := req.RequestURI
 
