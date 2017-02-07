@@ -13,6 +13,18 @@ type Reactions struct {
 	Reactions reactions.Service
 }
 
+func (h Reactions) List(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return httperror.Method{Allowed: []string{"GET"}}
+	}
+	reactableURL := req.URL.Query().Get("ReactableURL")
+	reactions, err := h.Reactions.List(req.Context(), reactableURL)
+	if err != nil {
+		return err
+	}
+	return httperror.JSONResponse{V: reactions}
+}
+
 func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" && req.Method != "POST" {
 		return httperror.Method{Allowed: []string{"GET", "POST"}}

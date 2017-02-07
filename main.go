@@ -81,6 +81,7 @@ func run() error {
 
 	reactionsAPIHandler := httphandler.Reactions{Reactions: reactions}
 	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler(users, reactionsAPIHandler.GetOrToggle)})
+	http.Handle("/api/react/list", userMiddleware{httputil.ErrorHandler(users, reactionsAPIHandler.List)})
 
 	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),

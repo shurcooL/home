@@ -2,6 +2,7 @@ package idiomaticgo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -18,6 +19,10 @@ type IssuesReactions struct {
 
 // issuesReactionsCommentID is the comment ID that IssuesReactions is hardcoded to use.
 const issuesReactionsCommentID = 0
+
+func (ir IssuesReactions) List(ctx context.Context, uri string) (map[string][]reactions.Reaction, error) {
+	return nil, errors.New("IssuesReactions.List: not implemented")
+}
 
 func (ir IssuesReactions) Get(ctx context.Context, uri string, id string) ([]reactions.Reaction, error) {
 	// TODO: id is issueID/commentID. Maybe? Not needed for this specific use atm.
