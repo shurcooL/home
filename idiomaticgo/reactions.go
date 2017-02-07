@@ -56,11 +56,3 @@ func (ir IssuesReactions) Toggle(ctx context.Context, uri string, id string, tr 
 	}
 	return comment.Reactions, nil
 }
-
-type fetchedReactions struct {
-	Reactions []reactions.Reaction
-}
-
-func (f fetchedReactions) Get(ctx context.Context, uri string, id string) ([]reactions.Reaction, error) {
-	return f.Reactions, nil
-}

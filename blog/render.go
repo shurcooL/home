@@ -15,7 +15,6 @@ import (
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
-	"github.com/shurcooL/reactions"
 	resumecomponent "github.com/shurcooL/resume/component"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -97,7 +96,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 		io.WriteString(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
 		err = htmlg.RenderComponents(w, resumecomponent.ReactionsBar{
-			Reactions:    fetchedReactions{Reactions: comment.Reactions},
+			Reactions:    comment.Reactions,
 			ReactableURL: blogURI.URI,
 			CurrentUser:  authenticatedUser,
 			ID:           fmt.Sprintf("%d", issue.ID), // TODO: "/0"?
@@ -156,14 +155,6 @@ func (it imageText) Render() []*html.Node {
 	}
 	text := htmlg.Text(it.Text)
 	return []*html.Node{image, text}
-}
-
-type fetchedReactions struct {
-	Reactions []reactions.Reaction
-}
-
-func (f fetchedReactions) Get(ctx context.Context, uri string, id string) ([]reactions.Reaction, error) {
-	return f.Reactions, nil
 }
 
 var octiconsCommentDiscussion = func() string {

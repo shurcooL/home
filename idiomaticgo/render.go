@@ -126,7 +126,7 @@ It'll show up here when I add an "Accepted" label.`)))
 
 		io.WriteString(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
 		err = htmlg.RenderComponents(w, resumecomponent.ReactionsBar{
-			Reactions:    fetchedReactions{Reactions: comment.Reactions},
+			Reactions:    comment.Reactions,
 			ReactableURL: ReactableURL,
 			CurrentUser:  authenticatedUser,
 			ID:           fmt.Sprintf("%d", issue.ID), // TODO: "/0"?
