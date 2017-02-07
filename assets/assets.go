@@ -26,5 +26,5 @@ var Assets = union.New(map[string]http.FileSystem{
 	"/assets": gopherjs_http.NewFS(http.Dir(importPathToDir("github.com/shurcooL/home/assets/_data"))),
 	//"/octicons": octicons.Assets,
 	"/resume.js":  gopherjs_http.Package("github.com/shurcooL/resume/frontend"),
-	"/resume.css": vfsutil.File(filepath.Join(importPathToDir("github.com/shurcooL/resume"), "style.css")),
+	"/resume.css": vfsutil.File(filepath.Join(importPathToDir("github.com/shurcooL/resume/frontend"), "style.css")),
 })
