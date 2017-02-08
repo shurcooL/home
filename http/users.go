@@ -7,14 +7,15 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/shurcooL/go/ctxhttp"
 	"github.com/shurcooL/users"
 )
 
 // Users implements users.Service remotely over HTTP.
 type Users struct{}
 
-func (Users) GetAuthenticated(_ context.Context) (users.User, error) {
-	resp, err := http.Get("/api/user")
+func (Users) GetAuthenticated(ctx context.Context) (users.User, error) {
+	resp, err := ctxhttp.Get(ctx, nil, "/api/user")
 	if err != nil {
 		return users.User{}, err
 	}
@@ -28,8 +29,8 @@ func (Users) GetAuthenticated(_ context.Context) (users.User, error) {
 	return u, err
 }
 
-func (Users) GetAuthenticatedSpec(_ context.Context) (users.UserSpec, error) {
-	resp, err := http.Get("/api/userspec")
+func (Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
+	resp, err := ctxhttp.Get(ctx, nil, "/api/userspec")
 	if err != nil {
 		return users.UserSpec{}, err
 	}
