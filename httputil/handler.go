@@ -49,9 +49,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err, ok := httperror.IsHTTP(err); ok {
 		code := err.Code
 		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
-		if code == http.StatusBadRequest {
-			error += "\n\n" + err.Error()
-		} else if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, code)
