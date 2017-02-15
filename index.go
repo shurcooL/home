@@ -652,18 +652,25 @@ type iconLink struct {
 }
 
 func (d iconLink) Render() []*html.Node {
-	icon := htmlg.Span(d.Icon())
-	icon.Attr = append(icon.Attr, html.Attribute{
-		Key: atom.Style.String(), Val: fmt.Sprintf("color: %s; margin-right: 4px;", d.Color.HexString()),
-	})
-	link := htmlg.A(d.Text, template.URL(d.URL))
+	a := &html.Node{
+		Type: html.ElementNode, Data: atom.A.String(),
+		Attr: []html.Attribute{{Key: atom.Href.String(), Val: d.URL}},
+	}
 	if d.Tooltip != "" {
-		link.Attr = append(link.Attr, html.Attribute{Key: atom.Title.String(), Val: d.Tooltip})
+		a.Attr = append(a.Attr, html.Attribute{Key: atom.Title.String(), Val: d.Tooltip})
 	}
 	if d.Black {
-		link.Attr = append(link.Attr, html.Attribute{Key: atom.Class.String(), Val: "black"})
+		a.Attr = append(a.Attr, html.Attribute{Key: atom.Class.String(), Val: "black"})
 	}
-	return []*html.Node{icon, link}
+	a.AppendChild(&html.Node{
+		Type: html.ElementNode, Data: atom.Span.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Style.String(), Val: fmt.Sprintf("color: %s; margin-right: 4px;", d.Color.HexString())},
+		},
+		FirstChild: d.Icon(),
+	})
+	a.AppendChild(htmlg.Text(d.Text))
+	return []*html.Node{a}
 }
 
 type text struct {
