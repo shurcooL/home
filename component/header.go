@@ -126,14 +126,14 @@ header.header .user {
 			a := &html.Node{
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
-					{Key: atom.Href.String(), Val: string(h.CurrentUser.HTMLURL)},
+					{Key: atom.Href.String(), Val: h.CurrentUser.HTMLURL},
 					{Key: atom.Style.String(), Val: `margin-right: 6px;`},
 				},
 			}
 			a.AppendChild(&html.Node{
 				Type: html.ElementNode, Data: atom.Img.String(),
 				Attr: []html.Attribute{
-					{Key: atom.Src.String(), Val: string(h.CurrentUser.AvatarURL)},
+					{Key: atom.Src.String(), Val: h.CurrentUser.AvatarURL},
 					{Key: atom.Title.String(), Val: fmt.Sprintf("Signed in as %s.", h.CurrentUser.Login)},
 					{Key: atom.Style.String(), Val: `border-radius: 2px;
 width: 18px;

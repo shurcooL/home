@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -324,8 +323,8 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			return users.User{
 				UserSpec:  users.UserSpec{ID: uint64(*ghUser.ID), Domain: "github.com"},
 				Login:     *ghUser.Login,
-				AvatarURL: template.URL(*ghUser.AvatarURL),
-				HTMLURL:   template.URL(*ghUser.HTMLURL),
+				AvatarURL: *ghUser.AvatarURL,
+				HTMLURL:   *ghUser.HTMLURL,
 			}, nil
 		}()
 		if err != nil {

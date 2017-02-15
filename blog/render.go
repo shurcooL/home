@@ -82,7 +82,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		// Post meta information.
 		var lis = []*html.Node{
 			htmlg.LIClass("post-meta", iconText{Icon: octiconssvg.Calendar, Text: comment.CreatedAt.Format("January 2, 2006")}.Render()...),
-			htmlg.LIClass("post-meta", imageText{ImageURL: string(comment.User.AvatarURL), Text: comment.User.Login}.Render()...),
+			htmlg.LIClass("post-meta", imageText{ImageURL: comment.User.AvatarURL, Text: comment.User.Login}.Render()...),
 		}
 		if labels := labelNames(issue.Labels); len(labels) != 0 {
 			lis = append(lis, htmlg.LIClass("post-meta", iconText{Icon: octiconssvg.Tag, Text: strings.Join(labels, ", ")}.Render()...))
