@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -45,7 +46,7 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 	}
 	go func() {
 		for {
-			events, commits, activityError := fetchActivity()
+			events, commits, activityError := fetchActivity(context.Background())
 			if activityError != nil {
 				log.Println("fetchActivity:", activityError)
 			}
@@ -62,8 +63,8 @@ func initIndex(notifications notifications.Service, users users.Service) http.Ha
 	return userMiddleware{httputil.ErrorHandler(users, h.ServeHTTP)}
 }
 
-func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, error) {
-	events, _, err := unauthenticatedGitHubClient.Activity.ListEventsPerformedByUser("shurcooL", true, &github.ListOptions{PerPage: 100})
+func fetchActivity(ctx context.Context) ([]*github.Event, map[string]*github.RepositoryCommit, error) {
+	events, _, err := unauthenticatedGitHubClient.Activity.ListEventsPerformedByUser(ctx, "shurcooL", true, &github.ListOptions{PerPage: 100})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -75,7 +76,7 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 				if _, ok := commits[*c.SHA]; ok {
 					continue
 				}
-				rc, err := fetchCommit(*c.URL)
+				rc, err := fetchCommit(ctx, *c.URL)
 				if err, ok := err.(*github.ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
 					continue
 				}
@@ -89,7 +90,7 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 				continue
 			}
 			commitURL := *e.Repo.URL + "/commits/" + *p.Comment.CommitID // commitURL is "{repoURL}/commits/{commitID}".
-			rc, err := fetchCommit(commitURL)
+			rc, err := fetchCommit(ctx, commitURL)
 			if err, ok := err.(*github.ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
 				continue
 			}
@@ -103,13 +104,13 @@ func fetchActivity() ([]*github.Event, map[string]*github.RepositoryCommit, erro
 }
 
 // fetchCommit fetches the commit at the API URL.
-func fetchCommit(commitURL string) (*github.RepositoryCommit, error) {
+func fetchCommit(ctx context.Context, commitURL string) (*github.RepositoryCommit, error) {
 	req, err := unauthenticatedGitHubClient.NewRequest("GET", commitURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	commit := new(github.RepositoryCommit)
-	_, err = unauthenticatedGitHubClient.Do(req, commit)
+	_, err = unauthenticatedGitHubClient.Do(req.WithContext(ctx), commit)
 	if err != nil {
 		return nil, err
 	}
