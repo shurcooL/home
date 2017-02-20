@@ -300,11 +300,11 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			if err != nil {
 				return users.User{}, err
 			}
-			c := githubConfig.Client(req.Context(), token)
-			c.Timeout = 5 * time.Second
-			gh := github.NewClient(c)
+			httpClient := githubConfig.Client(req.Context(), token)
+			httpClient.Timeout = 5 * time.Second
+			gh := github.NewClient(httpClient)
 
-			ghUser, _, err := gh.Users.Get("")
+			ghUser, _, err := gh.Users.Get(req.Context(), "")
 			if err != nil {
 				return users.User{}, err
 			}
