@@ -110,7 +110,7 @@ func fetchCommit(ctx context.Context, commitURL string) (*github.RepositoryCommi
 		return nil, err
 	}
 	commit := new(github.RepositoryCommit)
-	_, err = unauthenticatedGitHubClient.Do(req.WithContext(ctx), commit)
+	_, err = unauthenticatedGitHubClient.Do(ctx, req, commit)
 	if err != nil {
 		return nil, err
 	}
