@@ -88,7 +88,7 @@ func run() error {
 		users: users,
 	}
 	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Upload)})
-	http.Handle("/usercontent/", http.StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Serve)}))
+	http.Handle("/usercontent/", http۰StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Serve)}))
 
 	indexHandler := initIndex(notifications, users)
 
@@ -105,7 +105,7 @@ func run() error {
 	}
 
 	emojisHandler := userMiddleware{httpgzip.FileServer(emojis.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
-	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
+	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))
 
 	assetsHandler := userMiddleware{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
@@ -172,6 +172,9 @@ func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	started := time.Now()
 	http.DefaultServeMux.ServeHTTP(w, req)
 	fmt.Printf("TIMING: %s: %v\n", path, time.Since(started))
+	if path != req.URL.Path {
+		log.Printf("warning: req.URL.Path was modified from %v to %v\n", path, req.URL.Path)
+	}
 	if _, haveType := w.Header()["Content-Type"]; !haveType {
 		log.Printf("warning: Content-Type header not set for %q\n", path)
 	}

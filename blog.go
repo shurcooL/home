@@ -111,6 +111,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 			}
 			return httperror.Redirect{URL: baseURL}
 		}
+		req = copyRequestAndURL(req)
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
 			req.URL.Path = "/"

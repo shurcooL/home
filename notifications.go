@@ -110,6 +110,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 			return httperror.Redirect{URL: baseURL}
 		}
 		returnURL := req.RequestURI
+		req = copyRequestAndURL(req)
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
 			req.URL.Path = "/"

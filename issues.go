@@ -104,6 +104,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 				}
 				return httperror.Redirect{URL: baseURL}
 			}
+			req = copyRequestAndURL(req)
 			req.URL.Path = req.URL.Path[prefixLen:]
 			if req.URL.Path == "" {
 				req.URL.Path = "/"
