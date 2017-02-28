@@ -176,6 +176,9 @@ func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Printf("warning: req.URL.Path was modified from %v to %v\n", path, req.URL.Path)
 	}
 	if _, haveType := w.Header()["Content-Type"]; !haveType {
+		if path == "/login/github" || path == "/callback/github" { // TODO: A better way to skip these. Ideally, they shouldn't be detected because they don't write any response, and/or the status code is redirect. But that'd require some interspection of written response.
+			return
+		}
 		log.Printf("warning: Content-Type header not set for %q\n", path)
 	}
 }
