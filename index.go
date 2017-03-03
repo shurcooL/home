@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -616,9 +617,9 @@ func (e event) Render() []*html.Node {
 			Type: html.ElementNode, Data: atom.Span.String(),
 			Attr: []html.Attribute{
 				{Key: atom.Class.String(), Val: "time"},
-				{Key: atom.Title.String(), Val: e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
+				{Key: atom.Title.String(), Val: humanize.Time(e.Time) + " – " + e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
 			},
-			FirstChild: htmlg.Text(humanize.Time(e.Time)),
+			FirstChild: htmlg.Text(compactTime(e.Time)),
 		},
 	)
 	if e.Details != nil {
@@ -627,7 +628,25 @@ func (e event) Render() []*html.Node {
 	return []*html.Node{div}
 }
 
-const timeFormat = "Jan _2, 2006, 3:04 PM MST"
+// compactTime formats time t into a relative string.
+//
+// For example, "5s" for 5 seconds ago, "47m" for 47 minutes ago,
+// "3w" for 3 weeks ago, etc.
+func compactTime(t time.Time) string {
+	return humanize.CustomRelTime(t, time.Now(), "", "", compactMagnitudes)
+}
+
+var compactMagnitudes = []humanize.RelTimeMagnitude{
+	{D: time.Minute, Format: "%ds", DivBy: time.Second},
+	{D: time.Hour, Format: "%dm", DivBy: time.Minute},
+	{D: humanize.Day, Format: "%dh", DivBy: time.Hour},
+	{D: humanize.Week, Format: "%dd", DivBy: humanize.Day},
+	{D: humanize.Month, Format: "%dw", DivBy: humanize.Week},
+	{D: humanize.Year, Format: "%dm", DivBy: humanize.Month},
+	{D: math.MaxInt64, Format: "%dy", DivBy: humanize.Year},
+}
+
+const timeFormat = "Jan 2, 2006, 3:04 PM MST"
 
 // TODO: Dedup.
 //
