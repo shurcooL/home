@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/shurcooL/go/httpstoppable"
 	"github.com/shurcooL/home/assets"
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
@@ -142,18 +141,23 @@ func run() error {
 		log.Println("sessions.LoadAndRemove:", n, err)
 	}
 
-	log.Println("Started.")
+	server := &http.Server{Addr: *httpFlag, Handler: topMux{}}
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
-	stop := make(chan struct{})
 	go func() {
 		<-interrupt
-		close(stop)
+		err := server.Close()
+		if err != nil {
+			log.Println("server.Close:", err)
+		}
 	}()
-	err = httpstoppable.ListenAndServe(*httpFlag, topMux{}, stop)
+
+	log.Println("Started.")
+
+	err = server.ListenAndServe()
 	if err != nil {
-		log.Println("httpstoppable.ListenAndServe:", err)
+		log.Println("server.ListenAndServe:", err)
 	}
 
 	if *statefileFlag != "" {

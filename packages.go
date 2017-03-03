@@ -452,11 +452,6 @@ var packages = []struct {
 		Doc:        "Package jsutil provides utility functions for interacting with native JavaScript APIs.",
 	},
 	{
-		ImportPath: "github.com/shurcooL/go/httpstoppable",
-		Command:    false,
-		Doc:        "Package httpstoppable provides ListenAndServe like http.ListenAndServe, but with ability to stop it.",
-	},
-	{
 		ImportPath: "github.com/shurcooL/go/importgraphutil",
 		Command:    false,
 		Doc:        "Package importgraphutil augments \"golang.org/x/tools/refactor/importgraph\" with a way to build graphs ignoring tests.",
