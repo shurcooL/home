@@ -66,7 +66,7 @@ func initAbout(notifications notifications.Service, users users.Service) {
 			<div style="margin-left: 340px; text-align: justify;">
 				<p>I'm Dmitri Shuralyov, a software engineer and an avid <a title="Someone who uses Go." href="https://golang.org">gopher</a>. I strive to make software more delightful.</p>
 
-				<p>Coming from a game development and graphics/UI background where C++ was used primarily, I discovered and made a full switch to Go <abbr title="2013.">three years ago</abbr>, which lead to increased developer happiness.</p>
+				<p>Coming from a game development and graphics/UI background where C++ was used primarily, I discovered and made a full switch to Go <abbr title="2013.">four years ago</abbr>, which lead to increased developer happiness.</p>
 
 				<p>In my spare time, I'm mostly interested in working on software development tools and exploring experimental ideas. I enjoy contributing to open source, fixing issues in existing tools and the <a href="https://github.com/golang/go/commits/master?author=shurcooL">Go project</a> itself.</p>
 
