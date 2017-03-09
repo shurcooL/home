@@ -226,29 +226,29 @@ func (a activity) Render() []*html.Node {
 	}
 
 	var (
-		now     = time.Now()
-		headers = []struct {
+		now      = time.Now()
+		headings = []struct {
 			Text string
 			End  time.Time
 		}{
 			{Text: "Today", End: timeutil.StartOfDay(now).Add(24 * time.Hour)},
 			{Text: "Yesterday", End: timeutil.StartOfDay(now)},
-			{Text: "This week", End: timeutil.StartOfDay(now).Add(-24 * time.Hour)},
-			{Text: "Last week", End: timeutil.StartOfWeek(now)},
+			{Text: "This Week", End: timeutil.StartOfDay(now).Add(-24 * time.Hour)},
+			{Text: "Last Week", End: timeutil.StartOfWeek(now)},
 			{Text: "Earlier", End: timeutil.StartOfWeek(now).Add(-7 * 24 * time.Hour)},
 		}
 	)
 
 	for _, e := range a.Events {
-		// Header.
-		if len(headers) > 0 && headers[0].End.After(*e.CreatedAt) {
-			for len(headers) >= 2 && headers[1].End.After(*e.CreatedAt) {
-				headers = headers[1:]
+		// Heading.
+		if len(headings) > 0 && headings[0].End.After(*e.CreatedAt) {
+			for len(headings) >= 2 && headings[1].End.After(*e.CreatedAt) {
+				headings = headings[1:]
 			}
 			nodes = append(nodes,
-				htmlg.DivClass("events-header", htmlg.Text(headers[0].Text)),
+				htmlg.DivClass("events-heading", htmlg.Text(headings[0].Text)),
 			)
-			headers = headers[1:]
+			headings = headings[1:]
 		}
 
 		// Event.

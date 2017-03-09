@@ -21,11 +21,11 @@ a.blue:hover {
 div.activity {
 	font-size: 14px;
 }
-.activity div.events-header {
-	color: #bbb;
+.activity div.events-heading {
+	color: #666;
 	margin-bottom: 6px;
 }
-.activity div.events-header:not(:first-child) {
+.activity div.events-heading:not(:first-child) {
 	margin-top: 30px;
 }
 .activity div.event {
