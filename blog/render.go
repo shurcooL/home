@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/shurcooL/github_flavored_markdown"
@@ -60,6 +61,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 	if err != nil {
 		return err
 	}
+	sort.Slice(is, func(i, j int) bool { return is[i].CreatedAt.After(is[j].CreatedAt) })
 	for _, issue := range is {
 		if issue.State != issues.OpenState {
 			continue
