@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/reactions"
 )
@@ -14,8 +15,8 @@ type Reactions struct {
 }
 
 func (h Reactions) List(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" {
-		return httperror.Method{Allowed: []string{"GET"}}
+	if req.Method != http.MethodGet {
+		return httperror.Method{Allowed: []string{http.MethodGet}}
 	}
 	reactableURL := req.URL.Query().Get("ReactableURL")
 	reactions, err := h.Reactions.List(req.Context(), reactableURL)
@@ -26,8 +27,8 @@ func (h Reactions) List(w http.ResponseWriter, req *http.Request) error {
 }
 
 func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" && req.Method != "POST" {
-		return httperror.Method{Allowed: []string{"GET", "POST"}}
+	if err := httputil.AllowMethods(req, http.MethodGet, http.MethodPost); err != nil {
+		return err
 	}
 	if err := req.ParseForm(); err != nil {
 		log.Println("req.ParseForm:", err)
@@ -36,13 +37,13 @@ func (h Reactions) GetOrToggle(w http.ResponseWriter, req *http.Request) error {
 	reactableURL := req.Form.Get("reactableURL")
 	reactableID := req.Form.Get("reactableID")
 	switch req.Method {
-	case "GET":
+	case http.MethodGet:
 		reactions, err := h.Reactions.Get(req.Context(), reactableURL, reactableID)
 		if err != nil {
 			return err
 		}
 		return httperror.JSONResponse{V: reactions}
-	case "POST":
+	case http.MethodPost:
 		tr := reactions.ToggleRequest{
 			Reaction: reactions.EmojiID(req.PostForm.Get("reaction")),
 		}

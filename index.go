@@ -22,7 +22,6 @@ import (
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
-	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
@@ -129,12 +128,12 @@ type indexHandler struct {
 }
 
 func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" && req.Method != "HEAD" {
-		return httperror.Method{Allowed: []string{"GET", "HEAD"}}
+	if err := httputil.AllowMethods(req, http.MethodGet, http.MethodHead); err != nil {
+		return err
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if req.Method == "HEAD" {
+	if req.Method == http.MethodHead {
 		return nil
 	}
 
