@@ -129,11 +129,15 @@ type indexHandler struct {
 }
 
 func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" {
-		return httperror.Method{Allowed: []string{"GET"}}
+	if req.Method != "GET" && req.Method != "HEAD" {
+		return httperror.Method{Allowed: []string{"GET", "HEAD"}}
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if req.Method == "HEAD" {
+		return nil
+	}
+
 	data := struct{ Production bool }{*productionFlag}
 	err := indexHTML.Execute(w, data)
 	if err != nil {
