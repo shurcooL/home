@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/shurcooL/github_flavored_markdown"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/htmlg"
@@ -83,7 +84,11 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 		// Post meta information.
 		var lis = []*html.Node{
-			htmlg.LIClass("post-meta", iconText{Icon: octiconssvg.Calendar, Text: comment.CreatedAt.Format("January 2, 2006")}.Render()...),
+			htmlg.LIClass("post-meta", iconText{
+				Icon:    octiconssvg.Calendar,
+				Text:    comment.CreatedAt.Format("January 2, 2006"),
+				Tooltip: humanize.Time(comment.CreatedAt) + " – " + comment.CreatedAt.Local().Format("Jan 2, 2006, 3:04 PM MST"), // TODO: Use local time of page viewer, not server.
+			}.Render()...),
 			htmlg.LIClass("post-meta", imageText{ImageURL: comment.User.AvatarURL, Text: comment.User.Login}.Render()...),
 		}
 		if labels := labelNames(issue.Labels); len(labels) != 0 {
@@ -127,8 +132,9 @@ func labelNames(labels []issues.Label) (names []string) {
 // iconText is an icon with text on the right.
 // Icon must be not nil.
 type iconText struct {
-	Icon func() *html.Node // Must be not nil.
-	Text string
+	Icon    func() *html.Node // Must be not nil.
+	Text    string
+	Tooltip string // Optional tooltip.
 }
 
 func (it iconText) Render() []*html.Node {
@@ -137,7 +143,11 @@ func (it iconText) Render() []*html.Node {
 		Key: atom.Style.String(), Val: "margin-right: 4px;",
 	})
 	text := htmlg.Text(it.Text)
-	return []*html.Node{icon, text}
+	span := htmlg.Span(icon, text)
+	if it.Tooltip != "" {
+		span.Attr = append(span.Attr, html.Attribute{Key: atom.Title.String(), Val: it.Tooltip})
+	}
+	return []*html.Node{span}
 }
 
 // imageText is an image with text on the right.
