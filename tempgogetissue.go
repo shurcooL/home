@@ -26,7 +26,7 @@ func init() {
 	</head>
 	<body>
 		<div>Install: <code>go get -u dmitri.shuralyov.com/temp/go-get-issue-unicode/испытание</code></div>
-		<div><a href="https://godoc.org/dmitri.shuralyov.com/temp/go-get-issue-unicode/испытание">Documentation</a> (doesn't work because of <a href="https://github.com/golang/gddo/issues/468#issuecomment-273369922">golang/gddo#468</a>)</div>
+		<div><a href="https://godoc.org/dmitri.shuralyov.com/temp/go-get-issue-unicode/испытание">Documentation</a></div>
 		<div><a href="https://github.com/shurcooL-test/go-get-issue-unicode/tree/master/испытание">Source</a></div>
 		<div><a href="/issues/dmitri.shuralyov.com/temp/go-get-issue-unicode/испытание">Issues</a></div>
 	</body>
