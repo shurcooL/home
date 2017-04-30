@@ -1,3 +1,4 @@
+// idiomaticgo sets up reactions menu for /idiomatic-go page.
 package main
 
 import (

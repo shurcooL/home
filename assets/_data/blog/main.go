@@ -1,3 +1,4 @@
+// blog sets up reactions menu for /blog page.
 package main
 
 import (
