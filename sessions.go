@@ -234,7 +234,7 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if os.IsPermission(err) {
-		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible. (But this shouldn't apply for APIs.)
+		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
 		if u == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
@@ -248,7 +248,7 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
-		http.Error(w, error, http.StatusUnauthorized)
+		http.Error(w, error, http.StatusForbidden)
 		return
 	}
 

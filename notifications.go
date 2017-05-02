@@ -120,8 +120,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		req = req.WithContext(context.WithValue(req.Context(), notificationsapp.BaseURIContextKey, "/notifications"))
 		notificationsApp.ServeHTTP(rr, req)
 		// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
-		// TODO: Factor this rr.Code == http.StatusUnauthorized && u == nil check out somewhere, if possible. (But this shouldn't apply for APIs.)
-		if u := req.Context().Value(userContextKey).(*user); rr.Code == http.StatusUnauthorized && u == nil {
+		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
+		if u := req.Context().Value(userContextKey).(*user); rr.Code == http.StatusForbidden && u == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
 				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),

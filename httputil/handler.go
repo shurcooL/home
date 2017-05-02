@@ -81,7 +81,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
-		http.Error(w, error, http.StatusUnauthorized)
+		http.Error(w, error, http.StatusForbidden)
 		return
 	}
 
