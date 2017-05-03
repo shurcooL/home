@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/rand"
+	cryptorand "crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
@@ -80,7 +80,7 @@ func (s *state) Save(path string) error {
 
 func cryptoRandBytes() []byte {
 	b := make([]byte, 256)
-	_, err := rand.Read(b)
+	_, err := cryptorand.Read(b)
 	if err != nil {
 		panic(err)
 	}
@@ -170,14 +170,12 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
 	default:
 		if req.Method != "GET" {
-			w.Header().Set("Allow", "GET")
-			http.Error(w, "405 Method Not Allowed\n\nmethod should be GET", http.StatusMethodNotAllowed)
+			httperror.HandleMethod(w, httperror.Method{Allowed: []string{"GET"}})
 			return
 		}
 	case "/login/github", "/logout":
 		if req.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			http.Error(w, "405 Method Not Allowed\n\nmethod should be POST", http.StatusMethodNotAllowed)
+			httperror.HandleMethod(w, httperror.Method{Allowed: []string{"POST"}})
 			return
 		}
 	}
@@ -270,7 +268,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			return nil, httperror.Redirect{URL: returnURL}
 		}
 
-		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ascii bytes in state, so use base64.
+		state := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ASCII bytes in state, so use base64.
 		httputil.SetCookie(w, &http.Cookie{Path: "/callback/github", Name: stateCookieName, Value: state, HttpOnly: true, Secure: *productionFlag})
 
 		// TODO, THINK.
@@ -436,7 +434,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 				return nil, err
 			}
 			nodes = append(nodes,
-				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(u.Expiry), base64.RawURLEncoding.EncodeToString([]byte(u.AccessToken))[:20]))),
+				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(u.Expiry), base64.RawURLEncoding.EncodeToString([]byte(u.AccessToken)[:15])))),
 			)
 		}
 		if len(us) == 0 {
