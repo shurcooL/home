@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -113,11 +114,11 @@ type user struct {
 
 var errBadAccessToken = errors.New("bad access token")
 
-// lookUpUser retrieves the user from req by looking up
+// lookUpUserViaCookie retrieves the user from req by looking up
 // the request's access token in the sessions map.
 // It returns a valid user (possibly nil) and nil error,
 // or nil user and errBadAccessToken.
-func lookUpUser(req *http.Request) (*user, error) {
+func lookUpUserViaCookie(req *http.Request) (*user, error) {
 	cookie, err := req.Cookie(accessTokenCookieName)
 	if err == http.ErrNoCookie {
 		return nil, nil // No user.
@@ -152,10 +153,62 @@ type userMiddleware struct {
 }
 
 func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	user, err := lookUpUser(req)
+	user, err := lookUpUserViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+	}
+	mw.Handler.ServeHTTP(w, withUser(req, user))
+}
+
+// lookUpUserViaHeader retrieves the user from req by looking up
+// the request's access token in the sessions map.
+// It returns a valid user (possibly nil) and nil error,
+// or nil user and errBadAccessToken.
+func lookUpUserViaHeader(req *http.Request) (*user, error) {
+	authorization, ok := req.Header["Authorization"]
+	if !ok {
+		return nil, nil // No user.
+	}
+	if len(authorization) != 1 {
+		return nil, errBadAccessToken
+	}
+	if !strings.HasPrefix(authorization[0], "Bearer ") {
+		return nil, errBadAccessToken
+	}
+	encodedAccessToken := authorization[0][len("Bearer "):] // THINK: Should access token be base64 encoded?
+	accessTokenBytes, err := base64.RawURLEncoding.DecodeString(encodedAccessToken)
+	if err != nil {
+		return nil, errBadAccessToken
+	}
+	accessToken := string(accessTokenBytes)
+	var u *user
+	sessions.mu.Lock()
+	if user, ok := sessions.sessions[accessToken]; ok {
+		if time.Now().Before(user.Expiry) {
+			u = &user
+		} else {
+			delete(sessions.sessions, accessToken)
+		}
+	}
+	sessions.mu.Unlock()
+	if u == nil {
+		return nil, errBadAccessToken
+	}
+	return u, nil // Existing user.
+}
+
+// apiMiddleware parses authentication information from request headers,
+// and sets authenticated user as a context value.
+type apiMiddleware struct {
+	Handler http.Handler
+}
+
+func (mw apiMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	user, err := lookUpUserViaHeader(req)
+	if err != nil {
+		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
+		return
 	}
 	mw.Handler.ServeHTTP(w, withUser(req, user))
 }
@@ -181,7 +234,7 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// TODO: Factor this out into user middleware?
-	u, err := lookUpUser(req)
+	u, err := lookUpUserViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens, then a successful login results in setting accessTokenCookieName to a new value.
@@ -374,7 +427,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 
 		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
 		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
-		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: true, Secure: *productionFlag})
+		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: false, Secure: *productionFlag})
 		return nil, httperror.Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
