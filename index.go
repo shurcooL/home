@@ -274,7 +274,7 @@ func (a activity) Render() []*html.Node {
 		var displayEvent htmlg.Component
 		switch p := e.Payload().(type) {
 		case *github.IssuesEvent:
-			e := event{
+			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.IssueOpened,
 				Action:     component.Text(fmt.Sprintf("%v an issue in", *p.Action)),
@@ -301,7 +301,7 @@ func (a activity) Render() []*html.Node {
 			e.Details = details
 			displayEvent = e
 		case *github.PullRequestEvent:
-			e := event{
+			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitPullRequest,
 			}
@@ -331,7 +331,7 @@ func (a activity) Render() []*html.Node {
 			displayEvent = e
 
 		case *github.IssueCommentEvent:
-			e := event{
+			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
 			}
@@ -363,7 +363,7 @@ func (a activity) Render() []*html.Node {
 			}
 			displayEvent = e
 		case *github.PullRequestReviewCommentEvent:
-			e := event{
+			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
 			}
@@ -380,7 +380,7 @@ func (a activity) Render() []*html.Node {
 			}
 			displayEvent = e
 		case *github.CommitCommentEvent:
-			displayEvent = event{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
 				Action:     component.Join("commented on ", commitName(p, a.Commits), " in"),
@@ -409,7 +409,7 @@ func (a activity) Render() []*html.Node {
 				cs = append(cs, commit)
 			}
 
-			displayEvent = event{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
 				Action:     component.Text("pushed to"),
@@ -419,7 +419,7 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case *github.ForkEvent:
-			displayEvent = event{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.RepoForked,
 				Action:     component.Text("forked"),
@@ -431,14 +431,14 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case *github.WatchEvent:
-			displayEvent = event{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Star,
 				Action:     component.Text("starred"),
 			}
 
 		case *github.CreateEvent:
-			e := event{
+			e := activityEvent{
 				basicEvent: &basicEvent,
 			}
 			switch *p.RefType {
@@ -463,7 +463,7 @@ func (a activity) Render() []*html.Node {
 			}
 			displayEvent = e
 		case *github.DeleteEvent:
-			displayEvent = event{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Trashcan,
 				Action:     component.Text(fmt.Sprintf("deleted %v in", *p.RefType)),
@@ -474,7 +474,7 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case *github.GollumEvent:
-			displayEvent = event{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Book,
 				Action:     component.Text("edited the wiki in"),
@@ -486,7 +486,7 @@ func (a activity) Render() []*html.Node {
 
 		default:
 			basicEvent.WIP = true
-			displayEvent = event{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Action:     component.Text(*e.Type),
 			}
@@ -585,16 +585,16 @@ type basicEvent struct {
 	Raw string // Raw event for debugging to display as title. Empty string excludes it.
 }
 
-// An event within the activity stream.
+// activityEvent is an event within the activity stream.
 // Action must be not nil.
-type event struct {
+type activityEvent struct {
 	*basicEvent
 	Icon    func() *html.Node
 	Action  htmlg.Component // Not nil.
 	Details htmlg.Component
 }
 
-func (e event) Render() []*html.Node {
+func (e activityEvent) Render() []*html.Node {
 	divClass := "event"
 	if e.WIP {
 		divClass += " wip"
