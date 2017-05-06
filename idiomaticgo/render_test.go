@@ -30,7 +30,7 @@ func TestBodyInnerHTML(t *testing.T) {
 	notifications := mockNotifications{}
 	issues, err := fs.NewService(
 		webdavfs.New(issuesFS),
-		notifications, users)
+		notifications, nil, users)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 	notifications := mockNotifications{}
 	issues, err := fs.NewService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues")),
-		notifications, users)
+		notifications, nil, users)
 	if err != nil {
 		b.Fatal(err)
 	}

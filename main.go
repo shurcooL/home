@@ -60,9 +60,12 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	events := newEventsService(
+		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "events")),
+	)
 	issuesService, err := newIssuesService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues")),
-		notifications, users)
+		notifications, events, users)
 	if err != nil {
 		return err
 	}
@@ -89,7 +92,7 @@ func run() error {
 	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Upload)})
 	http.Handle("/usercontent/", http۰StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Serve)}))
 
-	indexHandler := initIndex(notifications, users)
+	indexHandler := initIndex(events, notifications, users)
 
 	initAbout(notifications, users)
 

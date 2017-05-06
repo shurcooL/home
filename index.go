@@ -1,23 +1,20 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/google/go-github/github"
 	"github.com/shurcooL/component"
+	"github.com/shurcooL/events"
+	"github.com/shurcooL/events/event"
 	"github.com/shurcooL/go/timeutil"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
@@ -39,92 +36,19 @@ var indexHTML = template.Must(template.New("").Parse(`<html>
 	<body>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
-func initIndex(notifications notifications.Service, users users.Service) http.Handler {
+func initIndex(events events.Service, notifications notifications.Service, users users.Service) http.Handler {
 	h := &indexHandler{
+		events:        events,
 		notifications: notifications,
 		users:         users,
 	}
-	go func() {
-		for {
-			events, commits, activityError := fetchActivity(context.Background())
-			if activityError != nil {
-				log.Println("fetchActivity:", activityError)
-			}
-			h.mu.Lock()
-			if activityError == nil {
-				h.events, h.commits = events, commits
-			}
-			h.activityError = activityError
-			h.mu.Unlock()
-
-			time.Sleep(time.Minute)
-		}
-	}()
 	return userMiddleware{httputil.ErrorHandler(users, h.ServeHTTP)}
 }
 
-func fetchActivity(ctx context.Context) ([]*github.Event, map[string]*github.RepositoryCommit, error) {
-	events, _, err := unauthenticatedGitHubClient.Activity.ListEventsPerformedByUser(ctx, "shurcooL", true, &github.ListOptions{PerPage: 100})
-	if err != nil {
-		return nil, nil, err
-	}
-	commits := make(map[string]*github.RepositoryCommit)
-	for _, e := range events {
-		switch p := e.Payload().(type) {
-		case *github.PushEvent:
-			for _, c := range p.Commits {
-				if _, ok := commits[*c.SHA]; ok {
-					continue
-				}
-				rc, err := fetchCommit(ctx, *c.URL)
-				if err, ok := err.(*github.ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
-					continue
-				}
-				if err != nil {
-					return nil, nil, fmt.Errorf("fetchCommit: %v", err)
-				}
-				commits[*c.SHA] = rc
-			}
-		case *github.CommitCommentEvent:
-			if _, ok := commits[*p.Comment.CommitID]; ok {
-				continue
-			}
-			commitURL := *e.Repo.URL + "/commits/" + *p.Comment.CommitID // commitURL is "{repoURL}/commits/{commitID}".
-			rc, err := fetchCommit(ctx, commitURL)
-			if err, ok := err.(*github.ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
-				continue
-			}
-			if err != nil {
-				return nil, nil, fmt.Errorf("fetchCommit: %v", err)
-			}
-			commits[*p.Comment.CommitID] = rc
-		}
-	}
-	return events, commits, nil
-}
-
-// fetchCommit fetches the commit at the API URL.
-func fetchCommit(ctx context.Context, commitURL string) (*github.RepositoryCommit, error) {
-	req, err := unauthenticatedGitHubClient.NewRequest("GET", commitURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	commit := new(github.RepositoryCommit)
-	_, err = unauthenticatedGitHubClient.Do(ctx, req, commit)
-	if err != nil {
-		return nil, err
-	}
-	return commit, nil
-}
-
 type indexHandler struct {
+	events        events.Service
 	notifications notifications.Service
 	users         users.Service
-
-	mu            sync.Mutex
-	events        []*github.Event
-	commits       map[string]*github.RepositoryCommit // SHA -> Commit.
-	activityError error
 }
 
 func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
@@ -167,19 +91,16 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return err
 	}
 
-	h.mu.Lock()
-	events, commits, activityError := h.events, h.commits, h.activityError
-	h.mu.Unlock()
+	events, eventsError := h.events.List(req.Context())
 	var error string
-	if activityError != nil {
+	if eventsError != nil {
 		error = "There's been a problem fetching latest activity from GitHub."
 		if authenticatedUser.SiteAdmin {
-			error += "\n\n" + activityError.Error()
+			error += "\n\n" + eventsError.Error()
 		}
 	}
 	activity := activity{
 		Events:  events,
-		Commits: commits,
 		Error:   error,
 		ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool,
 	}
@@ -199,9 +120,8 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 }
 
 type activity struct {
-	Events  []*github.Event
-	Commits map[string]*github.RepositoryCommit // SHA -> Commit.
-	Error   string
+	Events []event.Event
+	Error  string
 
 	ShowWIP bool // Controls whether all events are displayed, including WIP ones.
 	ShowRaw bool // Controls whether full raw payload are available as titles.
@@ -244,8 +164,8 @@ func (a activity) Render() []*html.Node {
 
 	for _, e := range a.Events {
 		// Heading.
-		if len(headings) > 0 && headings[0].End.After(*e.CreatedAt) {
-			for len(headings) >= 2 && headings[1].End.After(*e.CreatedAt) {
+		if len(headings) > 0 && headings[0].End.After(e.Time) {
+			for len(headings) >= 2 && headings[1].End.After(e.Time) {
 				headings = headings[1:]
 			}
 			nodes = append(nodes,
@@ -256,35 +176,34 @@ func (a activity) Render() []*html.Node {
 
 		// Event.
 		basicEvent := basicEvent{
-			Time:      *e.CreatedAt,
-			Actor:     *e.Actor.Login,
-			Container: "github.com/" + *e.Repo.Name,
+			Time:      e.Time,
+			Actor:     e.Actor.Login,
+			Container: e.Container,
 		}
 
 		if a.ShowRaw {
 			// For debugging, include full raw payload as a title.
-			var raw bytes.Buffer
-			err := json.Indent(&raw, (*e.RawPayload), "", "\t")
+			raw, err := json.MarshalIndent(e.Payload, "", "\t")
 			if err != nil {
 				panic(err)
 			}
-			basicEvent.Raw = raw.String()
+			basicEvent.Raw = string(raw)
 		}
 
 		var displayEvent htmlg.Component
-		switch p := e.Payload().(type) {
-		case *github.IssuesEvent:
+		switch p := e.Payload.(type) {
+		case event.Issue:
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.IssueOpened,
-				Action:     component.Text(fmt.Sprintf("%v an issue in", *p.Action)),
+				Action:     component.Text(fmt.Sprintf("%v an issue in", p.Action)),
 			}
 			details := iconLink{
-				Text:  *p.Issue.Title,
-				URL:   *p.Issue.HTMLURL,
+				Text:  p.IssueTitle,
+				URL:   p.IssueHTMLURL,
 				Black: true,
 			}
-			switch *p.Action {
+			switch p.Action {
 			case "opened":
 				details.Icon = octiconssvg.IssueOpened
 				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
@@ -294,201 +213,159 @@ func (a activity) Render() []*html.Node {
 			case "reopened":
 				details.Icon = octiconssvg.IssueReopened
 				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-			default:
-				log.Println("activity.Render: unsupported *github.IssuesEvent action:", *p.Action)
-				details.Icon = octiconssvg.IssueOpened
+
+				//default:
+				//log.Println("activity.Render: unsupported event.Issue action:", p.Action)
+				//details.Icon = octiconssvg.IssueOpened
 			}
 			e.Details = details
 			displayEvent = e
-		case *github.PullRequestEvent:
+		case event.PullRequest:
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitPullRequest,
 			}
 			details := iconLink{
-				Text:  *p.PullRequest.Title,
-				URL:   *p.PullRequest.HTMLURL,
+				Text:  p.PullRequestTitle,
+				URL:   p.PullRequestHTMLURL,
 				Black: true,
 			}
-			switch {
-			case !*p.PullRequest.Merged && *p.PullRequest.State == "open":
+			switch p.Action {
+			case "opened":
 				e.Action = component.Text("opened a pull request in")
 				details.Icon = octiconssvg.GitPullRequest
 				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-			case !*p.PullRequest.Merged && *p.PullRequest.State == "closed":
+			case "closed":
 				e.Action = component.Text("closed a pull request in")
 				details.Icon = octiconssvg.GitPullRequest
 				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-			case *p.PullRequest.Merged:
+			case "merged":
 				e.Action = component.Text("merged a pull request in")
 				details.Icon = octiconssvg.GitMerge
 				details.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
-			default:
-				log.Println("activity.Render: unsupported *github.PullRequestEvent PullRequest.State:", *p.PullRequest.State, "PullRequest.Merged:", *p.PullRequest.Merged)
-				details.Icon = octiconssvg.GitPullRequest
+
+				//default:
+				//log.Println("activity.Render: unsupported event.PullRequest action:", p.Action)
+				//details.Icon = octiconssvg.GitPullRequest
 			}
 			e.Details = details
 			displayEvent = e
 
-		case *github.IssueCommentEvent:
+		case event.IssueComment:
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
 			}
-			switch p.Issue.PullRequestLinks {
-			case nil: // Issue.
-				switch *p.Action {
-				case "created":
-					e.Action = component.Join("commented on ", issueName(p), " in")
-					e.Details = imageText{
-						ImageURL: *p.Comment.User.AvatarURL,
-						Text:     shortBody(*p.Comment.Body),
-					}
-				default:
-					basicEvent.WIP = true
-					e.Action = component.Text(fmt.Sprintf("%v on an issue in", *p.Action))
-				}
-			default: // Pull Request.
-				switch *p.Action {
-				case "created":
-					e.Action = component.Join("commented on ", prName(p), " in")
-					e.Details = imageText{
-						ImageURL: *p.Comment.User.AvatarURL,
-						Text:     shortBody(*p.Comment.Body),
-					}
-				default:
-					basicEvent.WIP = true
-					e.Action = component.Text(fmt.Sprintf("%v on a pull request in", *p.Action))
-				}
+			e.Action = component.Join("commented on ", issueName(p), " in")
+			e.Details = imageText{
+				ImageURL: p.CommentUserAvatarURL,
+				Text:     shortBody(p.CommentBody),
 			}
 			displayEvent = e
-		case *github.PullRequestReviewCommentEvent:
+		case event.PullRequestComment:
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
 			}
-			switch *p.Action {
-			case "created":
-				e.Action = component.Join("commented on ", prrName(p), " in")
-				e.Details = imageText{
-					ImageURL: *p.Comment.User.AvatarURL,
-					Text:     shortBody(*p.Comment.Body),
-				}
-			default:
-				basicEvent.WIP = true
-				e.Action = component.Text(fmt.Sprintf("%v on a pull request in", *p.Action))
+			e.Action = component.Join("commented on ", prName(p), " in")
+			e.Details = imageText{
+				ImageURL: p.CommentUserAvatarURL,
+				Text:     shortBody(p.CommentBody),
 			}
 			displayEvent = e
-		case *github.CommitCommentEvent:
+		case event.CommitComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
-				Action:     component.Join("commented on ", commitName(p, a.Commits), " in"),
+				Action:     component.Join("commented on ", commitName(p), " in"),
 				Details: imageText{
-					ImageURL: *p.Comment.User.AvatarURL,
-					Text:     shortBody(*p.Comment.Body),
+					ImageURL: p.CommentUserAvatarURL,
+					Text:     shortBody(p.CommentBody),
 				},
 			}
 
-		case *github.PushEvent:
-			var cs []*github.RepositoryCommit
-			for _, c := range p.Commits {
-				commit := a.Commits[*c.SHA]
-				if commit == nil {
-					avatarURL := "https://secure.gravatar.com/avatar?d=mm&f=y&s=96"
-					if *c.Author.Email == "shurcooL@gmail.com" {
-						// TODO: Can we de-dup this in a good way? It's in users service.
-						avatarURL = "https://dmitri.shuralyov.com/avatar-s.jpg"
-					}
-					commit = &github.RepositoryCommit{
-						SHA:    c.SHA,
-						Commit: &github.Commit{Message: c.Message},
-						Author: &github.User{AvatarURL: &avatarURL},
-					}
-				}
-				cs = append(cs, commit)
-			}
-
+		case event.Push:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
 				Action:     component.Text("pushed to"),
 				Details: commits{
-					Commits: cs,
+					Commits: p.Commits,
 				},
 			}
 
-		case *github.ForkEvent:
+		// TODO: Move between create and delete events.
+		case event.Fork:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.RepoForked,
 				Action:     component.Text("forked"),
 				Details: iconLink{
-					Text: "github.com/" + *p.Forkee.FullName,
-					URL:  *p.Forkee.HTMLURL,
+					Text: p.Container,
+					URL:  "https://" + p.Container,
 					Icon: octiconssvg.Repo,
 				},
 			}
 
-		case *github.WatchEvent:
+		case event.Star:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Star,
 				Action:     component.Text("starred"),
 			}
 
-		case *github.CreateEvent:
+		case event.Create:
 			e := activityEvent{
 				basicEvent: &basicEvent,
 			}
-			switch *p.RefType {
+			switch p.Type {
 			case "repository":
 				e.Icon = octiconssvg.Repo
 				e.Action = component.Text("created repository")
 				e.Details = text{
-					Text: *p.Description,
+					Text: p.Description,
 				}
 			case "branch":
 				e.Icon = octiconssvg.GitBranch
 				e.Action = component.Text("created branch in")
 				e.Details = code{
-					Text: *p.Ref,
+					Text: p.Name,
 				}
-			default:
-				basicEvent.WIP = true
-				e.Action = component.Text(fmt.Sprintf("created %v in", *p.RefType))
+			case "tag":
+				e.Icon = octiconssvg.Tag
+				e.Action = component.Text("created tag in")
 				e.Details = code{
-					Text: *p.Ref,
+					Text: p.Name,
 				}
+
+				//default:
+				//basicEvent.WIP = true
+				//e.Action = component.Text(fmt.Sprintf("created %v in", *p.RefType))
+				//e.Details = code{
+				//	Text: p.Name,
+				//}
 			}
 			displayEvent = e
-		case *github.DeleteEvent:
+		case event.Delete:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Trashcan,
-				Action:     component.Text(fmt.Sprintf("deleted %v in", *p.RefType)),
+				Action:     component.Text(fmt.Sprintf("deleted %v in", p.Type)),
 				Details: code{
-					Text:          *p.Ref,
+					Text:          p.Name,
 					Strikethrough: true,
 				},
 			}
 
-		case *github.GollumEvent:
+		case event.Gollum:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Book,
 				Action:     component.Text("edited the wiki in"),
 				Details: &pages{
-					Actor: e.Actor,
-					Pages: p.Pages,
+					ActorAvatarURL: p.ActorAvatarURL,
+					Pages:          p.Pages,
 				},
-			}
-
-		default:
-			basicEvent.WIP = true
-			displayEvent = activityEvent{
-				basicEvent: &basicEvent,
-				Action:     component.Text(*e.Type),
 			}
 		}
 		if displayEvent == nil {
@@ -504,76 +381,57 @@ func (a activity) Render() []*html.Node {
 	return []*html.Node{htmlg.DivClass("activity", nodes...)}
 }
 
-func issueName(p *github.IssueCommentEvent) htmlg.Component {
+func issueName(p event.IssueComment) htmlg.Component {
 	n := iconLink{
-		Text:    shortTitle(*p.Issue.Title),
-		Tooltip: *p.Issue.Title,
-		URL:     *p.Comment.HTMLURL,
+		Text:    shortTitle(p.IssueTitle),
+		Tooltip: p.IssueTitle,
+		URL:     p.CommentHTMLURL,
 		Black:   true,
 	}
-	switch *p.Issue.State {
+	switch p.IssueState {
 	case "open":
 		n.Icon = octiconssvg.IssueOpened
 		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 	case "closed":
 		n.Icon = octiconssvg.IssueClosed
 		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-	default:
-		log.Println("activity.Render: unsupported *github.IssueCommentEvent Issue.State:", *p.Issue.State)
-		n.Icon = octiconssvg.IssueOpened
+
+		//default:
+		//log.Println("issueName: unsupported event.IssueComment State:", p.State)
+		//n.Icon = octiconssvg.IssueOpened
 	}
 	return n
 }
-func prName(p *github.IssueCommentEvent) htmlg.Component {
+func prName(p event.PullRequestComment) htmlg.Component {
 	n := iconLink{
-		Text:    shortTitle(*p.Issue.Title),
-		Tooltip: *p.Issue.Title,
-		URL:     *p.Comment.HTMLURL,
+		Text:    shortTitle(p.PullRequestTitle),
+		Tooltip: p.PullRequestTitle,
+		URL:     p.CommentHTMLURL,
 		Black:   true,
 	}
-	switch *p.Issue.State {
+	switch p.PullRequestState {
 	case "open":
 		n.Icon = octiconssvg.GitPullRequest
 		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 	case "closed":
 		n.Icon = octiconssvg.GitPullRequest
 		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-	// TODO: Detect merged somehow? It's likely going to require making an API call.
-	default:
-		log.Println("activity.Render: unsupported *github.IssueCommentEvent Issue.State:", *p.Issue.State)
-		n.Icon = octiconssvg.GitPullRequest
-	}
-	return n
-}
-func prrName(p *github.PullRequestReviewCommentEvent) htmlg.Component {
-	n := iconLink{
-		Text:    shortTitle(*p.PullRequest.Title),
-		Tooltip: *p.PullRequest.Title,
-		URL:     *p.Comment.HTMLURL,
-		Black:   true,
-	}
-	switch {
-	case p.PullRequest.MergedAt == nil && *p.PullRequest.State == "open":
-		n.Icon = octiconssvg.GitPullRequest
-		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-	case p.PullRequest.MergedAt == nil && *p.PullRequest.State == "closed":
-		n.Icon = octiconssvg.GitPullRequest
-		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-	case p.PullRequest.MergedAt != nil:
+	case "merged":
 		n.Icon = octiconssvg.GitMerge
 		n.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
-	default:
-		log.Println("activity.Render: unsupported *github.PullRequestReviewCommentEvent PullRequest.State:", *p.PullRequest.State)
-		n.Icon = octiconssvg.GitPullRequest
+
+		//default:
+		//log.Println("prName: unsupported event.PullRequestComment State:", p.State)
+		//n.Icon = octiconssvg.GitPullRequest
 	}
 	return n
 }
-func commitName(p *github.CommitCommentEvent, commits map[string]*github.RepositoryCommit) htmlg.Component {
-	c := commits[*p.Comment.CommitID]
-	if c == nil {
+func commitName(p event.CommitComment) htmlg.Component {
+	c := p.Commit
+	if c.CommitMessage == "" {
 		return component.Text("a commit")
 	}
-	return commit{C: c, Short: true}
+	return commit{Commit: c, Short: true}
 }
 
 type basicEvent struct {
@@ -767,14 +625,14 @@ border-radius: 3px;`
 }
 
 type commits struct {
-	Commits []*github.RepositoryCommit
+	Commits []event.Commit
 }
 
 func (d commits) Render() []*html.Node {
 	var nodes []*html.Node
 
 	for _, c := range d.Commits {
-		div := htmlg.Div(commit{C: c}.Render()...)
+		div := htmlg.Div(commit{Commit: c}.Render()...)
 		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
 		nodes = append(nodes, div)
 	}
@@ -783,7 +641,7 @@ func (d commits) Render() []*html.Node {
 }
 
 type commit struct {
-	C     *github.RepositoryCommit
+	event.Commit
 	Short bool
 }
 
@@ -791,19 +649,19 @@ func (c commit) Render() []*html.Node {
 	avatar := &html.Node{
 		Type: html.ElementNode, Data: atom.Img.String(),
 		Attr: []html.Attribute{
-			{Key: atom.Src.String(), Val: *c.C.Author.AvatarURL},
+			{Key: atom.Src.String(), Val: c.AuthorAvatarURL},
 			{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 4px;"},
 		},
 	}
 	sha := &html.Node{
 		Type: html.ElementNode, Data: atom.Code.String(),
-		FirstChild: htmlg.Text(shortSHA(*c.C.SHA)),
+		FirstChild: htmlg.Text(shortSHA(c.SHA)),
 	}
-	if c.C.HTMLURL != nil {
+	if c.HTMLURL != "" {
 		sha = &html.Node{
 			Type: html.ElementNode, Data: atom.A.String(),
 			Attr: []html.Attribute{
-				{Key: atom.Href.String(), Val: *c.C.HTMLURL},
+				{Key: atom.Href.String(), Val: c.HTMLURL},
 			},
 			FirstChild: sha,
 		}
@@ -812,14 +670,14 @@ func (c commit) Render() []*html.Node {
 		Type: html.ElementNode, Data: atom.Span.String(),
 		Attr: []html.Attribute{
 			{Key: atom.Style.String(), Val: "margin-left: 4px;"},
-			{Key: atom.Title.String(), Val: *c.C.Commit.Message},
+			{Key: atom.Title.String(), Val: c.CommitMessage},
 		},
 	}
 	switch c.Short {
 	case false:
-		message.AppendChild(htmlg.Text(firstParagraph(*c.C.Commit.Message)))
+		message.AppendChild(htmlg.Text(firstParagraph(c.CommitMessage)))
 	case true:
-		message.AppendChild(htmlg.Text(shortCommit(firstParagraph(*c.C.Commit.Message))))
+		message.AppendChild(htmlg.Text(shortCommit(firstParagraph(c.CommitMessage))))
 	}
 	return []*html.Node{avatar, sha, message}
 }
@@ -845,8 +703,8 @@ func firstParagraph(s string) string {
 }
 
 type pages struct {
-	Actor *github.User   // Actor that acted on the pages.
-	Pages []*github.Page // Wiki pages that are affected.
+	ActorAvatarURL string       // Actor that acted on the pages.
+	Pages          []event.Page // Wiki pages that are affected.
 }
 
 func (d pages) Render() []*html.Node {
@@ -856,20 +714,20 @@ func (d pages) Render() []*html.Node {
 		avatar := &html.Node{
 			Type: html.ElementNode, Data: atom.Img.String(),
 			Attr: []html.Attribute{
-				{Key: atom.Src.String(), Val: *d.Actor.AvatarURL},
+				{Key: atom.Src.String(), Val: d.ActorAvatarURL},
 				{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 6px;"},
 			},
 		}
 		action := &html.Node{
 			Type: html.ElementNode, Data: atom.Span.String(),
-			FirstChild: htmlg.Text(*p.Action),
+			FirstChild: htmlg.Text(p.Action),
 		}
-		switch *p.Action {
+		switch p.Action {
 		case "edited":
 			action = &html.Node{
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
-					{Key: atom.Href.String(), Val: "https://github.com" + *p.HTMLURL + "/_compare/" + *p.SHA + "^..." + *p.SHA},
+					{Key: atom.Href.String(), Val: p.CompareHTMLURL},
 				},
 				FirstChild: action,
 			}
@@ -877,11 +735,11 @@ func (d pages) Render() []*html.Node {
 		title := &html.Node{
 			Type: html.ElementNode, Data: atom.A.String(),
 			Attr: []html.Attribute{
-				{Key: atom.Href.String(), Val: "https://github.com" + *p.HTMLURL},
+				{Key: atom.Href.String(), Val: p.PageHTMLURL},
 			},
 			FirstChild: &html.Node{
 				Type: html.ElementNode, Data: atom.Span.String(),
-				FirstChild: htmlg.Text(*p.Title),
+				FirstChild: htmlg.Text(p.Title),
 			},
 		}
 

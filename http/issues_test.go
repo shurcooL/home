@@ -56,7 +56,7 @@ func init() {
 	users := mockUsers{}
 
 	// Create a mock backend service implementation with sample data.
-	issuesService, err := fs.NewService(webdav.Dir(filepath.Join("testdata", "issues")), nil, users)
+	issuesService, err := fs.NewService(webdav.Dir(filepath.Join("testdata", "issues")), nil, nil, users)
 	if err != nil {
 		log.Fatalln(err)
 	}

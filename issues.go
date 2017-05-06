@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/shurcooL/events"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
@@ -17,8 +18,8 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, users users.Service) (issues.Service, error) {
-	return fs.NewService(root, notifications, users)
+func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (issues.Service, error) {
+	return fs.NewService(root, notifications, events, users)
 }
 
 // initIssues registers handlers for the issues service HTTP API,
