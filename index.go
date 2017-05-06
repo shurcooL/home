@@ -294,19 +294,6 @@ func (a activity) Render() []*html.Node {
 				},
 			}
 
-		// TODO: Move between create and delete events.
-		case event.Fork:
-			displayEvent = activityEvent{
-				basicEvent: &basicEvent,
-				Icon:       octiconssvg.RepoForked,
-				Action:     component.Text("forked"),
-				Details: iconLink{
-					Text: p.Container,
-					URL:  "https://" + p.Container,
-					Icon: octiconssvg.Repo,
-				},
-			}
-
 		case event.Star:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
@@ -346,6 +333,17 @@ func (a activity) Render() []*html.Node {
 				//}
 			}
 			displayEvent = e
+		case event.Fork:
+			displayEvent = activityEvent{
+				basicEvent: &basicEvent,
+				Icon:       octiconssvg.RepoForked,
+				Action:     component.Text("forked"),
+				Details: iconLink{
+					Text: p.Container,
+					URL:  "https://" + p.Container,
+					Icon: octiconssvg.Repo,
+				},
+			}
 		case event.Delete:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
