@@ -75,7 +75,6 @@ func initAbout(notifications notifications.Service, users users.Service) {
 				<div>
 					<a class="blue mr8" title="GitHub" href="https://github.com/shurcooL" rel="me"><i class="fa fa-github fa-2x" style="vertical-align: middle;"></i></a>
 					<a class="blue mr8" title="Twitter" href="https://twitter.com/shurcooL" rel="me"><span class="fa-stack"><i class="fa fa-circle fa-stack-2x"></i><i class="fa fa-twitter fa-stack-1x fa-inverse"></i></span></a>
-					<a class="blue" title="Gratipay" href="https://gratipay.com/~shurcooL"><i class="fa fa-gittip fa-2x" style="vertical-align: middle;"></i></a>
 				</div>
 			</div>
 			<div style="clear: both;"></div>`)
