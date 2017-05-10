@@ -51,14 +51,6 @@ func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error)
 	return s.store.Get(ctx, user)
 }
 
-// userContextKey is a context key. It can be used to access the user
-// that the context is tied to. The associated value will be of type *user.
-var userContextKey = &contextKey{"user"}
-
-func withUser(req *http.Request, u *user) *http.Request {
-	return req.WithContext(context.WithValue(req.Context(), userContextKey, u))
-}
-
 func (s Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
 	u, ok := ctx.Value(userContextKey).(*user)
 	if !ok {
@@ -86,4 +78,12 @@ func (s Users) GetAuthenticated(ctx context.Context) (users.User, error) {
 
 func (Users) Edit(ctx context.Context, er users.EditRequest) (users.User, error) {
 	return users.User{}, errors.New("Edit is not implemented")
+}
+
+// userContextKey is a context key. It can be used to access the user
+// that the context is tied to. The associated value will be of type *user.
+var userContextKey = &contextKey{"user"}
+
+func withUser(req *http.Request, u *user) *http.Request {
+	return req.WithContext(context.WithValue(req.Context(), userContextKey, u))
 }
