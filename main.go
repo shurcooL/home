@@ -60,9 +60,12 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	events := newEventsService(
+	events, err := newEventsService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "events")),
 	)
+	if err != nil {
+		return err
+	}
 	issuesService, err := newIssuesService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues")),
 		notifications, events, users)
