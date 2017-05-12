@@ -54,7 +54,8 @@ func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notificat
 		}
 
 		// Optional (still experimental) server-side rendering.
-		if ok, _ := strconv.ParseBool(req.URL.Query().Get("prerender")); ok {
+		prerender, _ := strconv.ParseBool(req.URL.Query().Get("prerender"))
+		if prerender {
 			authenticatedUser, err := usersService.GetAuthenticated(req.Context())
 			if err != nil {
 				log.Println(err)

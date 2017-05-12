@@ -44,14 +44,14 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		github.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
 	)
 
-	service := shurcoolSeeHisGitHubNotifications{
+	notificationsService := shurcoolSeeHisGitHubNotifications{
 		service:                     fs.NewService(root, users),
 		shurcoolGitHubNotifications: shurcoolGitHubNotifications,
 		users: users,
 	}
 
 	// Register HTTP API endpoints.
-	notificationsAPIHandler := httphandler.Notifications{Notifications: service}
+	notificationsAPIHandler := httphandler.Notifications{Notifications: notificationsService}
 	http.Handle(httproute.List, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.List)})
 	http.Handle(httproute.Count, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
 	http.Handle(httproute.MarkRead, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkRead)})
@@ -84,7 +84,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		}
 		var nc uint64
 		if authenticatedUser.ID != 0 {
-			nc, err = service.Count(req.Context(), nil)
+			nc, err = notificationsService.Count(req.Context(), nil)
 			if err != nil {
 				return nil, err
 			}
@@ -98,7 +98,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		}
 		return []htmlg.Component{header}, nil
 	}
-	notificationsApp := notificationsapp.New(service, opt)
+	notificationsApp := notificationsapp.New(notificationsService, opt)
 
 	notificationsHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/notifications")
@@ -135,7 +135,7 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 	http.Handle("/notifications", notificationsHandler)
 	http.Handle("/notifications/", notificationsHandler)
 
-	return service, nil
+	return notificationsService, nil
 }
 
 // shurcoolSeeHisGitHubNotifications lets shurcooL also see his GitHub notifications,
