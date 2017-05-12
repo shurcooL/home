@@ -30,7 +30,7 @@ import (
 // initNotifications creates and returns a notification service,
 // registers handlers for its HTTP API,
 // and handlers for the notifications app.
-func initNotifications(root webdav.FileSystem, users users.Service) (notifications.Service, error) {
+func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.Service) (notifications.Service, error) {
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_NOTIFICATIONS")}),
 	}
@@ -52,10 +52,10 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 
 	// Register HTTP API endpoints.
 	notificationsAPIHandler := httphandler.Notifications{Notifications: notificationsService}
-	http.Handle(httproute.List, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.List)})
-	http.Handle(httproute.Count, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
-	http.Handle(httproute.MarkRead, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkRead)})
-	http.Handle(httproute.MarkAllRead, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkAllRead)})
+	mux.Handle(httproute.List, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.List)})
+	mux.Handle(httproute.Count, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
+	mux.Handle(httproute.MarkRead, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkRead)})
+	mux.Handle(httproute.MarkAllRead, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkAllRead)})
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
@@ -132,8 +132,8 @@ func initNotifications(root webdav.FileSystem, users users.Service) (notificatio
 		_, err := io.Copy(w, rr.Body)
 		return err
 	})}
-	http.Handle("/notifications", notificationsHandler)
-	http.Handle("/notifications/", notificationsHandler)
+	mux.Handle("/notifications", notificationsHandler)
+	mux.Handle("/notifications/", notificationsHandler)
 
 	return notificationsService, nil
 }

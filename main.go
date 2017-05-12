@@ -55,6 +55,7 @@ func run() error {
 		return err
 	}
 	notifications, err := initNotifications(
+		http.DefaultServeMux,
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
 		users)
 	if err != nil {
