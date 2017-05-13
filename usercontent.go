@@ -42,7 +42,7 @@ func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) er
 	}
 
 	dir := fmt.Sprintf("/%d@%s", user.ID, user.Domain)
-	err = vfsutil.MkdirAll(uc.store, dir, 0755)
+	err = vfsutil.MkdirAll(req.Context(), uc.store, dir, 0755)
 	if err != nil {
 		return httperror.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
@@ -76,7 +76,7 @@ func (uc userContentHandler) Serve(w http.ResponseWriter, req *http.Request) err
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
 
-	f, err := vfsutil.Open(uc.store, req.URL.Path)
+	f, err := vfsutil.Open(req.Context(), uc.store, req.URL.Path)
 	if err != nil {
 		return err
 	}
