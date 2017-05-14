@@ -25,6 +25,7 @@ var projectsHTML = template.Must(template.New("").Parse(`<html>
 	<head>
 		<title>Dmitri Shuralyov - Projects</title>
 		<link href="/icon.png" rel="icon" type="image/png">
+		<meta name="viewport" content="width=device-width">
 		<link href="/assets/projects/style.css" rel="stylesheet" type="text/css">
 		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>

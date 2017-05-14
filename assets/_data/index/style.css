@@ -20,6 +20,7 @@ a.blue:hover {
 
 div.activity {
 	font-size: 14px;
+	word-break: break-word;
 }
 .activity div.events-heading {
 	color: #666;

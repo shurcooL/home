@@ -36,6 +36,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		Notifications: notifications,
 
 		HeadPre: `<link href="/icon.png" rel="icon" type="image/png">
+<meta name="viewport" content="width=device-width">
 <style type="text/css">
 	body {
 		margin: 20px;
