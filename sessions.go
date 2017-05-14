@@ -245,7 +245,7 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	nodes, err := h.serve(w, req, u)
 	if err == nil {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		io.WriteString(w, string(htmlg.Render(nodes...)))
+		io.WriteString(w, htmlg.Render(nodes...))
 		return
 	}
 	if err, ok := httperror.IsRedirect(err); ok {

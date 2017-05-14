@@ -472,7 +472,7 @@ func (e activityEvent) Render() []*html.Node {
 		htmlg.Text(" "),
 		action,
 		htmlg.Text(" "),
-		htmlg.A(e.Container, template.URL("https://"+e.Container)),
+		htmlg.A(e.Container, "https://"+e.Container),
 		&html.Node{
 			Type: html.ElementNode, Data: atom.Span.String(),
 			Attr: []html.Attribute{

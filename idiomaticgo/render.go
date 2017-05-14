@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html/template"
 	"io"
 
 	"github.com/shurcooL/github_flavored_markdown"
@@ -83,7 +82,7 @@ It'll show up here when I add an "Accepted" label.`)))
 			continue
 		}
 		lis = append(lis, htmlg.LI(
-			htmlg.A(issue.Title, template.URL("#"+sanitized_anchor_name.Create(issue.Title))),
+			htmlg.A(issue.Title, "#"+sanitized_anchor_name.Create(issue.Title)),
 		))
 	}
 	html.Render(w, htmlg.UL(lis...))

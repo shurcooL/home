@@ -218,7 +218,7 @@ func (h *talksHandler) renderDir(w io.Writer, path string, d dirReader) error {
 	sort.Sort(dl.Slides)
 	sort.Sort(dl.Files)
 
-	_, err = io.WriteString(w, string(htmlg.Render(dl.Render()...)))
+	_, err = io.WriteString(w, htmlg.Render(dl.Render()...))
 	return err
 }
 
@@ -251,7 +251,7 @@ func (dl *dirList) Render() []*html.Node {
 		for _, d := range dl.Dirs {
 			ns = append(ns,
 				htmlg.DD(
-					htmlg.A(d.Name, template.URL(pathpkg.Join(dl.Base, d.Path))),
+					htmlg.A(d.Name, pathpkg.Join(dl.Base, d.Path)),
 				),
 			)
 		}
@@ -266,7 +266,7 @@ func (dl *dirList) Render() []*html.Node {
 		for _, s := range dl.Slides {
 			ns = append(ns,
 				htmlg.DD(
-					htmlg.A(s.Name, template.URL(pathpkg.Join(dl.Base, s.Path))), htmlg.Text(": "+s.Title),
+					htmlg.A(s.Name, pathpkg.Join(dl.Base, s.Path)), htmlg.Text(": "+s.Title),
 				),
 			)
 		}
@@ -281,7 +281,7 @@ func (dl *dirList) Render() []*html.Node {
 		for _, s := range dl.Files {
 			ns = append(ns,
 				htmlg.DD(
-					htmlg.A(s.Name, template.URL(pathpkg.Join(dl.Base, s.Path))),
+					htmlg.A(s.Name, pathpkg.Join(dl.Base, s.Path)),
 				),
 			)
 		}

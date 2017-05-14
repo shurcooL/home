@@ -112,7 +112,7 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 				continue
 			}
 			html.Render(w, htmlg.TR(
-				htmlg.TD(htmlg.A(p.ImportPath, template.URL("https://godoc.org/"+p.ImportPath))),
+				htmlg.TD(htmlg.A(p.ImportPath, "https://godoc.org/"+p.ImportPath)),
 				htmlg.TD(htmlg.Text(p.Doc)),
 			))
 		}

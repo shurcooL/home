@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html/template"
 	"io"
 	"sort"
 	"strings"
@@ -79,7 +78,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 		// Header.
 		io.WriteString(w, `<div class="markdown-body">`)
-		html.Render(w, htmlg.H3(htmlg.A(issue.Title, template.URL(fmt.Sprintf("/blog/%d", issue.ID)))))
+		html.Render(w, htmlg.H3(htmlg.A(issue.Title, fmt.Sprintf("/blog/%d", issue.ID))))
 		io.WriteString(w, `</div>`)
 
 		// Post meta information.
