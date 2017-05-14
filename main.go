@@ -124,9 +124,14 @@ func run() error {
 
 	initPackages(notifications, users)
 
-	initTalks(skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))), notifications, users)
+	initTalks(
+		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))),
+		notifications, users)
 
-	initProjects(skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "projects"))), notifications, users)
+	initProjects(
+		http.DefaultServeMux,
+		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "projects"))),
+		notifications, users)
 
 	staticFiles := userMiddleware{httpgzip.FileServer(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri"))),
@@ -194,6 +199,7 @@ func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if path == "/login/github" || path == "/callback/github" { // TODO: A better way to skip these. Ideally, they shouldn't be detected because they don't write any response, and/or the status code is redirect. But that'd require some interspection of written response.
 			return
 		}
+		// BUG: There are false positives for redirect responses, as well as 304 responses, etc.
 		log.Printf("warning: Content-Type header not set for %q\n", path)
 	}
 }

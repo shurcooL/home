@@ -13,16 +13,11 @@ import (
 func TestNotificationsRedirectsLogin(t *testing.T) {
 	mux := http.NewServeMux()
 
-	users, _, err := newUsersService(
-		webdav.NewMemFS(),
-	)
+	users, _, err := newUsersService(webdav.NewMemFS())
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = initNotifications(
-		mux,
-		webdav.NewMemFS(),
-		users)
+	_, err = initNotifications(mux, webdav.NewMemFS(), users)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -33,15 +33,15 @@ var projectsHTML = template.Must(template.New("").Parse(`<html>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
 // initProjects registers a projects handler with root as projects content source.
-func initProjects(root http.FileSystem, notifications notifications.Service, users users.Service) {
+func initProjects(mux *http.ServeMux, root http.FileSystem, notifications notifications.Service, users users.Service) {
 	projectsHandler := http۰StripPrefix("/projects", userMiddleware{httputil.ErrorHandler(users, (&projectsHandler{
 		fs: root,
 
 		notifications: notifications,
 		users:         users,
 	}).ServeHTTP)})
-	http.Handle("/projects", projectsHandler)
-	http.Handle("/projects/", projectsHandler)
+	// Register "/projects/" but not "/projects", we need it to redirect to /projects/.
+	mux.Handle("/projects/", projectsHandler)
 }
 
 type projectsHandler struct {
@@ -54,9 +54,6 @@ type projectsHandler struct {
 func (h *projectsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return httperror.Method{Allowed: []string{"GET"}}
-	}
-	if req.URL.Path == "" { // Fix-up the missing trailing slash at root.
-		return httperror.Redirect{URL: "/projects/"}
 	}
 
 	path := pathpkg.Clean("/" + req.URL.Path)
