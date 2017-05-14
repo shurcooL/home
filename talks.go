@@ -9,7 +9,6 @@ import (
 	"os"
 	pathpkg "path"
 	"sort"
-	"strings"
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
@@ -177,7 +176,7 @@ func (h *talksHandler) renderDir(w io.Writer, fs http.FileSystem, path string, d
 			})
 
 		// Add directories to Dirs.
-		case dir && !strings.HasPrefix(fi.Name(), "."):
+		case dir:
 			dl.Dirs = append(dl.Dirs, dirEntry{
 				Name: fi.Name(),
 				Path: pathpkg.Join(path, fi.Name()),

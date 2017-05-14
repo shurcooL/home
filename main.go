@@ -10,11 +10,13 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/shurcooL/home/assets"
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/reactions/emojis"
@@ -122,10 +124,10 @@ func run() error {
 
 	initPackages(notifications, users)
 
-	initTalks(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks")), notifications, users)
+	initTalks(skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))), notifications, users)
 
 	staticFiles := userMiddleware{httpgzip.FileServer(
-		http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri")),
+		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri"))),
 		httpgzip.FileServerOptions{
 			IndexHTML:  true,
 			ServeError: detailedForAdmin{Users: users}.ServeError,
@@ -192,6 +194,19 @@ func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		log.Printf("warning: Content-Type header not set for %q\n", path)
 	}
+}
+
+// skipDot returns src without dot files.
+func skipDot(src http.FileSystem) http.FileSystem {
+	return filter.Skip(src,
+		func(path string, fi os.FileInfo) bool {
+			for _, e := range strings.Split(path[1:], "/") {
+				if strings.HasPrefix(e, ".") {
+					return true
+				}
+			}
+			return false
+		})
 }
 
 // detailedForAdmin serves detailed errors for admin users,
