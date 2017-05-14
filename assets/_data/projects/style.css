@@ -1,0 +1,16 @@
+body {
+	margin: 20px;
+	font-family: sans-serif;
+}
+h1 {
+	margin: 20px 0;
+	padding: 0;
+	color: rgb(35, 35, 35);
+	font-weight: bold;
+	font-size: 24px;
+}
+h2 {
+	font-size: 20px;
+	background: #e0ebf5;
+	padding: 2px 5px;
+}

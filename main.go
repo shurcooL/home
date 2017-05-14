@@ -126,6 +126,8 @@ func run() error {
 
 	initTalks(skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))), notifications, users)
 
+	initProjects(skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "projects"))), notifications, users)
+
 	staticFiles := userMiddleware{httpgzip.FileServer(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri"))),
 		httpgzip.FileServerOptions{
