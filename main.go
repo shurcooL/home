@@ -31,6 +31,8 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	err := run()
 	if err != nil {
 		log.Fatalln(err)
@@ -38,8 +40,6 @@ func main() {
 }
 
 func run() error {
-	flag.Parse()
-
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
 		return err
 	}
