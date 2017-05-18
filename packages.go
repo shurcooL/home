@@ -84,7 +84,7 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 			Tabs: []tab{
 				{
 					Content:  iconText{Icon: octiconssvg.Package, Text: fmt.Sprintf("%d Libraries", librariesCount)},
-					URL:      "/packages?type=library",
+					URL:      "/packages",
 					Selected: !commands,
 				},
 				{
