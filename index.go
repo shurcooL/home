@@ -488,6 +488,8 @@ func (e activityEvent) Render() []*html.Node {
 	return []*html.Node{div}
 }
 
+const timeFormat = "Jan 2, 2006, 3:04 PM MST"
+
 // compactTime formats time t into a relative string.
 //
 // For example, "5s" for 5 seconds ago, "47m" for 47 minutes ago,
@@ -505,8 +507,6 @@ var compactMagnitudes = []humanize.RelTimeMagnitude{
 	{D: humanize.Year, Format: "%dm", DivBy: humanize.Month},
 	{D: math.MaxInt64, Format: "%dy", DivBy: humanize.Year},
 }
-
-const timeFormat = "Jan 2, 2006, 3:04 PM MST"
 
 // TODO: Dedup.
 //

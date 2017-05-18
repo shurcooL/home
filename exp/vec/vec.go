@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/shurcooL/htmlg"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -15,8 +16,8 @@ type HTML struct {
 	Data       string        // Used when Type is html.TextNode.
 	Attributes map[atom.Atom]string
 
-	Children []*HTML
-	//HTMLNode *html.Node // TODO: Generalize to all children. Currently, this is an optional first node before children.
+	Children  []*HTML
+	Children2 []*html.Node // TODO: Generalize to/merge with all children. Currently, this is optional nodes after children.
 }
 
 type Component interface {
@@ -79,14 +80,14 @@ func renderHTML(w io.Writer, h *HTML) error {
 			return err
 		}
 
-		//if h.HTMLNode != nil {
-		//	err = html.Render(w, h.HTMLNode)
-		//	if err != nil {
-		//		return err
-		//	}
-		//}
 		for _, c := range h.Children {
 			err = renderHTML(w, c)
+			if err != nil {
+				return err
+			}
+		}
+		for _, c := range h.Children2 {
+			err = html.Render(w, c)
 			if err != nil {
 				return err
 			}
@@ -123,8 +124,11 @@ func Apply(h *HTML, m MarkupOrComponentOrHTML) {
 	case string:
 		text := &HTML{Type: html.TextNode, Data: m}
 		h.Children = append(h.Children, text)
-	//case *html.Node:
-	//h.HTMLNode = m
+	case *html.Node:
+		panic(fmt.Errorf("*html.Node not supported"))
+		//h.Children2 = append(h.Children2, m)
+	case htmlg.Component:
+		h.Children2 = append(h.Children2, m.Render()...)
 	case Component:
 		panic(fmt.Errorf("Component not supported"))
 	default:
