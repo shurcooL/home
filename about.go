@@ -6,6 +6,9 @@ import (
 	"net/http"
 
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/exp/vec"
+	"github.com/shurcooL/home/exp/vec/attr"
+	"github.com/shurcooL/home/exp/vec/elem"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
@@ -18,7 +21,7 @@ var aboutHTML = template.Must(template.New("").Parse(`<html>
 		<title>Dmitri Shuralyov - About</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
-		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
 		<link href="/assets/about/style.css" rel="stylesheet" type="text/css">
 		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
@@ -63,22 +66,65 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		}
 
 		// Render content.
-		_, err = io.WriteString(w, `<div style="float: left;"><img width="300" height="450" src="avatar-p.jpg"></div>
-			<div style="margin-left: 340px; text-align: justify;">
-				<p>I'm Dmitri Shuralyov, a software engineer and an avid <a title="Someone who uses Go." href="https://golang.org">gopher</a>. I strive to make software more delightful.</p>
-
-				<p>Coming from a game development and graphics/UI background where C++ was used primarily, I discovered and made a full switch to Go <abbr title="2013.">four years ago</abbr>, which lead to increased developer happiness.</p>
-
-				<p>In my spare time, I'm mostly interested in working on software development tools and exploring experimental ideas. I enjoy contributing to open source, fixing issues in existing tools and the <a href="https://github.com/golang/go/commits/master?author=shurcooL">Go project</a> itself.</p>
-
-				<p>You can also find me on:</p>
-
-				<div>
-					<a class="blue mr8" title="GitHub" href="https://github.com/shurcooL" rel="me"><i class="fa fa-github fa-2x" style="vertical-align: middle;"></i></a>
-					<a class="blue mr8" title="Twitter" href="https://twitter.com/shurcooL" rel="me"><span class="fa-stack"><i class="fa fa-circle fa-stack-2x"></i><i class="fa fa-twitter fa-stack-1x fa-inverse"></i></span></a>
-				</div>
-			</div>
-			<div style="clear: both;"></div>`)
+		err = vec.RenderHTML(w,
+			elem.Span(
+				attr.Style("display: table; margin-left: auto; margin-right: auto;"),
+				elem.Img(
+					attr.Style("width: 240px; height: 240px; border-radius: 8px; margin-bottom: 8px;"),
+					attr.Src("avatar-s.jpg"),
+				),
+				elem.Div(
+					attr.Style("font-size: 26px; font-weight: 600;"),
+					"Dmitri Shuralyov",
+				),
+				elem.Div(
+					attr.Style("font-size: 20px; font-weight: 300; color: #666;"),
+					"shurcooL",
+				),
+			),
+			elem.Div(
+				attr.Style("margin-top: 24px;"),
+				elem.P(
+					"Dmitri Shuralyov is a software engineer and an avid ",
+					elem.A(attr.Title("Someone who uses Go."), attr.Href("https://golang.org"),
+						"gopher",
+					),
+					". He strives to make software more delightful.",
+				),
+				elem.P(
+					"Coming from a game development and graphics/UI background where C++ was used predominantly, he discovered and made a full switch to Go ",
+					elem.Abbr(attr.Title("2013."), attr.Href("https://golang.org"),
+						"four years ago",
+					),
+					", which lead to increased developer happiness.",
+				),
+				elem.P(
+					"In his spare time, he's mostly working on software development tools and exploring experimental ideas. He enjoys contributing to open source, fixing issues in existing tools and the ",
+					elem.A(attr.Href("https://github.com/golang/go/commits/master?author=shurcooL"),
+						"Go project",
+					),
+					" itself.",
+				),
+			),
+			elem.Div(
+				attr.Style("border-top: 1px solid #f0f0f0;"),
+				elem.Ul(
+					attr.Style("padding-left: 0;"),
+					elem.Li(
+						attr.Style("display: block; margin-bottom: 8px;"),
+						elem.Span(attr.Style("color: #666; margin-right: 6px;"),
+							elem.I(attr.Class("fa fa-github"))),
+						elem.A(attr.Href("https://github.com/shurcooL"), "github.com/shurcooL"),
+					),
+					elem.Li(
+						attr.Style("display: block;"),
+						elem.Span(attr.Style("color: #666; margin-right: 6px;"),
+							elem.I(attr.Class("fa fa-twitter"))),
+						elem.A(attr.Href("https://twitter.com/shurcooL"), "twitter.com/shurcooL"),
+					),
+				),
+			),
+		)
 		if err != nil {
 			return err
 		}

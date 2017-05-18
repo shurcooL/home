@@ -11,13 +11,3 @@ a {
 a:hover {
 	text-decoration: underline;
 }
-a.blue {
-	color: rgb(138, 178, 219);
-}
-a.blue:hover {
-	color: #4183c4;
-}
-
-.mr8 {
-	margin-right: 8px;
-}
