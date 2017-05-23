@@ -37,7 +37,7 @@ func (h Header) Render() []*html.Node {
 			</ul>
 
 			{{if h.CurrentUser.ID}}
-				Notifications{Unread: h.NotificationCount > 0}
+				Notifications{Count: h.NotificationCount}
 				<a class="topbar-avatar" href="{{h.CurrentUser.HTMLURL}}">
 					<img class="topbar-avatar" src="{{h.CurrentUser.AvatarURL}}" title="Signed in as {{h.CurrentUser.Login}}.">
 				</a>
@@ -116,7 +116,7 @@ header.header .user {
 					{Key: atom.Style.String(), Val: "margin-right: 10px;"},
 				},
 			}
-			for _, n := range (Notifications{Unread: h.NotificationCount > 0}).Render() {
+			for _, n := range (Notifications{Count: h.NotificationCount}).Render() {
 				span.AppendChild(n)
 			}
 			userSpan.AppendChild(span)
@@ -162,8 +162,8 @@ vertical-align: top;`},
 // Notifications is an icon for displaying if user has unread notifications.
 // It links to "/notifications".
 type Notifications struct {
-	// Unread is whether the user has unread notifications.
-	Unread bool
+	// Count is the number of unread notifications the user has.
+	Count uint64
 }
 
 // Render implements htmlg.Component.
@@ -178,8 +178,15 @@ position: relative;`},
 		},
 	}
 	a.AppendChild(octiconssvg.Bell())
-	if n.Unread {
-		a.Attr = append(a.Attr, html.Attribute{Key: atom.Title.String(), Val: "You have unread notifications."})
+	switch n.Count {
+	case 0:
+		a.Attr = append(a.Attr, html.Attribute{Key: atom.Title.String(), Val: "You have no unread notifications."})
+	case 1:
+		a.Attr = append(a.Attr, html.Attribute{Key: atom.Title.String(), Val: "You have 1 unread notification."})
+	default:
+		a.Attr = append(a.Attr, html.Attribute{Key: atom.Title.String(), Val: fmt.Sprintf("You have %d unread notifications.", n.Count)})
+	}
+	if n.Count > 0 {
 		notificationsUnread := &html.Node{
 			Type: html.ElementNode, Data: atom.Span.String(),
 			Attr: []html.Attribute{
