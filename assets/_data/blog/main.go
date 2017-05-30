@@ -9,6 +9,7 @@ import (
 	"github.com/shurcooL/frontend/reactionsmenu"
 	"github.com/shurcooL/home/http"
 	"github.com/shurcooL/home/idiomaticgo"
+	"github.com/shurcooL/issuesapp/httpclient"
 	"github.com/shurcooL/users"
 	"honnef.co/go/js/dom"
 )
@@ -29,7 +30,7 @@ func main() {
 }
 
 func setup() {
-	issuesService := http.NewIssues("", "")
+	issuesService := httpclient.NewIssues("", "")
 	reactionsService := idiomaticgo.IssuesReactions{Issues: issuesService}
 	authenticatedUser, err := http.Users{}.GetAuthenticated(context.TODO())
 	if err != nil {
