@@ -101,11 +101,10 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		io.WriteString(w, `</div>`)
 
 		io.WriteString(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
-		err = htmlg.RenderComponents(w, resumecomponent.ReactionsBar{
-			Reactions:    comment.Reactions,
-			ReactableURL: blogURI.URI,
-			CurrentUser:  authenticatedUser,
-			ID:           fmt.Sprintf("%d", issue.ID), // TODO: "/0"?
+		err = htmlg.RenderComponents(w, reactionscomponent.ReactionsBar{
+			Reactions:   comment.Reactions,
+			CurrentUser: authenticatedUser,
+			ID:          fmt.Sprintf("%d", issue.ID), // TODO: "/0"?
 		})
 		if err != nil {
 			return err
