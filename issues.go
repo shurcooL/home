@@ -6,13 +6,14 @@ import (
 
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/home/component"
-	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/issuesapp"
+	"github.com/shurcooL/issuesapp/httphandler"
+	"github.com/shurcooL/issuesapp/httproute"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
@@ -27,10 +28,10 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle("/api/issues/list", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.List)})
-	http.Handle("/api/issues/count", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
-	http.Handle("/api/issues/list-comments", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
-	http.Handle("/api/issues/edit-comment", userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
+	http.Handle(httproute.List, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.List)})
+	http.Handle(httproute.Count, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
+	http.Handle(httproute.ListComments, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
+	http.Handle(httproute.EditComment, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,
