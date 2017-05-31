@@ -13,7 +13,7 @@ import (
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
-	resumecomponent "github.com/shurcooL/resume/component"
+	reactionscomponent "github.com/shurcooL/reactions/component"
 	"github.com/shurcooL/sanitized_anchor_name"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
