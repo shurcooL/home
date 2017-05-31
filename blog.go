@@ -47,7 +47,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 <style type="text/css">
 	body {
 		margin: 20px;
-		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+		font-family: sans-serif;
 		font-size: 14px;
 		line-height: initial;
 		color: #373a3c;
