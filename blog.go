@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -33,7 +34,7 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 
 // initBlog registers a blog handler with blog URI as blog content source.
 func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications notifications.Service, users users.Service) error {
-	onlyShurcoolCreatePosts := onlyShurcoolCreatePosts{
+	shurcoolBlogService := shurcoolBlogService{
 		Service: issuesService,
 		users:   users,
 	}
@@ -68,11 +69,68 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		background-color: #fff;
 		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
+
+	.post .markdown-body {
+		font-size: 16px;
+    	line-height: 1.6;
+    }
+    .post .black-link a, .black-link a:focus, .black-link a:hover {
+		color: #373a3c;
+	}
+	.post ul.post-meta {
+		padding-left: 0;
+		list-style: none;
+		margin-top: 10px;
+		margin-bottom: 20px;
+
+		font-family: sans-serif;
+		font-size: 14px;
+		line-height: 18px;
+		color: #999;
+	}
+	.post li.post-meta {
+		display: inline-block;
+		margin-right: 30px;
+	}
+	.post div.reactable-container {
+		display: inline-block;
+		vertical-align: top;
+		margin-left: 0;
+	}
+	.post .reaction-bar-appear:hover div.new-reaction {
+		display: inline-block;
+	}
+	/* Make new-reaction button visible if there are no other reactions. */
+	.post div.reactable-container a:first-child div.new-reaction {
+		display: inline-block;
+	}
 </style>`,
 		BodyPre: `{{/* Override create issue button to only show up for shurcooL as New Blog Post button. */}}
 {{define "create-issue"}}
 	{{if and (eq .CurrentUser.ID 1924134) (eq .CurrentUser.Domain "github.com")}}
 		<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">New Blog Post</button></div>
+	{{end}}
+{{end}}
+
+{{define "issue"}}
+	{{if .ForceIssuesApp}}
+		{{$issue := .Issue}}
+
+		<h1>{{$issue.Title}} <span class="gray">#{{$issue.ID}}</span></h1>
+		<div id="issue-state-badge" style="margin-bottom: 20px;">{{template "issue-state-badge" $issue}}</div>
+	{{else}}
+		<h2>Comments</h2>
+	{{end}}
+	{{$items := .Items}}
+	{{range $items}}
+		{{template "issue-item" .}}
+	{{end}}
+	<div id="new-item-marker"></div>
+	{{if (and (eq .CurrentUser.ID 0) (not $items))}}
+		{{/* HACK: Negative offset to make "Sign in via GitHub to comment." appear aligned. */}}
+		<div style="margin-left: -58px;">{{template "new-comment" .}}</div>
+	{{else}}
+		{{template "new-comment" .}}
 	{{end}}
 {{end}}
 
@@ -100,9 +158,32 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 			NotificationCount: nc,
 			ReturnURL:         returnURL,
 		}
+
+		// Check if we're on an idividual blog post /{id:[0-9]+} page.
+		// This is a copy of issueapp's router logic.
+		_, forceIssuesApp := req.Context().Value(forceIssuesAppContextKey).(struct{})
+		if issueID, err := strconv.ParseUint(req.URL.Path[1:], 10, 64); err == nil && !forceIssuesApp {
+			issue, err := issuesService.Get(req.Context(), blog, issueID)
+			if err != nil {
+				return nil, err
+			}
+			comments, err := issuesService.ListComments(req.Context(), blog, issueID, &issues.ListOptions{Length: 1})
+			if err != nil {
+				return nil, err
+			}
+			if len(comments) == 0 {
+				return nil, fmt.Errorf("blog post %d has no body", issueID)
+			}
+			issue.Comment = comments[0]
+			post := blogpkg.Post{Blog: blog, CurrentUser: authenticatedUser, Issue: issue}
+
+			return []htmlg.Component{header, post}, nil
+		}
+
+		// If this is not an issue page, that's okay, only include the header.
 		return []htmlg.Component{header}, nil
 	}
-	issuesApp := issuesapp.New(onlyShurcoolCreatePosts, users, opt)
+	issuesApp := issuesapp.New(shurcoolBlogService, users, opt)
 
 	blogHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/blog")
@@ -147,6 +228,9 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		default:
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, blog))
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/blog"))
+			if forceIssuesApp {
+				req = req.WithContext(context.WithValue(req.Context(), forceIssuesAppContextKey, struct{}{}))
+			}
 			issuesApp.ServeHTTP(w, req)
 			return nil
 		}
@@ -157,14 +241,27 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	return nil
 }
 
-// onlyShurcoolCreatePosts limits an issues.Service's Create method to allow only shurcooL
-// to create new blog posts.
-type onlyShurcoolCreatePosts struct {
+// shurcoolBlogService skips first comment (the issue body), because we're
+// taking on responsibility to render it ourselves (unless forceIssuesApp
+// is set). It also limits an issues.Service's Create method to allow only
+// shurcooL to create new blog posts.
+type shurcoolBlogService struct {
 	issues.Service
 	users users.Service
 }
 
-func (s onlyShurcoolCreatePosts) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+func (s shurcoolBlogService) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
+	cs, listCommentsError := s.Service.ListComments(ctx, repo, id, opt)
+	_, forceIssuesApp := ctx.Value(forceIssuesAppContextKey).(struct{})
+	if len(cs) >= 1 && !forceIssuesApp {
+		// Skip first comment (the issue body), we're taking on responsibility
+		// to render it ourselves.
+		cs = cs[1:]
+	}
+	return cs, listCommentsError
+}
+
+func (s shurcoolBlogService) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
 	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return issues.Issue{}, err
@@ -175,8 +272,13 @@ func (s onlyShurcoolCreatePosts) Create(ctx context.Context, repo issues.RepoSpe
 	return s.Service.Create(ctx, repo, issue)
 }
 
-func (s onlyShurcoolCreatePosts) ThreadType() string {
+func (s shurcoolBlogService) ThreadType() string {
 	return s.Service.(interface {
 		ThreadType() string
 	}).ThreadType()
 }
+
+// forceIssuesAppContextKey is a context key. It can be used to check whether
+// issuesapp is being forced upon the blog. The associated value will be of type struct{}.
+// Eventually, a better solution should be found, and this removed.
+var forceIssuesAppContextKey = &contextKey{"ForceIssuesApp"}
