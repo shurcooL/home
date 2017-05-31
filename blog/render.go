@@ -76,7 +76,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		}
 		comment := cs[commentID]
 
-		// Header.
+		// Heading.
 		io.WriteString(w, `<div class="markdown-body">`)
 		html.Render(w, htmlg.H3(htmlg.A(issue.Title, fmt.Sprintf("/blog/%d", issue.ID))))
 		io.WriteString(w, `</div>`)
@@ -100,6 +100,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
 		io.WriteString(w, `</div>`)
 
+		// Reactions bar.
 		io.WriteString(w, `<div class="reaction-bar-appear" style="display: flex; justify-content: space-between; margin-bottom: 60px;">`)
 		err = htmlg.RenderComponents(w, reactionscomponent.ReactionsBar{
 			Reactions:   comment.Reactions,
@@ -118,6 +119,61 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 	_, err = io.WriteString(w, `</div>`)
 	return err
+}
+
+// Post is an individual blog post.
+type Post struct {
+	Blog        issues.RepoSpec
+	CurrentUser users.User
+
+	issues.Issue
+}
+
+func (p Post) Render() []*html.Node {
+	var nodes []*html.Node
+
+	// Heading.
+	nodes = append(nodes, htmlg.DivClass("markdown-body",
+		htmlg.H3(htmlg.Text(p.Title)),
+	))
+
+	// Post meta information.
+	var lis = []*html.Node{
+		htmlg.LIClass("post-meta", iconText{
+			Icon:    octiconssvg.Calendar,
+			Text:    p.CreatedAt.Format("January 2, 2006"),
+			Tooltip: humanize.Time(p.CreatedAt) + " – " + p.CreatedAt.Local().Format("Jan 2, 2006, 3:04 PM MST"), // TODO: Use local time of page viewer, not server.
+		}.Render()...),
+		htmlg.LIClass("post-meta", imageText{ImageURL: p.User.AvatarURL, Text: p.User.Login}.Render()...),
+	}
+	if labels := labelNames(p.Labels); len(labels) != 0 {
+		lis = append(lis, htmlg.LIClass("post-meta", iconText{Icon: octiconssvg.Tag, Text: strings.Join(labels, ", ")}.Render()...))
+	}
+	nodes = append(nodes, htmlg.ULClass("post-meta", lis...))
+
+	// Contents.
+	body, err := html.Parse(bytes.NewReader(github_flavored_markdown.Markdown([]byte(p.Body))))
+	if err != nil {
+		panic(fmt.Errorf("internal error: parsing own GFM-rendered blog post into HTML failed: %v", err))
+	}
+	nodes = append(nodes,
+		divClassStyle("markdown-body", "padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 8px;",
+			body,
+		),
+	)
+
+	// Reactions bar.
+	nodes = append(nodes,
+		divClassStyle("reaction-bar-appear", "display: flex; justify-content: space-between; margin-bottom: 50px;",
+			reactionscomponent.ReactionsBar{
+				Reactions:   p.Reactions,
+				CurrentUser: p.CurrentUser,
+				ID:          fmt.Sprintf("%d/0", p.ID),
+			}.Render()...,
+		),
+	)
+
+	return []*html.Node{htmlg.DivClass("post", nodes...)}
 }
 
 func labelNames(labels []issues.Label) (names []string) {
@@ -165,6 +221,21 @@ func (it imageText) Render() []*html.Node {
 	}
 	text := htmlg.Text(it.Text)
 	return []*html.Node{image, text}
+}
+
+// divClassStyle returns a div element <div class="{{.class}}" style="{{.style}}">{{range .nodes}}{{.}}{{end}}</div>.
+func divClassStyle(class, style string, nodes ...*html.Node) *html.Node {
+	div := &html.Node{
+		Type: html.ElementNode, Data: atom.Div.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Class.String(), Val: class},
+			{Key: atom.Style.String(), Val: style},
+		},
+	}
+	for _, n := range nodes {
+		div.AppendChild(n)
+	}
+	return div
 }
 
 var octiconsCommentDiscussion = func() string {
