@@ -5,12 +5,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/shurcooL/frontend/reactionsmenu"
-	"github.com/shurcooL/home/http"
+	homehttp "github.com/shurcooL/home/http"
 	"github.com/shurcooL/home/idiomaticgo"
 	"github.com/shurcooL/issuesapp/httpclient"
 	"github.com/shurcooL/users"
+	"golang.org/x/oauth2"
 	"honnef.co/go/js/dom"
 )
 
@@ -30,9 +32,11 @@ func main() {
 }
 
 func setup() {
-	issuesService := httpclient.NewIssues("", "")
+	httpClient := httpClient()
+
+	issuesService := httpclient.NewIssues(httpClient, "", "")
 	reactionsService := idiomaticgo.IssuesReactions{Issues: issuesService}
-	authenticatedUser, err := http.Users{}.GetAuthenticated(context.TODO())
+	authenticatedUser, err := homehttp.Users{}.GetAuthenticated(context.TODO())
 	if err != nil {
 		log.Println(err)
 		authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
@@ -51,4 +55,18 @@ func setup() {
 	}*/
 
 	reactionsmenu.Setup(idiomaticgo.ReactableURL, reactionsService, authenticatedUser)
+}
+
+// httpClient gives an *http.Client for making API requests.
+func httpClient() *http.Client {
+	cookies := &http.Request{Header: http.Header{"Cookie": {document.Cookie()}}}
+	if accessToken, err := cookies.Cookie("accessToken"); err == nil {
+		// Authenticated client.
+		src := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: accessToken.Value},
+		)
+		return oauth2.NewClient(context.Background(), src)
+	}
+	// Not authenticated client.
+	return http.DefaultClient
 }

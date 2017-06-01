@@ -28,10 +28,10 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle(httproute.List, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.List)})
-	http.Handle(httproute.Count, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
-	http.Handle(httproute.ListComments, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
-	http.Handle(httproute.EditComment, userMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
+	http.Handle(httproute.List, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.List)})
+	http.Handle(httproute.Count, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
+	http.Handle(httproute.ListComments, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
+	http.Handle(httproute.EditComment, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,
