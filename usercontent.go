@@ -85,6 +85,9 @@ func (uc userContentHandler) Serve(w http.ResponseWriter, req *http.Request) err
 	if err != nil {
 		return err
 	}
+	if fi.IsDir() {
+		return os.ErrNotExist
+	}
 
 	w.Header().Set("Content-Type", "image/png")
 	http.ServeContent(w, req, "", fi.ModTime(), f)
