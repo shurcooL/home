@@ -95,7 +95,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	events, eventsError := h.events.List(req.Context())
 	var error string
 	if eventsError != nil {
-		error = "There's been a problem fetching latest activity from GitHub."
+		error = "There was a problem getting latest activity."
 		if authenticatedUser.SiteAdmin {
 			error += "\n\n" + eventsError.Error()
 		}
