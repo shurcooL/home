@@ -112,10 +112,19 @@ type user struct {
 	AccessToken string // Internal access token. Needed to be able to clear session when this user signs out.
 }
 
+func setAccessTokenCookie(w httputil.HeaderWriter, accessToken string, expiry time.Time) {
+	// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
+	encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
+	httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: false, Secure: *productionFlag})
+}
+func clearAccessTokenCookie(w httputil.HeaderWriter) {
+	httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+}
+
 var errBadAccessToken = errors.New("bad access token")
 
 // lookUpUserViaCookie retrieves the user from req by looking up
-// the request's access token in the sessions map.
+// the request's access token (via accessTokenCookieName cookie) in the sessions map.
 // It returns a valid user (possibly nil) and nil error,
 // or nil user and errBadAccessToken.
 func lookUpUserViaCookie(req *http.Request) (*user, error) {
@@ -156,13 +165,13 @@ func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	user, err := lookUpUserViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
-		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+		clearAccessTokenCookie(w)
 	}
 	mw.Handler.ServeHTTP(w, withUser(req, user))
 }
 
 // lookUpUserViaHeader retrieves the user from req by looking up
-// the request's access token in the sessions map.
+// the request's access token (via Authorization header) in the sessions map.
 // It returns a valid user (possibly nil) and nil error,
 // or nil user and errBadAccessToken.
 func lookUpUserViaHeader(req *http.Request) (*user, error) {
@@ -237,8 +246,8 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	u, err := lookUpUserViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
-		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens, then a successful login results in setting accessTokenCookieName to a new value.
-		http.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens (here), then a successful login results in setting accessTokenCookieName to a new value (in h.serve).
+		clearAccessTokenCookie(w)
 	}
 	req = withUser(req, u)
 
@@ -425,9 +434,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			returnURL = "/"
 		}
 
-		// TODO: Is base64 the best encoding for cookie values? Factor it out maybe?
-		encodedAccessToken := base64.RawURLEncoding.EncodeToString([]byte(accessToken))
-		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, Value: encodedAccessToken, Expires: expiry, HttpOnly: false, Secure: *productionFlag})
+		setAccessTokenCookie(w, accessToken, expiry)
 		return nil, httperror.Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
@@ -437,7 +444,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			sessions.mu.Unlock()
 		}
 
-		httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
+		clearAccessTokenCookie(w)
 		return nil, httperror.Redirect{URL: sanitizeReturn(req.PostFormValue("return"))}
 
 	case req.Method == "GET" && req.URL.Path == "/login":
