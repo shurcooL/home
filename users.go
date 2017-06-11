@@ -47,43 +47,43 @@ type Users struct {
 	store users.Store
 }
 
-func (s Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
-	return s.store.Get(ctx, user)
+func (u Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
+	return u.store.Get(ctx, user)
 }
 
-func (s Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
-	u, ok := ctx.Value(userContextKey).(*user)
+func (Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
+	s, ok := ctx.Value(sessionContextKey).(*session)
 	if !ok {
-		return users.UserSpec{}, fmt.Errorf("internal error: userContextKey isn't set on context but Users.GetAuthenticatedSpec is called")
+		return users.UserSpec{}, fmt.Errorf("internal error: sessionContextKey isn't set on context but Users.GetAuthenticatedSpec is called")
 	}
-	if u == nil {
+	if s == nil {
 		return users.UserSpec{}, nil
 	}
 	return users.UserSpec{
-		ID:     u.ID,
+		ID:     s.GitHubUserID,
 		Domain: "github.com",
 	}, nil
 }
 
-func (s Users) GetAuthenticated(ctx context.Context) (users.User, error) {
-	userSpec, err := s.GetAuthenticatedSpec(ctx)
+func (u Users) GetAuthenticated(ctx context.Context) (users.User, error) {
+	userSpec, err := u.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return users.User{}, err
 	}
 	if userSpec.ID == 0 {
 		return users.User{}, nil
 	}
-	return s.Get(ctx, userSpec)
+	return u.Get(ctx, userSpec)
 }
 
 func (Users) Edit(ctx context.Context, er users.EditRequest) (users.User, error) {
 	return users.User{}, errors.New("Edit is not implemented")
 }
 
-// userContextKey is a context key. It can be used to access the user
-// that the context is tied to. The associated value will be of type *user.
-var userContextKey = &contextKey{"user"}
+// sessionContextKey is a context key. It can be used to access the session
+// that the context is tied to. The associated value will be of type *session.
+var sessionContextKey = &contextKey{"session"}
 
-func withUser(req *http.Request, u *user) *http.Request {
-	return req.WithContext(context.WithValue(req.Context(), userContextKey, u))
+func withSession(req *http.Request, s *session) *http.Request {
+	return req.WithContext(context.WithValue(req.Context(), sessionContextKey, s))
 }

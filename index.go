@@ -43,7 +43,7 @@ func initIndex(events events.Service, notifications notifications.Service, users
 		notifications: notifications,
 		users:         users,
 	}
-	return userMiddleware{httputil.ErrorHandler(users, h.ServeHTTP)}
+	return cookieAuth{httputil.ErrorHandler(users, h.ServeHTTP)}
 }
 
 type indexHandler struct {

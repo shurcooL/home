@@ -36,11 +36,12 @@ var githubConfig = oauth2.Config{
 	Endpoint:     githuboauth2.Endpoint,
 }
 
-var sessions = state{sessions: make(map[string]user)}
+// global server state.
+var global = state{sessions: make(map[string]session)}
 
 type state struct {
 	mu       sync.Mutex
-	sessions map[string]user // Access Token -> User.
+	sessions map[string]session // Access Token -> User Session.
 }
 
 // LoadAndRemove first loads state from file at path, then,
@@ -104,12 +105,14 @@ type contextKey struct {
 
 func (k *contextKey) String() string { return "github.com/shurcooL/home context value " + k.name }
 
-// user is a GitHub user (i.e., domain is "github.com").
-type user struct {
-	ID uint64
+// session is a user session. Nil session pointer represents no session.
+// Non-nil session pointers are expected to have valid users.
+type session struct {
+	// GitHubUserID is a valid (i.e., non-zero) GitHub user ID. Domain is "github.com".
+	GitHubUserID uint64
 
 	Expiry      time.Time
-	AccessToken string // Internal access token. Needed to be able to clear session when this user signs out.
+	AccessToken string // Access token. Needed to be able to clear session when the user signs out.
 }
 
 func setAccessTokenCookie(w httputil.HeaderWriter, accessToken string, expiry time.Time) {
@@ -123,14 +126,14 @@ func clearAccessTokenCookie(w httputil.HeaderWriter) {
 
 var errBadAccessToken = errors.New("bad access token")
 
-// lookUpUserViaCookie retrieves the user from req by looking up
+// lookUpSessionViaCookie retrieves the session from req by looking up
 // the request's access token (via accessTokenCookieName cookie) in the sessions map.
-// It returns a valid user (possibly nil) and nil error,
-// or nil user and errBadAccessToken.
-func lookUpUserViaCookie(req *http.Request) (*user, error) {
+// It returns a valid session (possibly nil) and nil error,
+// or nil session and errBadAccessToken.
+func lookUpSessionViaCookie(req *http.Request) (s *session, err error) {
 	cookie, err := req.Cookie(accessTokenCookieName)
 	if err == http.ErrNoCookie {
-		return nil, nil // No user.
+		return nil, nil // No session.
 	} else if err != nil {
 		return nil, errBadAccessToken
 	}
@@ -139,45 +142,44 @@ func lookUpUserViaCookie(req *http.Request) (*user, error) {
 		return nil, errBadAccessToken
 	}
 	accessToken := string(accessTokenBytes)
-	var u *user
-	sessions.mu.Lock()
-	if user, ok := sessions.sessions[accessToken]; ok {
-		if time.Now().Before(user.Expiry) {
-			u = &user
+	global.mu.Lock()
+	if session, ok := global.sessions[accessToken]; ok {
+		if time.Now().Before(session.Expiry) {
+			s = &session
 		} else {
-			delete(sessions.sessions, accessToken) // This is unlikely to happen because cookie expires by then.
+			delete(global.sessions, accessToken) // This is unlikely to happen because cookie expires by then.
 		}
 	}
-	sessions.mu.Unlock()
-	if u == nil {
+	global.mu.Unlock()
+	if s == nil {
 		return nil, errBadAccessToken
 	}
-	return u, nil // Existing user.
+	return s, nil // Existing session.
 }
 
-// userMiddleware parses authentication information from request headers,
-// and sets authenticated user as a context value.
-type userMiddleware struct {
+// cookieAuth is a middleware that parses authentication information
+// from request cookies, and sets session as a context value.
+type cookieAuth struct {
 	Handler http.Handler
 }
 
-func (mw userMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	user, err := lookUpUserViaCookie(req)
+func (mw cookieAuth) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	s, err := lookUpSessionViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		clearAccessTokenCookie(w)
 	}
-	mw.Handler.ServeHTTP(w, withUser(req, user))
+	mw.Handler.ServeHTTP(w, withSession(req, s))
 }
 
-// lookUpUserViaHeader retrieves the user from req by looking up
+// lookUpSessionViaHeader retrieves the session from req by looking up
 // the request's access token (via Authorization header) in the sessions map.
-// It returns a valid user (possibly nil) and nil error,
-// or nil user and errBadAccessToken.
-func lookUpUserViaHeader(req *http.Request) (*user, error) {
+// It returns a valid session (possibly nil) and nil error,
+// or nil session and errBadAccessToken.
+func lookUpSessionViaHeader(req *http.Request) (*session, error) {
 	authorization, ok := req.Header["Authorization"]
 	if !ok {
-		return nil, nil // No user.
+		return nil, nil // No session.
 	}
 	if len(authorization) != 1 {
 		return nil, errBadAccessToken
@@ -191,35 +193,35 @@ func lookUpUserViaHeader(req *http.Request) (*user, error) {
 		return nil, errBadAccessToken
 	}
 	accessToken := string(accessTokenBytes)
-	var u *user
-	sessions.mu.Lock()
-	if user, ok := sessions.sessions[accessToken]; ok {
-		if time.Now().Before(user.Expiry) {
-			u = &user
+	var s *session
+	global.mu.Lock()
+	if session, ok := global.sessions[accessToken]; ok {
+		if time.Now().Before(session.Expiry) {
+			s = &session
 		} else {
-			delete(sessions.sessions, accessToken)
+			delete(global.sessions, accessToken)
 		}
 	}
-	sessions.mu.Unlock()
-	if u == nil {
+	global.mu.Unlock()
+	if s == nil {
 		return nil, errBadAccessToken
 	}
-	return u, nil // Existing user.
+	return s, nil // Existing session.
 }
 
-// apiMiddleware parses authentication information from request headers,
-// and sets authenticated user as a context value.
-type apiMiddleware struct {
+// headerAuth is a middleware that parses authentication information
+// from request headers, and sets session as a context value.
+type headerAuth struct {
 	Handler http.Handler
 }
 
-func (mw apiMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	user, err := lookUpUserViaHeader(req)
+func (mw headerAuth) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	s, err := lookUpSessionViaHeader(req)
 	if err != nil {
 		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	mw.Handler.ServeHTTP(w, withUser(req, user))
+	mw.Handler.ServeHTTP(w, withSession(req, s))
 }
 
 type sessionsHandler struct {
@@ -243,15 +245,15 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// TODO: Factor this out into user middleware?
-	u, err := lookUpUserViaCookie(req)
+	s, err := lookUpSessionViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens (here), then a successful login results in setting accessTokenCookieName to a new value (in h.serve).
 		clearAccessTokenCookie(w)
 	}
-	req = withUser(req, u)
+	req = withSession(req, s)
 
-	nodes, err := h.serve(w, req, u)
+	nodes, err := h.serve(w, req, s)
 	if err == nil {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.WriteString(w, htmlg.Render(nodes...))
@@ -294,8 +296,8 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if os.IsPermission(err) {
-		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
-		if u == nil {
+		// TODO: Factor out this os.IsPermission(err) && s == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
+		if s == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
 				RawQuery: url.Values{returnQueryName: {req.RequestURI}}.Encode(),
@@ -320,13 +322,13 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	http.Error(w, error, http.StatusInternalServerError)
 }
 
-func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *user) ([]*html.Node, error) {
+func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, s *session) ([]*html.Node, error) {
 	// Simple switch-based router for now. For a larger project, a more sophisticated router should be used.
 	switch {
 	case req.Method == "POST" && req.URL.Path == "/login/github":
 		returnURL := sanitizeReturn(req.PostFormValue("return"))
 
-		if u != nil {
+		if s != nil {
 			return nil, httperror.Redirect{URL: returnURL}
 		}
 
@@ -340,7 +342,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		return nil, httperror.Redirect{URL: url}
 
 	case req.Method == "GET" && req.URL.Path == "/callback/github":
-		if u != nil {
+		if s != nil {
 			return nil, httperror.Redirect{URL: "/"}
 		}
 
@@ -406,19 +408,19 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		// Add new session.
 		accessToken := string(cryptoRandBytes())
 		expiry := time.Now().Add(7 * 24 * time.Hour)
-		sessions.mu.Lock()
-		for token, user := range sessions.sessions { // Clean up expired sesions.
+		global.mu.Lock()
+		for token, user := range global.sessions { // Clean up expired sesions.
 			if time.Now().Before(user.Expiry) {
 				continue
 			}
-			delete(sessions.sessions, token)
+			delete(global.sessions, token)
 		}
-		sessions.sessions[accessToken] = user{
-			ID:          us.ID,
-			Expiry:      expiry,
-			AccessToken: accessToken,
+		global.sessions[accessToken] = session{
+			GitHubUserID: us.ID,
+			Expiry:       expiry,
+			AccessToken:  accessToken,
 		}
-		sessions.mu.Unlock()
+		global.mu.Unlock()
 
 		// TODO, THINK.
 		returnURL, err := func() (string, error) {
@@ -438,10 +440,10 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 		return nil, httperror.Redirect{URL: returnURL}
 
 	case req.Method == "POST" && req.URL.Path == "/logout":
-		if u != nil {
-			sessions.mu.Lock()
-			delete(sessions.sessions, u.AccessToken)
-			sessions.mu.Unlock()
+		if s != nil {
+			global.mu.Lock()
+			delete(global.sessions, s.AccessToken)
+			global.mu.Unlock()
 		}
 
 		clearAccessTokenCookie(w)
@@ -450,7 +452,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 	case req.Method == "GET" && req.URL.Path == "/login":
 		returnURL := sanitizeReturn(req.URL.Query().Get(returnQueryName))
 
-		if u != nil {
+		if s != nil {
 			return nil, httperror.Redirect{URL: returnURL}
 		}
 
@@ -470,10 +472,10 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 
 	case req.Method == "GET" && req.URL.Path == "/sessions":
 		// Authorization check.
-		if u == nil {
+		if s == nil {
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
-		if user, err := h.users.Get(req.Context(), users.UserSpec{ID: u.ID, Domain: "github.com"}); err != nil {
+		if user, err := h.users.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"}); err != nil {
 			log.Println("/sessions: h.users.Get:", err)
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		} else if !user.SiteAdmin {
@@ -481,23 +483,23 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, u *u
 			return nil, &os.PathError{Op: "open", Path: req.URL.String(), Err: os.ErrPermission}
 		}
 
-		var us []user
-		sessions.mu.Lock()
-		for _, u := range sessions.sessions {
-			us = append(us, u)
+		var ss []session
+		global.mu.Lock()
+		for _, s := range global.sessions {
+			ss = append(ss, s)
 		}
-		sessions.mu.Unlock()
+		global.mu.Unlock()
 		var nodes []*html.Node
-		for _, u := range us {
-			user, err := h.users.Get(req.Context(), users.UserSpec{ID: u.ID, Domain: "github.com"})
+		for _, s := range ss {
+			user, err := h.users.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"})
 			if err != nil {
 				return nil, err
 			}
 			nodes = append(nodes,
-				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(u.Expiry), base64.RawURLEncoding.EncodeToString([]byte(u.AccessToken)[:15])))),
+				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(s.Expiry), base64.RawURLEncoding.EncodeToString([]byte(s.AccessToken)[:15])))),
 			)
 		}
-		if len(us) == 0 {
+		if len(ss) == 0 {
 			nodes = append(nodes,
 				htmlg.Div(htmlg.Text("-")),
 			)

@@ -52,10 +52,10 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 
 	// Register HTTP API endpoints.
 	notificationsAPIHandler := httphandler.Notifications{Notifications: notificationsService}
-	mux.Handle(httproute.List, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.List)})
-	mux.Handle(httproute.Count, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
-	mux.Handle(httproute.MarkRead, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkRead)})
-	mux.Handle(httproute.MarkAllRead, apiMiddleware{httputil.ErrorHandler(users, notificationsAPIHandler.MarkAllRead)})
+	mux.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, notificationsAPIHandler.List)})
+	mux.Handle(httproute.Count, headerAuth{httputil.ErrorHandler(users, notificationsAPIHandler.Count)})
+	mux.Handle(httproute.MarkRead, headerAuth{httputil.ErrorHandler(users, notificationsAPIHandler.MarkRead)})
+	mux.Handle(httproute.MarkAllRead, headerAuth{httputil.ErrorHandler(users, notificationsAPIHandler.MarkAllRead)})
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
@@ -101,7 +101,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 	}
 	notificationsApp := notificationsapp.New(notificationsService, opt)
 
-	notificationsHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
+	notificationsHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/notifications")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
@@ -122,7 +122,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		notificationsApp.ServeHTTP(rr, req)
 		// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
 		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
-		if u := req.Context().Value(userContextKey).(*user); rr.Code == http.StatusForbidden && u == nil {
+		if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
 				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),

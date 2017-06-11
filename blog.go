@@ -185,7 +185,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	}
 	issuesApp := issuesapp.New(shurcoolBlogService, users, opt)
 
-	blogHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
+	blogHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/blog")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix

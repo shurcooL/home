@@ -28,10 +28,10 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle(httproute.List, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.List)})
-	http.Handle(httproute.Count, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
-	http.Handle(httproute.ListComments, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
-	http.Handle(httproute.EditComment, apiMiddleware{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
+	http.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.List)})
+	http.Handle(httproute.Count, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
+	http.Handle(httproute.ListComments, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
+	http.Handle(httproute.EditComment, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,
@@ -98,7 +98,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		{URI: "dmitri.shuralyov.com/temp/go-get-issue-unicode/испытание"}, // TODO: Delete after https://github.com/golang/go/issues/18660 and https://github.com/golang/gddo/issues/468 are resolved.
 	} {
 		repoSpec := repoSpec
-		issuesHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
+		issuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 			prefixLen := len("/issues/") + len(repoSpec.URI)
 			if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 				baseURL := prefix

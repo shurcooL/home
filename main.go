@@ -84,19 +84,19 @@ func run() error {
 	http.Handle("/sessions", sessionsHandler)
 
 	usersAPIHandler := httphandler.Users{Users: users}
-	http.Handle("/api/userspec", userMiddleware{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticatedSpec)})
-	http.Handle("/api/user", userMiddleware{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticated)})
+	http.Handle("/api/userspec", cookieAuth{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticatedSpec)})
+	http.Handle("/api/user", cookieAuth{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticated)})
 
 	reactionsAPIHandler := httphandler.Reactions{Reactions: reactions}
-	http.Handle("/api/react", userMiddleware{httputil.ErrorHandler(users, reactionsAPIHandler.GetOrToggle)})
-	http.Handle("/api/react/list", userMiddleware{httputil.ErrorHandler(users, reactionsAPIHandler.List)})
+	http.Handle("/api/react", cookieAuth{httputil.ErrorHandler(users, reactionsAPIHandler.GetOrToggle)})
+	http.Handle("/api/react/list", cookieAuth{httputil.ErrorHandler(users, reactionsAPIHandler.List)})
 
 	userContentHandler := userContentHandler{
 		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
 		users: users,
 	}
-	http.Handle("/api/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Upload)})
-	http.Handle("/usercontent/", http۰StripPrefix("/usercontent", userMiddleware{httputil.ErrorHandler(users, userContentHandler.Serve)}))
+	http.Handle("/api/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Upload)})
+	http.Handle("/usercontent/", http۰StripPrefix("/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Serve)}))
 
 	indexHandler := initIndex(events, notifications, users)
 
@@ -112,10 +112,10 @@ func run() error {
 		return err
 	}
 
-	emojisHandler := userMiddleware{httpgzip.FileServer(emojis.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
+	emojisHandler := cookieAuth{httpgzip.FileServer(emojis.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))
 
-	assetsHandler := userMiddleware{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
+	assetsHandler := cookieAuth{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
 
 	initResume(assetsHandler, reactions, notifications, users)
@@ -133,7 +133,7 @@ func run() error {
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "projects"))),
 		notifications, users)
 
-	staticFiles := userMiddleware{httpgzip.FileServer(
+	staticFiles := cookieAuth{httpgzip.FileServer(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri"))),
 		httpgzip.FileServerOptions{
 			IndexHTML:  true,
@@ -150,10 +150,10 @@ func run() error {
 	})
 
 	if *statefileFlag != "" {
-		err := sessions.LoadAndRemove(*statefileFlag)
-		sessions.mu.Lock()
-		n := len(sessions.sessions)
-		sessions.mu.Unlock()
+		err := global.LoadAndRemove(*statefileFlag)
+		global.mu.Lock()
+		n := len(global.sessions)
+		global.mu.Unlock()
 		log.Println("sessions.LoadAndRemove:", n, err)
 	}
 
@@ -177,7 +177,7 @@ func run() error {
 	}
 
 	if *statefileFlag != "" {
-		err := sessions.Save(*statefileFlag)
+		err := global.Save(*statefileFlag)
 		log.Println("sessions.Save:", err)
 	}
 

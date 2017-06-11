@@ -32,7 +32,7 @@ var aboutHTML = template.Must(template.New("").Parse(`<html>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
 func initAbout(notifications notifications.Service, users users.Service) {
-	aboutHandler := userMiddleware{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
+	aboutHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
 		}

@@ -42,7 +42,7 @@ const googleAnalytics = `<script>
 
 // resumeJSCSS contains /resume.{js,css}.
 func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notifications notifications.Service, usersService users.Service) {
-	http.Handle("/resume", userMiddleware{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
+	http.Handle("/resume", cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
 		}

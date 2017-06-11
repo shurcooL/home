@@ -38,14 +38,14 @@ var talksHTML = template.Must(template.New("").Parse(`<html>
 // initTalks registers a talks handler with root as talks content source.
 func initTalks(root http.FileSystem, notifications notifications.Service, users users.Service) {
 	// Host static files that slides need.
-	http.Handle("/static/", userMiddleware{httpgzip.FileServer(presentdata.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})})
+	http.Handle("/static/", cookieAuth{httpgzip.FileServer(presentdata.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})})
 
 	// Create a template for slides.
 	tmpl := present.Template()
 	tmpl = tmpl.Funcs(template.FuncMap{"playable": func(present.Code) bool { return false }})
 	tmpl = template.Must(vfstemplate.ParseFiles(presentdata.Assets, tmpl, "/templates/action.tmpl", "/templates/slides.tmpl"))
 
-	talksHandler := http۰StripPrefix("/talks", userMiddleware{httputil.ErrorHandler(users, (&talksHandler{
+	talksHandler := http۰StripPrefix("/talks", cookieAuth{httputil.ErrorHandler(users, (&talksHandler{
 		base:   "/talks",
 		fs:     root,
 		slides: tmpl,
