@@ -130,21 +130,29 @@ var errBadAccessToken = errors.New("bad access token")
 // the request's access token (via accessTokenCookieName cookie) in the sessions map.
 // It returns a valid session (possibly nil) and nil error,
 // or nil session and errBadAccessToken.
-func lookUpSessionViaCookie(req *http.Request) (s *session, err error) {
+// extended reports whether matched session expiry was extended.
+func lookUpSessionViaCookie(req *http.Request) (s *session, extended bool, err error) {
 	cookie, err := req.Cookie(accessTokenCookieName)
 	if err == http.ErrNoCookie {
-		return nil, nil // No session.
+		return nil, false, nil // No session.
 	} else if err != nil {
 		panic(fmt.Errorf("internal error: Request.Cookie is documented to return only nil or ErrNoCookie error, yet it returned %v", err))
 	}
 	accessTokenBytes, err := base64.RawURLEncoding.DecodeString(cookie.Value)
 	if err != nil {
-		return nil, errBadAccessToken
+		return nil, false, errBadAccessToken
 	}
 	accessToken := string(accessTokenBytes)
 	global.mu.Lock()
 	if session, ok := global.sessions[accessToken]; ok {
 		if time.Now().Before(session.Expiry) {
+			// Extend expiry if 6 days or less left.
+			if time.Until(session.Expiry) <= 6*24*time.Hour {
+				session.Expiry = time.Now().Add(7 * 24 * time.Hour)
+				global.sessions[accessToken] = session
+				extended = true
+			}
+
 			s = &session
 		} else {
 			delete(global.sessions, accessToken) // This is unlikely to happen because cookie expires by then.
@@ -152,9 +160,9 @@ func lookUpSessionViaCookie(req *http.Request) (s *session, err error) {
 	}
 	global.mu.Unlock()
 	if s == nil {
-		return nil, errBadAccessToken
+		return nil, false, errBadAccessToken
 	}
-	return s, nil // Existing session.
+	return s, extended, nil // Existing session.
 }
 
 // cookieAuth is a middleware that parses authentication information
@@ -164,10 +172,13 @@ type cookieAuth struct {
 }
 
 func (mw cookieAuth) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	s, err := lookUpSessionViaCookie(req)
+	s, extended, err := lookUpSessionViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		clearAccessTokenCookie(w)
+	} else if err == nil && extended {
+		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
+		setAccessTokenCookie(w, s.AccessToken, s.Expiry)
 	}
 	mw.Handler.ServeHTTP(w, withSession(req, s))
 }
@@ -245,11 +256,14 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// TODO: Factor this out into user middleware?
-	s, err := lookUpSessionViaCookie(req)
+	s, extended, err := lookUpSessionViaCookie(req)
 	if err == errBadAccessToken {
 		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
 		//       E.g., that will happen when you're logging in. First, errBadAccessToken happens (here), then a successful login results in setting accessTokenCookieName to a new value (in h.serve).
 		clearAccessTokenCookie(w)
+	} else if err == nil && extended {
+		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
+		setAccessTokenCookie(w, s.AccessToken, s.Expiry)
 	}
 	req = withSession(req, s)
 

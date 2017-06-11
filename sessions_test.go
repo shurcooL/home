@@ -28,13 +28,15 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 	}}
 
 	tests := []struct {
-		in          *http.Request
-		wantSession *session
-		wantError   error
+		in           *http.Request
+		wantSession  *session
+		wantExtended bool
+		wantError    error
 	}{
 		{
-			in:          &http.Request{},
-			wantSession: nil,
+			in:           &http.Request{},
+			wantSession:  nil,
+			wantExtended: false,
 		},
 		{
 			in: &http.Request{
@@ -42,7 +44,8 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 					"Cookie": []string{"accessToken=YWFh"}, // Base64-encoded "aaa".
 				},
 			},
-			wantSession: &sessionA,
+			wantSession:  &sessionA,
+			wantExtended: false,
 		},
 		{
 			in: &http.Request{
@@ -52,9 +55,10 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 			},
 			wantSession: &session{
 				GitHubUserID: 2,
-				Expiry:       sessionB.Expiry,
+				Expiry:       time.Now().Add(7 * 24 * time.Hour), // Extended expiry.
 				AccessToken:  "bbb",
 			},
+			wantExtended: true,
 		},
 		{
 			in: &http.Request{
@@ -74,7 +78,7 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		u, err := lookUpSessionViaCookie(tc.in)
+		u, extended, err := lookUpSessionViaCookie(tc.in)
 		if got, want := err, tc.wantError; !equalError(got, want) {
 			t.Fatalf("got error: %v, want: %v", got, want)
 		}
@@ -83,6 +87,9 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 		}
 		if got, want := u, tc.wantSession; !equalSession(got, want) {
 			t.Errorf("got session: %v, want: %v", got, want)
+		}
+		if got, want := extended, tc.wantExtended; got != want {
+			t.Errorf("got extended: %v, want: %v", got, want)
 		}
 	}
 }
