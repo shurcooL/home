@@ -135,7 +135,7 @@ func lookUpSessionViaCookie(req *http.Request) (s *session, err error) {
 	if err == http.ErrNoCookie {
 		return nil, nil // No session.
 	} else if err != nil {
-		return nil, errBadAccessToken
+		panic(fmt.Errorf("internal error: Request.Cookie is documented to return only nil or ErrNoCookie error, yet it returned %v", err))
 	}
 	accessTokenBytes, err := base64.RawURLEncoding.DecodeString(cookie.Value)
 	if err != nil {
