@@ -493,7 +493,11 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, s *s
 		for _, s := range ss {
 			user, err := h.users.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"})
 			if err != nil {
-				return nil, err
+				log.Printf("h.users.Get(%+v): %v\n", users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"}, err)
+				user = users.User{
+					UserSpec: users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"},
+					Login:    fmt.Sprintf("??? (GitHubUserID=%d)", s.GitHubUserID),
+				}
 			}
 			nodes = append(nodes,
 				htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", user.Login, user.Domain, humanize.Time(s.Expiry), base64.RawURLEncoding.EncodeToString([]byte(s.AccessToken)[:15])))),
