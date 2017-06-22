@@ -117,7 +117,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		{{$issue := .Issue}}
 
 		<h1>{{$issue.Title}} <span class="gray">#{{$issue.ID}}</span></h1>
-		<div id="issue-state-badge" style="margin-bottom: 20px;">{{template "issue-state-badge" $issue}}</div>
+		<div id="issue-state-badge" style="margin-bottom: 20px;">{{render (issueStateBadge $issue)}}</div>
 	{{else}}
 		<h2 id="comments">Comments</h2>
 	{{end}}
