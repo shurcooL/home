@@ -65,6 +65,7 @@ func run() error {
 	}
 	events, err := newEventsService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "events")),
+		users,
 	)
 	if err != nil {
 		return err

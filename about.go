@@ -90,20 +90,25 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		// Render content.
 		switch req.URL.Path {
 		case "/about":
+			shurcool, err := users.Get(req.Context(), shurcool)
+			if err != nil {
+				return err
+			}
+
 			err = vec.RenderHTML(w,
 				elem.Span(
 					attr.Style("display: table; margin-left: auto; margin-right: auto;"),
 					elem.Img(
 						attr.Style("width: 240px; height: 240px; border-radius: 8px; margin-bottom: 8px;"),
-						attr.Src("avatar-s.jpg"),
+						attr.Src(shurcool.AvatarURL),
 					),
 					elem.Div(
 						attr.Style("font-size: 26px; font-weight: 600;"),
-						"Dmitri Shuralyov",
+						shurcool.Name,
 					),
 					elem.Div(
 						attr.Style("font-size: 20px; font-weight: 300; color: #666;"),
-						"shurcooL",
+						shurcool.Login,
 					),
 				),
 				elem.Div(

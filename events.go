@@ -8,17 +8,26 @@ import (
 	"github.com/shurcooL/events/event"
 	"github.com/shurcooL/events/fs"
 	"github.com/shurcooL/events/githubapi"
+	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 )
 
-func newEventsService(root webdav.FileSystem) (events.Service, error) {
+func newEventsService(root webdav.FileSystem, users users.Service) (events.Service, error) {
 	local, err := fs.NewService(root, shurcool)
 	if err != nil {
 		return nil, err
 	}
+	shurcool, err := users.Get(context.Background(), shurcool)
+	if err != nil {
+		return nil, err
+	}
+	github, err := githubapi.NewService(unauthenticatedGitHubClient, shurcool)
+	if err != nil {
+		return nil, err
+	}
 	return multiEvents{
-		githubapi.NewService(unauthenticatedGitHubClient, "shurcooL"),
-		local,
+		github, // Events from GitHub API.
+		local,  // Events from local store.
 	}, nil
 }
 
