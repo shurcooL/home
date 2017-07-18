@@ -44,8 +44,19 @@ func (Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
 	return us, err
 }
 
-func (Users) Get(_ context.Context, user users.UserSpec) (users.User, error) {
-	return users.User{}, fmt.Errorf("Get: not implemented")
+func (Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
+	resp, err := ctxhttp.Get(ctx, nil, fmt.Sprintf("/api/user/%d@%s", user.ID, user.Domain))
+	if err != nil {
+		return users.User{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return users.User{}, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var u users.User
+	err = json.NewDecoder(resp.Body).Decode(&u)
+	return u, err
 }
 
 func (Users) Edit(_ context.Context, er users.EditRequest) (users.User, error) {
