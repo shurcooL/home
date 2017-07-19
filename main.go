@@ -208,15 +208,15 @@ func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // skipDot returns src without dot files.
 func skipDot(src http.FileSystem) http.FileSystem {
-	return filter.Skip(src,
-		func(path string, fi os.FileInfo) bool {
-			for _, e := range strings.Split(path[1:], "/") {
-				if strings.HasPrefix(e, ".") {
-					return true
-				}
+	skip := func(path string, fi os.FileInfo) bool {
+		for _, e := range strings.Split(path[1:], "/") {
+			if strings.HasPrefix(e, ".") {
+				return true
 			}
-			return false
-		})
+		}
+		return false
+	}
+	return filter.Skip(src, skip)
 }
 
 // detailedForAdmin serves detailed errors for admin users,
