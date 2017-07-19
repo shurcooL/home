@@ -274,6 +274,9 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if err, ok := httperror.IsRedirect(err); ok {
+		if req.Method == http.MethodGet { // Workaround for https://groups.google.com/forum/#!topic/golang-nuts/9AVyMP9C8Ac.
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		}
 		http.Redirect(w, req, err.URL, http.StatusSeeOther)
 		return
 	}
@@ -316,6 +319,9 @@ func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				Path:     "/login",
 				RawQuery: url.Values{returnQueryName: {req.RequestURI}}.Encode(),
 			}).String()
+			if req.Method == http.MethodGet { // Workaround for https://groups.google.com/forum/#!topic/golang-nuts/9AVyMP9C8Ac.
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			}
 			http.Redirect(w, req, loginURL, http.StatusSeeOther)
 			return
 		}
@@ -385,10 +391,10 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, s *s
 				return users.User{}, err
 			}
 			if ghUser.ID == nil || *ghUser.ID == 0 {
-				return users.User{}, errors.New("GitHub user ID is nil/0")
+				return users.User{}, errors.New("GitHub user ID is nil or 0")
 			}
 			if ghUser.Login == nil || *ghUser.Login == "" {
-				return users.User{}, errors.New("GitHub user Login is nil/empty")
+				return users.User{}, errors.New("GitHub user Login is nil or empty")
 			}
 			if ghUser.AvatarURL == nil {
 				return users.User{}, errors.New("GitHub user AvatarURL is nil")

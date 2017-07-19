@@ -192,18 +192,36 @@ type topMux struct{}
 func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 	started := time.Now()
-	http.DefaultServeMux.ServeHTTP(w, req)
+	rw := &responseWriter{ResponseWriter: w}
+	http.DefaultServeMux.ServeHTTP(rw, req)
 	fmt.Printf("TIMING: %s: %v\n", path, time.Since(started))
 	if path != req.URL.Path {
 		log.Printf("warning: req.URL.Path was modified from %v to %v\n", path, req.URL.Path)
 	}
-	if _, haveType := w.Header()["Content-Type"]; !haveType {
-		if path == "/login/github" || path == "/callback/github" { // TODO: A better way to skip these. Ideally, they shouldn't be detected because they don't write any response, and/or the status code is redirect. But that'd require some interspection of written response.
-			return
-		}
-		// BUG: There are false positives for redirect responses, as well as 304 responses, etc.
+	if rw.WroteBytes && !haveType(w) {
 		log.Printf("warning: Content-Type header not set for %q\n", path)
 	}
+}
+
+// haveType reports whether w has the Content-Type header set.
+func haveType(w http.ResponseWriter) bool {
+	_, ok := w.Header()["Content-Type"]
+	return ok
+}
+
+// responseWriter wraps a real http.ResponseWriter and captures
+// whether any bytes were written.
+type responseWriter struct {
+	http.ResponseWriter
+
+	WroteBytes bool // Whether non-zero bytes have been written.
+}
+
+func (rw *responseWriter) Write(p []byte) (n int, err error) {
+	if len(p) > 0 {
+		rw.WroteBytes = true
+	}
+	return rw.ResponseWriter.Write(p)
 }
 
 // skipDot returns src without dot files.
