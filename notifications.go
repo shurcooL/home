@@ -62,6 +62,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		HeadPre: `<title>Notifications</title>
 <link href="/icon.png" rel="icon" type="image/png">
 <meta name="viewport" content="width=device-width">
+<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 <style type="text/css">
 	body {
 		margin: 20px;

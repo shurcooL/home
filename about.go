@@ -24,6 +24,7 @@ var aboutHTML = template.Must(template.New("").Parse(`<html>
 		<title>Dmitri Shuralyov - About</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
+		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
 		<link href="/assets/about/style.css" rel="stylesheet" type="text/css">
 		{{if .Production}}` + googleAnalytics + `{{end}}

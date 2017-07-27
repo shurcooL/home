@@ -39,6 +39,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 
 		HeadPre: `<link href="/icon.png" rel="icon" type="image/png">
 <meta name="viewport" content="width=device-width">
+<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 <style type="text/css">
 	body {
 		margin: 20px;

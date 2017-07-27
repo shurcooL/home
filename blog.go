@@ -25,6 +25,7 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 		<title>Dmitri Shuralyov - Blog</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
+		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/blog/assets/gfm/gfm.css" rel="stylesheet" type="text/css">
 		<link href="/assets/blog/style.css" rel="stylesheet" type="text/css">
 		<script async src="/assets/blog/blog.js"></script>
@@ -45,6 +46,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		HeadPre: `<title>Dmitri Shuralyov - Blog</title>
 <link href="/icon.png" rel="icon" type="image/png">
 <meta name="viewport" content="width=device-width">
+<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 <style type="text/css">
 	body {
 		margin: 20px;

@@ -19,7 +19,6 @@ import (
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
-	"github.com/shurcooL/reactions/emojis"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 )
@@ -41,6 +40,9 @@ func main() {
 
 func run() error {
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
+		return err
+	}
+	if err := mime.AddExtensionType(".woff2", "application/font-woff"); err != nil {
 		return err
 	}
 
@@ -117,11 +119,14 @@ func run() error {
 		return err
 	}
 
-	emojisHandler := cookieAuth{httpgzip.FileServer(emojis.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
+	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))
 
 	assetsHandler := cookieAuth{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
+
+	fontsHandler := cookieAuth{httpgzip.FileServer(assets.Fonts, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
+	http.Handle("/assets/fonts/", http۰StripPrefix("/assets/fonts", fontsHandler))
 
 	initResume(assetsHandler, reactions, notifications, users)
 
