@@ -43,7 +43,7 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 <style type="text/css">
 	body {
 		margin: 20px;
-		font-family: sans-serif;
+		font-family: Go;
 		font-size: 14px;
 		line-height: initial;
 		color: #373a3c;
@@ -66,6 +66,10 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		background-color: #fff;
 		box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
 	}
+</style>`,
+		HeadPost: `<style type="text/css">
+	.markdown-body { font-family: Go; }
+	tt, code, pre  { font-family: "Go Mono"; }
 </style>`,
 		BodyPre: `<div style="max-width: 800px; margin: 0 auto 100px auto;">`,
 	}

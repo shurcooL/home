@@ -1,6 +1,6 @@
 body {
 	margin: 20px;
-	font-family: sans-serif;
+	font-family: Go;
 }
 h1 {
 	margin: 20px 0;
@@ -13,4 +13,9 @@ h2 {
 	font-size: 20px;
 	background: #e0ebf5;
 	padding: 2px 5px;
+}
+pre {
+	font-family: "Go Mono";
+	font-size: 12px;
+	line-height: 1.3;
 }

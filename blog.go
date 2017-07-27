@@ -27,6 +27,10 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/blog/assets/gfm/gfm.css" rel="stylesheet" type="text/css">
+		<style type="text/css">
+			.markdown-body { font-family: Go; }
+			tt, code, pre  { font-family: "Go Mono"; }
+		</style>
 		<link href="/assets/blog/style.css" rel="stylesheet" type="text/css">
 		<script async src="/assets/blog/blog.js"></script>
 		{{if .Production}}` + googleAnalytics + `{{end}}
@@ -50,7 +54,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 <style type="text/css">
 	body {
 		margin: 20px;
-		font-family: sans-serif;
+		font-family: Go;
 		font-size: 14px;
 		line-height: initial;
 		color: #373a3c;
@@ -108,6 +112,10 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 	.post div.reactable-container a:first-child div.new-reaction {
 		display: inline-block;
 	}
+</style>`,
+		HeadPost: `<style type="text/css">
+	.markdown-body { font-family: Go; }
+	tt, code, pre  { font-family: "Go Mono"; }
 </style>`,
 		BodyPre: `{{/* Override create issue button to only show up for shurcooL as New Blog Post button. */}}
 {{define "create-issue"}}

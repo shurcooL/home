@@ -21,6 +21,10 @@ var idiomaticGoHTML = template.Must(template.New("").Parse(`<html>
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/blog/assets/gfm/gfm.css" rel="stylesheet" type="text/css">
+		<style type="text/css">
+			.markdown-body { font-family: Go; }
+			tt, code, pre  { font-family: "Go Mono"; }
+		</style>
 		<link href="/assets/idiomaticgo/style.css" rel="stylesheet" type="text/css">
 		<script async src="/assets/idiomaticgo/idiomaticgo.js"></script>
 		{{if .Production}}` + googleAnalytics + `{{end}}
