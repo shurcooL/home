@@ -41,7 +41,7 @@ span.emoji-outer {
 	margin-right: 4px;
 }
 .reaction strong {
-	font-family: sans-serif;
+	font-family: inherit;
 	font-size: 14px;
 }
 
@@ -134,7 +134,7 @@ div#rm-reactions-menu {
 input.rm-reactions-filter {
 	width: 100%;
 	height: 30px;
-	font-family: sans-serif;
+	font-family: inherit;
 	font-size: 14px;
 	padding: 4px 16px;
 	outline: 0;
@@ -158,7 +158,7 @@ span#rm-reactions-preview-emoji {
 span#rm-reactions-preview-label {
 	margin-left: 10px;
 	vertical-align: top;
-	font-family: sans-serif;
+	font-family: inherit;
 	font-size: 14px;
 	font-weight: bold;
 }
@@ -173,7 +173,7 @@ div.rm-reactions-menu-disabled {
 	background-color: rgba(255, 255, 255, 0.75);
 }
 div.rm-reactions-menu-signin {
-	font-family: sans-serif;
+	font-family: inherit;
 	margin-top: 185px;
 	margin-left: auto;
 	margin-right: auto;

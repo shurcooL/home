@@ -33,8 +33,10 @@ func (b PostButton) Render() []*html.Node {
 		Type: html.ElementNode, Data: atom.Button.String(),
 		Attr: []html.Attribute{
 			{Key: atom.Type.String(), Val: "submit"},
-			{Key: atom.Style.String(), Val: `font-size: 11px;
+			{Key: atom.Style.String(), Val: `font-family: inherit;
+font-size: 11px;
 line-height: 11px;
+height: 18px;
 border-radius: 4px;
 border: solid #d2d2d2 1px;
 background-color: #fff;

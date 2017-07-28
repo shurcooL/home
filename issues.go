@@ -56,8 +56,10 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 		text-decoration: underline;
 	}
 	.btn {
+		font-family: inherit;
 		font-size: 11px;
 		line-height: 11px;
+		height: 18px;
 		border-radius: 4px;
 		border: solid #d2d2d2 1px;
 		background-color: #fff;

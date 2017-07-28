@@ -54,7 +54,8 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 	// New Blog Post button for shurcooL.
 	if authenticatedUser.UserSpec == shurcool {
-		io.WriteString(w, `<div style="text-align: right;"><button style="font-size: 11px; line-height: 11px; border-radius: 4px; border: solid #d2d2d2 1px; background-color: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, .05);" onclick="window.location = '/blog/new';">New Blog Post</button></div>`)
+		// TODO: Reuse a subset of component.PostButton (to reduce duplication of common button properties).
+		io.WriteString(w, `<div style="text-align: right;"><button style="font-family: inherit; font-size: 11px; line-height: 11px; height: 18px; border-radius: 4px; border: solid #d2d2d2 1px; background-color: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, .05);" onclick="window.location = '/blog/new';">New Blog Post</button></div>`)
 	}
 
 	is, err := issuesService.List(ctx, blogURI, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})

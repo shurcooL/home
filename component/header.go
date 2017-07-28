@@ -54,7 +54,7 @@ func (h Header) Render() []*html.Node {
 	}
 	style.AppendChild(htmlg.Text(`
 header.header {
-	font-family: sans-serif;
+	font-family: inherit;
 	font-size: 14px;
 	margin-top: 30px;
 	margin-bottom: 30px;

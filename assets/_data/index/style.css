@@ -62,5 +62,6 @@ div.activity {
 	color: #4183c4;
 }
 .activity div.details code {
-	font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+	font-family: monospace;
+	font-size: 12px;
 }

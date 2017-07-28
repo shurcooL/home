@@ -62,8 +62,10 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		text-decoration: underline;
 	}
 	.btn {
+		font-family: inherit;
 		font-size: 11px;
 		line-height: 11px;
+		height: 18px;
 		border-radius: 4px;
 		border: solid #d2d2d2 1px;
 		background-color: #fff;
@@ -83,7 +85,7 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 		margin-top: 10px;
 		margin-bottom: 20px;
 
-		font-family: sans-serif;
+		font-family: inherit;
 		font-size: 14px;
 		line-height: 18px;
 		color: #999;
