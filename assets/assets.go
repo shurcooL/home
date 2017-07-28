@@ -13,6 +13,13 @@ import (
 	"github.com/shurcooL/httpfs/vfsutil"
 )
 
+// Assets contains assets for home.
+var Assets = union.New(map[string]http.FileSystem{
+	"/assets":     gopherjs_http.NewFS(http.Dir(importPathToDir("github.com/shurcooL/home/assets/_data"))),
+	"/resume.js":  gopherjs_http.Package("github.com/shurcooL/resume/frontend"),
+	"/resume.css": vfsutil.File(filepath.Join(importPathToDir("github.com/shurcooL/resume/frontend"), "style.css")),
+})
+
 func importPathToDir(importPath string) string {
 	p, err := build.Import(importPath, "", build.FindOnly)
 	if err != nil {
@@ -20,10 +27,3 @@ func importPathToDir(importPath string) string {
 	}
 	return p.Dir
 }
-
-// Assets contains assets for home.
-var Assets = union.New(map[string]http.FileSystem{
-	"/assets":     gopherjs_http.NewFS(http.Dir(importPathToDir("github.com/shurcooL/home/assets/_data"))),
-	"/resume.js":  gopherjs_http.Package("github.com/shurcooL/resume/frontend"),
-	"/resume.css": vfsutil.File(filepath.Join(importPathToDir("github.com/shurcooL/resume/frontend"), "style.css")),
-})
