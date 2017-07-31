@@ -142,9 +142,7 @@ func (t tabnav) Render() []*html.Node {
 		Attr: []html.Attribute{{Key: atom.Class.String(), Val: "tabnav-tabs"}},
 	}
 	for _, t := range t.Tabs {
-		for _, n := range t.Render() {
-			nav.AppendChild(n)
-		}
+		htmlg.AppendChildren(nav, t.Render()...)
 	}
 	return []*html.Node{htmlg.DivClass("tabnav", nav)}
 }
@@ -168,9 +166,7 @@ func (t tab) Render() []*html.Node {
 			{Key: atom.Class.String(), Val: aClass},
 		},
 	}
-	for _, n := range t.Content.Render() {
-		a.AppendChild(n)
-	}
+	htmlg.AppendChildren(a, t.Content.Render()...)
 	return []*html.Node{a}
 }
 

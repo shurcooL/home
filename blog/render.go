@@ -233,9 +233,7 @@ func divClassStyle(class, style string, nodes ...*html.Node) *html.Node {
 			{Key: atom.Style.String(), Val: style},
 		},
 	}
-	for _, n := range nodes {
-		div.AppendChild(n)
-	}
+	htmlg.AppendChildren(div, nodes...)
 	return div
 }
 

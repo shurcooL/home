@@ -93,9 +93,7 @@ header.header .user {
 		Attr: []html.Attribute{{Key: atom.Class.String(), Val: "header"}},
 	}
 
-	for _, n := range (Logo{}).Render() {
-		header.AppendChild(n)
-	}
+	htmlg.AppendChildren(header, Logo{}.Render()...)
 
 	header.AppendChild(htmlg.ULClass("nav",
 		htmlg.LIClass("nav", htmlg.A("Packages", "/packages")),
@@ -116,9 +114,7 @@ header.header .user {
 					{Key: atom.Style.String(), Val: "margin-right: 10px;"},
 				},
 			}
-			for _, n := range (Notifications{Count: h.NotificationCount}).Render() {
-				span.AppendChild(n)
-			}
+			htmlg.AppendChildren(span, Notifications{Count: h.NotificationCount}.Render()...)
 			userSpan.AppendChild(span)
 		}
 
@@ -145,14 +141,10 @@ vertical-align: top;`},
 		}
 
 		signOut := PostButton{Action: "/logout", Text: "Sign out", ReturnURL: h.ReturnURL}
-		for _, n := range signOut.Render() {
-			userSpan.AppendChild(n)
-		}
+		htmlg.AppendChildren(userSpan, signOut.Render()...)
 	} else {
 		signInViaGitHub := PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: h.ReturnURL}
-		for _, n := range signInViaGitHub.Render() {
-			userSpan.AppendChild(n)
-		}
+		htmlg.AppendChildren(userSpan, signInViaGitHub.Render()...)
 	}
 	header.AppendChild(userSpan)
 

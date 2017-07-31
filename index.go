@@ -464,9 +464,7 @@ func (e activityEvent) Render() []*html.Node {
 	if e.Raw != "" {
 		action.Attr = append(action.Attr, html.Attribute{Key: atom.Title.String(), Val: e.Raw})
 	}
-	for _, n := range e.Action.Render() {
-		action.AppendChild(n)
-	}
+	htmlg.AppendChildren(action, e.Action.Render()...)
 	div := htmlg.DivClass(divClass,
 		htmlg.SpanClass("icon", e.Icon()),
 		htmlg.Text(e.Actor),

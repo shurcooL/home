@@ -485,9 +485,7 @@ func (h *sessionsHandler) serve(w httputil.HeaderWriter, req *http.Request, s *s
 			Text:      "Sign in via GitHub",
 			ReturnURL: returnURL,
 		}
-		for _, n := range signInViaGitHub.Render() {
-			centered.AppendChild(n)
-		}
+		htmlg.AppendChildren(centered, signInViaGitHub.Render()...)
 		return []*html.Node{centered}, nil
 
 	case req.Method == "GET" && req.URL.Path == "/sessions":
