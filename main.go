@@ -109,7 +109,7 @@ func run() error {
 
 	initAbout(notifications, users)
 
-	err = initBlog(issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
+	err = initBlog(http.DefaultServeMux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
 		return err
 	}

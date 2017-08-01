@@ -38,7 +38,7 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 	<body>`))
 
 // initBlog registers a blog handler with blog URI as blog content source.
-func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications notifications.Service, users users.Service) error {
+func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.RepoSpec, notifications notifications.Service, users users.Service) error {
 	shurcoolBlogService := shurcoolBlogService{
 		Service: issuesService,
 		users:   users,
@@ -247,8 +247,8 @@ func initBlog(issuesService issues.Service, blog issues.RepoSpec, notifications 
 			return nil
 		}
 	})}
-	http.Handle("/blog", blogHandler)
-	http.Handle("/blog/", blogHandler)
+	mux.Handle("/blog", blogHandler)
+	mux.Handle("/blog/", blogHandler)
 
 	return nil
 }

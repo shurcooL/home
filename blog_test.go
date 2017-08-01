@@ -1,0 +1,52 @@
+package main
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/shurcooL/issues"
+	"golang.org/x/net/webdav"
+)
+
+// Test that visiting /blog/1822 gives a 404 Not Found error (rather than 500 or something else).
+func TestBlogNotFound(t *testing.T) {
+	mux := http.NewServeMux()
+
+	users, _, err := newUsersService(webdav.NewMemFS())
+	if err != nil {
+		t.Fatal(err)
+	}
+	notifications, err := initNotifications(mux, webdav.NewMemFS(), users)
+	if err != nil {
+		t.Fatal(err)
+	}
+	issuesService, err := newIssuesService(
+		webdav.NewMemFS(),
+		notifications, nil, users)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = initBlog(mux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, url := range []string{
+		"/blog/1822",
+		"/blog/1822?issuesapp=1",
+	} {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+		if got, want := rr.Code, http.StatusNotFound; got != want {
+			t.Errorf("GET %s: got status code %d %s, want %d %s", url, got, http.StatusText(got), want, http.StatusText(want))
+		}
+		if got, want := rr.Header().Get("Content-Type"), "text/plain; charset=utf-8"; got != want {
+			t.Errorf("GET %s: got Content-Type header %q, want %q", url, got, want)
+		}
+		if got, want := rr.Body.String(), "404 Not Found\n"; got != want {
+			t.Errorf("GET %s: got body %q, want %q", url, got, want)
+		}
+	}
+}
