@@ -189,6 +189,10 @@ func initAbout(notifications notifications.Service, users users.Service) {
 							Text: "Apple Magic Trackpad 2",
 						}),
 						elem.Li(iconText{
+							Icon: faIcon("volume-off"),
+							Text: "Bose Companion 2 Series II",
+						}),
+						elem.Li(iconText{
 							Icon: faIcon("headphones"),
 							Text: "Bose QuietComfort 25",
 						}),
