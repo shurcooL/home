@@ -386,7 +386,6 @@ func issueName(p event.IssueComment) htmlg.Component {
 		Text:    shortTitle(p.IssueTitle),
 		Tooltip: p.IssueTitle,
 		URL:     p.CommentHTMLURL,
-		Black:   true,
 	}
 	switch p.IssueState {
 	case "open":
@@ -407,7 +406,6 @@ func prName(p event.PullRequestComment) htmlg.Component {
 		Text:    shortTitle(p.PullRequestTitle),
 		Tooltip: p.PullRequestTitle,
 		URL:     p.CommentHTMLURL,
-		Black:   true,
 	}
 	switch p.PullRequestState {
 	case "open":
