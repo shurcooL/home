@@ -40,7 +40,6 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		MarkCachedResponses: true,
 	}
 	shurcoolGitHubNotifications := githubapi.NewService(
-		github.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second}),
 		github.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
 	)
 
