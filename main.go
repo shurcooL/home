@@ -207,7 +207,7 @@ func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Printf("warning: req.URL.Path was modified from %v to %v\n", path, req.URL.Path)
 	}
 	if rw.WroteBytes && !haveType(w) {
-		log.Printf("warning: Content-Type header not set for %q\n", path)
+		log.Printf("warning: Content-Type header not set for %v %q\n", req.Method, path)
 	}
 }
 
