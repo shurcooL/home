@@ -114,7 +114,7 @@ func run() error {
 		return err
 	}
 
-	err = initIssues(issuesService, notifications, users)
+	err = initIssues(http.DefaultServeMux, issuesService, notifications, users)
 	if err != nil {
 		return err
 	}

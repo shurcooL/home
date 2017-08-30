@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"io"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/home/component"
@@ -25,14 +28,14 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 
 // initIssues registers handlers for the issues service HTTP API,
 // and handlers for the issues app.
-func initIssues(issuesService issues.Service, notifications notifications.Service, users users.Service) error {
+func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications notifications.Service, users users.Service) error {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.List)})
-	http.Handle(httproute.Count, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
-	http.Handle(httproute.ListComments, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
-	http.Handle(httproute.ListEvents, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.ListEvents)})
-	http.Handle(httproute.EditComment, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
+	mux.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.List)})
+	mux.Handle(httproute.Count, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.Count)})
+	mux.Handle(httproute.ListComments, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.ListComments)})
+	mux.Handle(httproute.ListEvents, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.ListEvents)})
+	mux.Handle(httproute.EditComment, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.EditComment)})
 
 	opt := issuesapp.Options{
 		Notifications: notifications,
@@ -115,18 +118,32 @@ func initIssues(issuesService issues.Service, notifications notifications.Servic
 				}
 				return httperror.Redirect{URL: baseURL}
 			}
+			returnURL := req.RequestURI
 			req = copyRequestAndURL(req)
 			req.URL.Path = req.URL.Path[prefixLen:]
 			if req.URL.Path == "" {
 				req.URL.Path = "/"
 			}
+			rr := httptest.NewRecorder()
+			rr.HeaderMap = w.Header()
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, repoSpec))
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/issues/"+repoSpec.URI))
-			issuesApp.ServeHTTP(w, req)
-			return nil
+			issuesApp.ServeHTTP(rr, req)
+			// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
+			// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
+			if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusUnauthorized && s == nil {
+				loginURL := (&url.URL{
+					Path:     "/login",
+					RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
+				}).String()
+				return httperror.Redirect{URL: loginURL}
+			}
+			w.WriteHeader(rr.Code)
+			_, err := io.Copy(w, rr.Body)
+			return err
 		})}
-		http.Handle("/issues/"+repoSpec.URI, issuesHandler)
-		http.Handle("/issues/"+repoSpec.URI+"/", issuesHandler)
+		mux.Handle("/issues/"+repoSpec.URI, issuesHandler)
+		mux.Handle("/issues/"+repoSpec.URI+"/", issuesHandler)
 	}
 
 	return nil
