@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
+	"github.com/shurcooL/githubql"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
@@ -39,8 +40,10 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
+	httpClient := &http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}
 	shurcoolGitHubNotifications := githubapi.NewService(
-		github.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
+		github.NewClient(httpClient),
+		githubql.NewClient(httpClient),
 	)
 
 	notificationsService := shurcoolSeeHisGitHubNotifications{
