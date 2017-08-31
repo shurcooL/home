@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -362,13 +363,14 @@ func (a activity) Render() []*html.Node {
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Book,
 				Action:     component.Text("edited the wiki in"),
-				Details: &pages{
+				Details: pages{
 					ActorAvatarURL: p.ActorAvatarURL,
 					Pages:          p.Pages,
 				},
 			}
-		}
-		if displayEvent == nil {
+
+		default:
+			log.Printf("unexpected event type: %T\n", p)
 			continue
 		}
 		if basicEvent.WIP && !a.ShowWIP {
