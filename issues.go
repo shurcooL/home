@@ -131,7 +131,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			issuesApp.ServeHTTP(rr, req)
 			// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
 			// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
-			if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusUnauthorized && s == nil {
+			if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
 				loginURL := (&url.URL{
 					Path:     "/login",
 					RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
