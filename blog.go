@@ -126,19 +126,16 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 
 {{define "issue"}}
 	{{if .ForceIssuesApp}}
-		{{$issue := .Issue}}
-
-		<h1>{{$issue.Title}} <span class="gray">#{{$issue.ID}}</span></h1>
-		<div id="issue-state-badge" style="margin-bottom: 20px;">{{render (issueStateBadge $issue)}}</div>
+		<h1>{{.Issue.Title}} <span class="gray">#{{.Issue.ID}}</span></h1>
+		<div id="issue-state-badge" style="margin-bottom: 20px;">{{render (issueStateBadge .Issue)}}</div>
 	{{else}}
 		<h2 id="comments">Comments</h2>
 	{{end}}
-	{{$items := .Items}}
-	{{range $items}}
+	{{range .Items}}
 		{{template "issue-item" .}}
 	{{end}}
 	<div id="new-item-marker"></div>
-	{{if (and (eq .CurrentUser.ID 0) (not $items))}}
+	{{if (and (eq .CurrentUser.ID 0) (not .Items))}}
 		{{/* HACK: Negative offset to make "Sign in via GitHub to comment." appear aligned. */}}
 		<div style="margin-left: -58px;">{{template "new-comment" .}}</div>
 	{{else}}
