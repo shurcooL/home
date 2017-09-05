@@ -102,7 +102,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		}
 		return []htmlg.Component{header}, nil
 	}
-	notificationsApp := notificationsapp.New(notificationsService, opt)
+	notificationsApp := notificationsapp.New(notificationsService, users, opt)
 
 	notificationsHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/notifications")
