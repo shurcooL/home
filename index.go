@@ -286,14 +286,17 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case event.Push:
-			displayEvent = activityEvent{
+			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
 				Action:     component.Text("pushed to"),
-				Details: commits{
-					Commits: p.Commits,
-				},
 			}
+			if len(p.Commits) > 0 {
+				e.Details = commits{
+					Commits: p.Commits,
+				}
+			}
+			displayEvent = e
 
 		case event.Star:
 			displayEvent = activityEvent{
