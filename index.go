@@ -255,27 +255,25 @@ func (a activity) Render() []*html.Node {
 			displayEvent = e
 
 		case event.IssueComment:
-			e := activityEvent{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
+				Action:     component.Join("commented on ", issueName(p), " in"),
+				Details: imageText{
+					ImageURL: p.CommentUserAvatarURL,
+					Text:     shortBody(p.CommentBody),
+				},
 			}
-			e.Action = component.Join("commented on ", issueName(p), " in")
-			e.Details = imageText{
-				ImageURL: p.CommentUserAvatarURL,
-				Text:     shortBody(p.CommentBody),
-			}
-			displayEvent = e
 		case event.PullRequestComment:
-			e := activityEvent{
+			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
+				Action:     component.Join("commented on ", prName(p), " in"),
+				Details: imageText{
+					ImageURL: p.CommentUserAvatarURL,
+					Text:     shortBody(p.CommentBody),
+				},
 			}
-			e.Action = component.Join("commented on ", prName(p), " in")
-			e.Details = imageText{
-				ImageURL: p.CommentUserAvatarURL,
-				Text:     shortBody(p.CommentBody),
-			}
-			displayEvent = e
 		case event.CommitComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
