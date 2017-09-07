@@ -22,6 +22,10 @@ div.activity {
 	font-size: 14px;
 	word-break: break-word;
 }
+div.activity code {
+	font-family: "Go Mono";
+	font-size: 12px;
+}
 .activity div.events-heading {
 	color: #666;
 	margin-bottom: 6px;
@@ -60,8 +64,4 @@ div.activity {
 }
 .activity div.details a.black:hover {
 	color: #4183c4;
-}
-.activity div.details code {
-	font-family: "Go Mono";
-	font-size: 12px;
 }

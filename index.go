@@ -289,12 +289,17 @@ func (a activity) Render() []*html.Node {
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
-				Action:     component.Text("pushed to"),
+				Action:     component.Join("pushed to ", code{Text: p.Branch}, " in"),
 			}
-			if len(p.Commits) > 0 {
+			switch len(p.Commits) {
+			default:
 				e.Details = commits{
 					Commits: p.Commits,
 				}
+			case 0:
+				before := commitID{SHA: p.Before, HTMLURL: p.BeforeHTMLURL}
+				head := commitID{SHA: p.Head, HTMLURL: p.HeadHTMLURL}
+				e.Details = component.Join(before, " → ", head)
 			}
 			displayEvent = e
 
@@ -680,6 +685,29 @@ func (c commit) Render() []*html.Node {
 		message.AppendChild(htmlg.Text(shortCommit(firstParagraph(c.CommitMessage))))
 	}
 	return []*html.Node{avatar, sha, message}
+}
+
+// commitID is a component that displays a linked commit ID. E.g., "c0de1234".
+type commitID struct {
+	SHA     string
+	HTMLURL string // Optional.
+}
+
+func (c commitID) Render() []*html.Node {
+	code := &html.Node{
+		Type: html.ElementNode, Data: atom.Code.String(),
+		FirstChild: htmlg.Text(shortSHA(c.SHA)),
+	}
+	if c.HTMLURL != "" {
+		code = &html.Node{
+			Type: html.ElementNode, Data: atom.A.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Href.String(), Val: c.HTMLURL},
+			},
+			FirstChild: code,
+		}
+	}
+	return []*html.Node{code}
 }
 
 func shortSHA(sha string) string {
