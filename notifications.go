@@ -200,7 +200,7 @@ func (s shurcoolSeeHisGitHubNotifications) Count(ctx context.Context, opt interf
 	return count, nil
 }
 
-func (s shurcoolSeeHisGitHubNotifications) MarkRead(ctx context.Context, appID string, repo notifications.RepoSpec, threadID uint64) error {
+func (s shurcoolSeeHisGitHubNotifications) MarkRead(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64) error {
 	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return err
@@ -209,10 +209,10 @@ func (s shurcoolSeeHisGitHubNotifications) MarkRead(ctx context.Context, appID s
 	if currentUser == shurcool && strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
 
-		return s.shurcoolGitHubNotifications.MarkRead(ctx, appID, repo, threadID)
+		return s.shurcoolGitHubNotifications.MarkRead(ctx, repo, threadType, threadID)
 	}
 
-	return s.service.MarkRead(ctx, appID, repo, threadID)
+	return s.service.MarkRead(ctx, repo, threadType, threadID)
 }
 
 func (s shurcoolSeeHisGitHubNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
@@ -230,7 +230,7 @@ func (s shurcoolSeeHisGitHubNotifications) MarkAllRead(ctx context.Context, repo
 	return s.service.MarkAllRead(ctx, repo)
 }
 
-func (s shurcoolSeeHisGitHubNotifications) Subscribe(ctx context.Context, appID string, repo notifications.RepoSpec, threadID uint64, subscribers []users.UserSpec) error {
+func (s shurcoolSeeHisGitHubNotifications) Subscribe(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
 	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return err
@@ -239,13 +239,13 @@ func (s shurcoolSeeHisGitHubNotifications) Subscribe(ctx context.Context, appID 
 	if currentUser == shurcool && strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
 
-		return s.shurcoolGitHubNotifications.Subscribe(ctx, appID, repo, threadID, subscribers)
+		return s.shurcoolGitHubNotifications.Subscribe(ctx, repo, threadType, threadID, subscribers)
 	}
 
-	return s.service.Subscribe(ctx, appID, repo, threadID, subscribers)
+	return s.service.Subscribe(ctx, repo, threadType, threadID, subscribers)
 }
 
-func (s shurcoolSeeHisGitHubNotifications) Notify(ctx context.Context, appID string, repo notifications.RepoSpec, threadID uint64, nr notifications.NotificationRequest) error {
+func (s shurcoolSeeHisGitHubNotifications) Notify(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, nr notifications.NotificationRequest) error {
 	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return err
@@ -254,8 +254,8 @@ func (s shurcoolSeeHisGitHubNotifications) Notify(ctx context.Context, appID str
 	if currentUser == shurcool && strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
 
-		return s.shurcoolGitHubNotifications.Notify(ctx, appID, repo, threadID, nr)
+		return s.shurcoolGitHubNotifications.Notify(ctx, repo, threadType, threadID, nr)
 	}
 
-	return s.service.Notify(ctx, appID, repo, threadID, nr)
+	return s.service.Notify(ctx, repo, threadType, threadID, nr)
 }
