@@ -624,14 +624,15 @@ border-radius: 3px;`
 }
 
 type commits struct {
-	Commits []event.Commit
+	Commits []event.Commit // Ordered from earliest to most recent (head).
 }
 
 func (d commits) Render() []*html.Node {
 	var nodes []*html.Node
 
-	for _, c := range d.Commits {
-		div := htmlg.Div(commit{Commit: c}.Render()...)
+	// Display latest commits on top.
+	for i := len(d.Commits) - 1; i >= 0; i-- {
+		div := htmlg.Div(commit{Commit: d.Commits[i]}.Render()...)
 		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
 		nodes = append(nodes, div)
 	}
