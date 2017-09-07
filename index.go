@@ -260,7 +260,7 @@ func (a activity) Render() []*html.Node {
 				Icon:       octiconssvg.CommentDiscussion,
 				Action:     component.Join("commented on ", issueName(p), " in"),
 				Details: imageText{
-					ImageURL: p.CommentUserAvatarURL,
+					ImageURL: e.Actor.AvatarURL,
 					Text:     shortBody(p.CommentBody),
 				},
 			}
@@ -270,7 +270,7 @@ func (a activity) Render() []*html.Node {
 				Icon:       octiconssvg.CommentDiscussion,
 				Action:     component.Join("commented on ", prName(p), " in"),
 				Details: imageText{
-					ImageURL: p.CommentUserAvatarURL,
+					ImageURL: e.Actor.AvatarURL,
 					Text:     shortBody(p.CommentBody),
 				},
 			}
@@ -280,7 +280,7 @@ func (a activity) Render() []*html.Node {
 				Icon:       octiconssvg.CommentDiscussion,
 				Action:     component.Join("commented on ", commitName(p), " in"),
 				Details: imageText{
-					ImageURL: p.CommentUserAvatarURL,
+					ImageURL: e.Actor.AvatarURL,
 					Text:     shortBody(p.CommentBody),
 				},
 			}
@@ -370,7 +370,7 @@ func (a activity) Render() []*html.Node {
 				Icon:       octiconssvg.Book,
 				Action:     component.Text("edited the wiki in"),
 				Details: pages{
-					ActorAvatarURL: p.ActorAvatarURL,
+					ActorAvatarURL: e.Actor.AvatarURL,
 					Pages:          p.Pages,
 				},
 			}
