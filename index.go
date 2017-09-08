@@ -227,6 +227,7 @@ func (a activity) Render() []*html.Node {
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitPullRequest,
+				Action:     component.Text(fmt.Sprintf("%v a pull request in", p.Action)),
 			}
 			details := iconLink{
 				Text:  p.PullRequestTitle,
@@ -235,15 +236,12 @@ func (a activity) Render() []*html.Node {
 			}
 			switch p.Action {
 			case "opened":
-				e.Action = component.Text("opened a pull request in")
 				details.Icon = octiconssvg.GitPullRequest
 				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case "closed":
-				e.Action = component.Text("closed a pull request in")
 				details.Icon = octiconssvg.GitPullRequest
 				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 			case "merged":
-				e.Action = component.Text("merged a pull request in")
 				details.Icon = octiconssvg.GitMerge
 				details.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 
