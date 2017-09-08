@@ -235,7 +235,7 @@ func (a activity) Render() []*html.Node {
 				Black: true,
 			}
 			switch p.Action {
-			case "opened":
+			case "opened", "reopened":
 				details.Icon = octiconssvg.GitPullRequest
 				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case "closed":
