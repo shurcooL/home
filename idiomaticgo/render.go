@@ -67,7 +67,7 @@ multiple times, or skip explaining why I make a given suggestion.
 
 You can view this as my supplement to https://github.com/golang/go/wiki/CodeReviewComments.
 
-This page is generated from the list of issues with label "Accepted" [here](/issues/dmitri.shuralyov.com/idiomatic-go).
+This page is generated from the entries with label "Accepted" [here](/idiomatic-go/entries).
 If you'd like to add a new suggestion, please provide convincing rationale and references
 (e.g., links to places in Go project that support your suggestion), and open a new issue.
 It'll show up here when I add an "Accepted" label.`)))
@@ -96,7 +96,7 @@ It'll show up here when I add an "Accepted" label.`)))
 	if openProposals > 0 {
 		html.Render(w, htmlg.P(
 			htmlg.Text("There are also "),
-			htmlg.A(fmt.Sprintf("%d open proposals", openProposals), "/issues/dmitri.shuralyov.com/idiomatic-go"),
+			htmlg.A(fmt.Sprintf("%d open proposals", openProposals), "/idiomatic-go/entries"),
 			htmlg.Text(" being considered."),
 		))
 	}
@@ -134,7 +134,7 @@ It'll show up here when I add an "Accepted" label.`)))
 		}
 		// TODO: Use iconText or similar component here?
 		io.WriteString(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
-		fmt.Fprintf(w, `<a href="/issues/%s/%d" style="line-height: 30px;"><span style="margin-right: 6px; position: relative; top: 7px;">%s</span>%d comments</a>`, idiomaticGoURI, issue.ID, octiconsCommentDiscussion, issue.Replies)
+		fmt.Fprintf(w, `<a href="/idiomatic-go/entries/%d" style="line-height: 30px;"><span style="margin-right: 6px; position: relative; top: 7px;">%s</span>%d comments</a>`, issue.ID, octiconsCommentDiscussion, issue.Replies)
 		io.WriteString(w, `</span>`)
 		io.WriteString(w, `</div>`)
 	}

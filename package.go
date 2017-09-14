@@ -100,7 +100,7 @@ Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming
 			<p><pre>go get -u dmitri.shuralyov.com/kebabcase</pre></p>
 			<h3><a href="https://godoc.org/dmitri.shuralyov.com/kebabcase">Documentation</a></h3>
 			<h3><a href="https://gotools.org/dmitri.shuralyov.com/kebabcase">Code</a></h3>
-			<h3><a href="/issues/dmitri.shuralyov.com/kebabcase">Issues</a></h3>
+			<h3><a href="/kebabcase/issues">Issues</a></h3>
 		</div>
 	</body>
 </html>`)

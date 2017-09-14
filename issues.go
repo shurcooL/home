@@ -102,15 +102,15 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 	}
 	issuesApp := issuesapp.New(issuesService, users, opt)
 
-	for _, repoSpec := range []issues.RepoSpec{
-		{URI: "github.com/shurcooL/issuesapp"},
-		{URI: "github.com/shurcooL/notificationsapp"},
-		{URI: "dmitri.shuralyov.com/idiomatic-go"},
-		{URI: "dmitri.shuralyov.com/kebabcase"},
+	for _, repo := range []struct{ SpecURL, BaseURL string }{
+		{SpecURL: "github.com/shurcooL/issuesapp", BaseURL: "/issues/github.com/shurcooL/issuesapp"},
+		{SpecURL: "github.com/shurcooL/notificationsapp", BaseURL: "/issues/github.com/shurcooL/notificationsapp"},
+		{SpecURL: "dmitri.shuralyov.com/idiomatic-go", BaseURL: "/idiomatic-go/entries"},
+		{SpecURL: "dmitri.shuralyov.com/kebabcase", BaseURL: "/kebabcase/issues"},
 	} {
-		repoSpec := repoSpec
+		repo := repo
 		issuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
-			prefixLen := len("/issues/") + len(repoSpec.URI)
+			prefixLen := len(repo.BaseURL)
 			if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 				baseURL := prefix
 				if req.URL.RawQuery != "" {
@@ -126,8 +126,8 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			}
 			rr := httptest.NewRecorder()
 			rr.HeaderMap = w.Header()
-			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, repoSpec))
-			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "/issues/"+repoSpec.URI))
+			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: repo.SpecURL}))
+			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, repo.BaseURL))
 			issuesApp.ServeHTTP(rr, req)
 			// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
 			// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
@@ -142,8 +142,8 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			_, err := io.Copy(w, rr.Body)
 			return err
 		})}
-		mux.Handle("/issues/"+repoSpec.URI, issuesHandler)
-		mux.Handle("/issues/"+repoSpec.URI+"/", issuesHandler)
+		mux.Handle(repo.BaseURL, issuesHandler)
+		mux.Handle(repo.BaseURL+"/", issuesHandler)
 	}
 
 	return nil
