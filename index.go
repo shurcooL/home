@@ -209,13 +209,13 @@ func (a activity) Render() []*html.Node {
 			switch p.Action {
 			case "opened":
 				details.Icon = octiconssvg.IssueOpened
-				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case "closed":
 				details.Icon = octiconssvg.IssueClosed
-				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+				details.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 			case "reopened":
 				details.Icon = octiconssvg.IssueReopened
-				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 
 				//default:
 				//log.Println("activity.Render: unsupported event.Issue action:", p.Action)
@@ -237,13 +237,13 @@ func (a activity) Render() []*html.Node {
 			switch p.Action {
 			case "opened", "reopened":
 				details.Icon = octiconssvg.GitPullRequest
-				details.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case "closed":
 				details.Icon = octiconssvg.GitPullRequest
-				details.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+				details.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 			case "merged":
 				details.Icon = octiconssvg.GitMerge
-				details.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
+				details.IconColor = &RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 
 				//default:
 				//log.Println("activity.Render: unsupported event.PullRequest action:", p.Action)
@@ -396,10 +396,10 @@ func issueName(p event.IssueComment) htmlg.Component {
 	switch p.IssueState {
 	case "open":
 		n.Icon = octiconssvg.IssueOpened
-		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+		n.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 	case "closed":
 		n.Icon = octiconssvg.IssueClosed
-		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+		n.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 
 		//default:
 		//log.Println("issueName: unsupported event.IssueComment State:", p.State)
@@ -416,13 +416,13 @@ func prName(p event.PullRequestComment) htmlg.Component {
 	switch p.PullRequestState {
 	case "open":
 		n.Icon = octiconssvg.GitPullRequest
-		n.Color = RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
+		n.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 	case "closed":
 		n.Icon = octiconssvg.GitPullRequest
-		n.Color = RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
+		n.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 	case "merged":
 		n.Icon = octiconssvg.GitMerge
-		n.Color = RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
+		n.IconColor = &RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 
 		//default:
 		//log.Println("prName: unsupported event.PullRequestComment State:", p.State)
@@ -526,12 +526,12 @@ func (c RGB) HexString() string {
 // iconLink consists of an icon and a text link.
 // Icon must be not nil.
 type iconLink struct {
-	Text    string
-	Tooltip string
-	URL     string
-	Black   bool              // Black link.
-	Icon    func() *html.Node // Not nil.
-	Color   RGB               // Icon color.
+	Text      string
+	Tooltip   string
+	URL       string
+	Black     bool              // Black link.
+	Icon      func() *html.Node // Not nil.
+	IconColor *RGB              // Optional icon color override.
 }
 
 func (d iconLink) Render() []*html.Node {
@@ -545,11 +545,13 @@ func (d iconLink) Render() []*html.Node {
 	if d.Black {
 		a.Attr = append(a.Attr, html.Attribute{Key: atom.Class.String(), Val: "black"})
 	}
+	iconSpanStyle := "margin-right: 4px;"
+	if d.IconColor != nil {
+		iconSpanStyle += fmt.Sprintf(" color: %s;", d.IconColor.HexString())
+	}
 	a.AppendChild(&html.Node{
 		Type: html.ElementNode, Data: atom.Span.String(),
-		Attr: []html.Attribute{
-			{Key: atom.Style.String(), Val: fmt.Sprintf("color: %s; margin-right: 4px;", d.Color.HexString())},
-		},
+		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: iconSpanStyle}},
 		FirstChild: d.Icon(),
 	})
 	a.AppendChild(htmlg.Text(d.Text))
