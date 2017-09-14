@@ -106,7 +106,6 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		{URI: "github.com/shurcooL/issuesapp"},
 		{URI: "github.com/shurcooL/notificationsapp"},
 		{URI: "dmitri.shuralyov.com/idiomatic-go"},
-		{URI: "dmitri.shuralyov.com/temp/go-get-issue-unicode/испытание"}, // TODO: Delete after https://github.com/golang/go/issues/18660 and https://github.com/golang/gddo/issues/468 are resolved.
 	} {
 		repoSpec := repoSpec
 		issuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
