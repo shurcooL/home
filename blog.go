@@ -184,7 +184,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 				return nil, fmt.Errorf("blog post %d has no body", issueID)
 			}
 			issue.Comment = comments[0]
-			post := blogpkg.Post{Blog: blog, CurrentUser: authenticatedUser, Issue: issue}
+			post := blogpkg.Post{CurrentUser: authenticatedUser, Issue: issue}
 
 			return []htmlg.Component{header, post}, nil
 		}

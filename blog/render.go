@@ -124,7 +124,6 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 // Post is an individual blog post.
 type Post struct {
-	Blog        issues.RepoSpec
 	CurrentUser users.User
 
 	issues.Issue
