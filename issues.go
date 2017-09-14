@@ -106,6 +106,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		{URI: "github.com/shurcooL/issuesapp"},
 		{URI: "github.com/shurcooL/notificationsapp"},
 		{URI: "dmitri.shuralyov.com/idiomatic-go"},
+		{URI: "dmitri.shuralyov.com/kebabcase"},
 	} {
 		repoSpec := repoSpec
 		issuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {

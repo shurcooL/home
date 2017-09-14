@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
@@ -113,7 +114,7 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 				continue
 			}
 			html.Render(w, htmlg.TR(
-				htmlg.TD(htmlg.A(p.ImportPath, "https://godoc.org/"+p.ImportPath)),
+				htmlg.TD(htmlg.A(p.ImportPath, p.HomeURL())),
 				htmlg.TD(htmlg.Text(p.Doc)),
 			))
 		}
@@ -199,11 +200,29 @@ func init() {
 	}
 }
 
-var packages = []struct {
+type goPackage struct {
 	ImportPath string
 	Command    bool
 	Doc        string
-}{
+}
+
+func (p goPackage) HomeURL() string {
+	switch strings.HasPrefix(p.ImportPath, "dmitri.shuralyov.com/") {
+	case true:
+		return p.ImportPath[len("dmitri.shuralyov.com"):]
+	case false:
+		return "https://godoc.org/" + p.ImportPath
+	default:
+		panic("unreachable")
+	}
+}
+
+var packages = []goPackage{
+	{
+		ImportPath: "dmitri.shuralyov.com/kebabcase",
+		Command:    false,
+		Doc:        "Package kebabcase provides a parser for identifier names using kebab-case naming convention.",
+	},
 	//{
 	//	ImportPath: "github.com/goxjs/example/motionblur",
 	//	Command:    true,

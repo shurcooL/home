@@ -134,6 +134,11 @@ func run() error {
 
 	initPackages(notifications, users)
 
+	err = initRepositories(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "repositories"))
+	if err != nil {
+		return err
+	}
+
 	initTalks(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))),
 		notifications, users)
