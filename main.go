@@ -134,7 +134,8 @@ func run() error {
 
 	initPackages(notifications, users)
 
-	err = initRepositories(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "repositories"))
+	err = initRepositories(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "repositories"),
+		notifications, users)
 	if err != nil {
 		return err
 	}

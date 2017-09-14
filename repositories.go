@@ -9,39 +9,32 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
-	"time"
 
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/httperror"
+	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/users"
 )
 
-func initRepositories(root string) error {
+func initRepositories(root string, notifications notifications.Service, users users.Service) error {
 	gitUploadPack, err := exec.LookPath("git-upload-pack")
 	if err != nil {
 		return err
 	}
 
 	repo := "dmitri.shuralyov.com/kebabcase"
+	packageHandler := cookieAuth{httputil.ErrorHandler(users, (&packageHandler{
+		Repo:          repo,
+		notifications: notifications,
+		users:         users,
+	}).ServeHTTP)}
 	h := &gitHandler{
 		GitUploadPack: gitUploadPack,
 
 		Path:    repo[len("dmitri.shuralyov.com"):],
 		RepoDir: filepath.Join(root, filepath.FromSlash(repo)),
-		NonGit: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			http.ServeContent(w, req, ".html", time.Time{}, strings.NewReader(`<html>
-	<head>
-		<meta name="go-import" content="dmitri.shuralyov.com/kebabcase git https://dmitri.shuralyov.com/kebabcase">
-		<meta name="go-source" content="dmitri.shuralyov.com/kebabcase https://dmitri.shuralyov.com/kebabcase https://gotools.org/dmitri.shuralyov.com/kebabcase{/dir} https://gotools.org/dmitri.shuralyov.com/kebabcase{/dir}#{file}-L{line}">
-	</head>
-	<body>
-		<div>Install: <code>go get -u dmitri.shuralyov.com/kebabcase</code></div>
-		<div><a href="https://godoc.org/dmitri.shuralyov.com/kebabcase">Documentation</a></div>
-		<div><a href="https://gotools.org/dmitri.shuralyov.com/kebabcase">Source</a></div>
-		<div><a href="/issues/dmitri.shuralyov.com/kebabcase">Issues</a></div>
-	</body>
-</html>`))
-		}),
+		NonGit:  packageHandler,
 	}
 	http.Handle("/kebabcase", h)
 	http.Handle("/kebabcase/", h)
