@@ -235,6 +235,47 @@ func lookUpSessionViaHeader(req *http.Request) (*session, error) {
 	return s, nil // Existing session.
 }
 
+// lookUpUserViaBasicAuth retrieves the user from req by looking up
+// the request's access token (via Basic Auth) in the sessions map,
+// and then getting the user via usersService.
+// It returns a valid user (possibly nil) and nil error,
+// or nil user and errBadAccessToken.
+func lookUpUserViaBasicAuth(req *http.Request, usersService users.Service) (*users.User, error) {
+	username, password, ok := req.BasicAuth()
+	if !ok {
+		return nil, nil // No user.
+	}
+	encodedAccessToken := password
+	accessTokenBytes, err := base64.RawURLEncoding.DecodeString(encodedAccessToken)
+	if err != nil {
+		return nil, errBadAccessToken
+	}
+	accessToken := string(accessTokenBytes)
+	var s *session
+	global.mu.Lock()
+	if session, ok := global.sessions[accessToken]; ok {
+		if time.Now().Before(session.Expiry) {
+			s = &session
+		} else {
+			delete(global.sessions, accessToken)
+		}
+	}
+	global.mu.Unlock()
+	if s == nil {
+		return nil, errBadAccessToken
+	}
+	// Existing session, now get user and verify the username matches.
+	user, err := usersService.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"})
+	if err != nil {
+		log.Println("lookUpUserViaBasicAuth: failed to get user:", err)
+		return nil, errBadAccessToken
+	}
+	if username != user.Login {
+		return nil, errBadAccessToken
+	}
+	return &user, nil // Existing user.
+}
+
 type sessionsHandler struct {
 	users     users.Service
 	userStore users.Store

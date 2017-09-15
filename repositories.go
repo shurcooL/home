@@ -22,6 +22,10 @@ func initRepositories(root string, notifications notifications.Service, users us
 	if err != nil {
 		return err
 	}
+	gitReceivePack, err := exec.LookPath("git-receive-pack")
+	if err != nil {
+		return err
+	}
 
 	repo := "dmitri.shuralyov.com/kebabcase"
 	packageHandler := cookieAuth{httputil.ErrorHandler(users, (&packageHandler{
@@ -30,7 +34,9 @@ func initRepositories(root string, notifications notifications.Service, users us
 		users:         users,
 	}).ServeHTTP)}
 	h := &gitHandler{
-		GitUploadPack: gitUploadPack,
+		GitUploadPack:  gitUploadPack,
+		GitReceivePack: gitReceivePack,
+		users:          users,
 
 		Path:    repo[len("dmitri.shuralyov.com"):],
 		RepoDir: filepath.Join(root, filepath.FromSlash(repo)),
@@ -42,8 +48,11 @@ func initRepositories(root string, notifications notifications.Service, users us
 }
 
 type gitHandler struct {
-	GitUploadPack string // Path to git-upload-pack binary.
+	GitUploadPack  string // Path to git-upload-pack binary.
+	GitReceivePack string // Path to git-receive-pack binary.
+	users          users.Service
 
+	// Repo-specific fields.
 	Path    string       // Path corresponding to repo root, without domain. E.g., "/kebabcase".
 	RepoDir string       // Path to repository directory on disk.
 	NonGit  http.Handler // Handler for non-git requests.
@@ -121,6 +130,99 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
+
+	case h.Path + "/info/refs?service=git-receive-pack":
+		if req.Method != http.MethodGet {
+			httperror.HandleMethod(w, httperror.Method{Allowed: []string{http.MethodGet}})
+			return
+		}
+
+		// Authorization check.
+		user, _ := lookUpUserViaBasicAuth(req, h.users)
+		if user == nil {
+			w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
+			http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
+			return
+		} else if !user.SiteAdmin {
+			http.Error(w, "403 Forbidden", http.StatusForbidden)
+			return
+		}
+
+		cmd := exec.CommandContext(req.Context(), h.GitReceivePack, "--advertise-refs", ".")
+		cmd.Dir = h.RepoDir
+		var buf bytes.Buffer
+		cmd.Stdout = &buf
+		err := cmd.Start()
+		if os.IsNotExist(err) {
+			http.Error(w, "Not found.", http.StatusNotFound)
+			return
+		} else if err != nil {
+			http.Error(w, fmt.Errorf("could not start command: %v", err).Error(), http.StatusInternalServerError)
+			return
+		}
+		err = cmd.Wait()
+		if err != nil {
+			log.Printf("git-receive-pack command failed: %v\n", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-git-receive-pack-advertisement")
+		_, err = io.WriteString(w, "001f# service=git-receive-pack\n0000")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		_, err = io.Copy(w, &buf)
+		if err != nil {
+			log.Println(err)
+		}
+	case h.Path + "/git-receive-pack":
+		if req.Method != http.MethodPost {
+			httperror.HandleMethod(w, httperror.Method{Allowed: []string{http.MethodPost}})
+			return
+		}
+		if req.Header.Get("Content-Type") != "application/x-git-receive-pack-request" {
+			err := fmt.Errorf("unexpected Content-Type: %v", req.Header.Get("Content-Type"))
+			httperror.HandleBadRequest(w, httperror.BadRequest{Err: err})
+			return
+		}
+
+		// Authorization check.
+		user, _ := lookUpUserViaBasicAuth(req, h.users)
+		if user == nil {
+			w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
+			http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
+			return
+		} else if !user.SiteAdmin {
+			http.Error(w, "403 Forbidden", http.StatusForbidden)
+			return
+		}
+
+		cmd := exec.CommandContext(req.Context(), h.GitReceivePack, "--stateless-rpc", ".")
+		cmd.Dir = h.RepoDir
+		cmd.Stdin = req.Body
+		var buf bytes.Buffer
+		cmd.Stdout = &buf
+		err := cmd.Start()
+		if os.IsNotExist(err) {
+			http.Error(w, "Not found.", http.StatusNotFound)
+			return
+		} else if err != nil {
+			http.Error(w, fmt.Errorf("could not start command: %v", err).Error(), http.StatusInternalServerError)
+			return
+		}
+		err = cmd.Wait()
+		if err != nil {
+			log.Printf("git-receive-pack command failed: %v\n", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-git-receive-pack-result")
+		_, err = io.Copy(w, &buf)
+		if err != nil {
+			log.Println(err)
+		}
+
 	default:
 		if req.URL.Path != h.Path {
 			http.Error(w, "404 Not Found", http.StatusNotFound)
