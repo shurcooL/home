@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/shurcooL/home/component"
@@ -73,6 +75,16 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 			return err
 		}
 
+		packages := packages
+		if patterns, ok := req.URL.Query()["pattern"]; ok {
+			packages = expandPatterns(packages, patterns)
+
+			err := htmlg.RenderComponents(w, patternFilter{Patterns: patterns, ClearURL: urlWith(*req.URL, "pattern", "")})
+			if err != nil {
+				return err
+			}
+		}
+
 		var commands bool
 		switch req.URL.Query().Get("type") {
 		default:
@@ -81,17 +93,27 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 			commands = true
 		}
 
+		var count struct{ Libraries, Commands int }
+		for _, p := range packages {
+			switch p.Command {
+			case false:
+				count.Libraries++
+			case true:
+				count.Commands++
+			}
+		}
+
 		// Render the tabnav.
 		err = htmlg.RenderComponents(w, tabnav{
 			Tabs: []tab{
 				{
-					Content:  iconText{Icon: octiconssvg.Package, Text: fmt.Sprintf("%d Libraries", librariesCount)},
-					URL:      "/packages",
+					Content:  iconText{Icon: octiconssvg.Package, Text: fmt.Sprintf("%d Libraries", count.Libraries)},
+					URL:      urlWith(*req.URL, "type", ""),
 					Selected: !commands,
 				},
 				{
-					Content:  iconText{Icon: octiconssvg.Gist, Text: fmt.Sprintf("%d Commands", commandsCount)},
-					URL:      "/packages?type=command",
+					Content:  iconText{Icon: octiconssvg.Gist, Text: fmt.Sprintf("%d Commands", count.Commands)},
+					URL:      urlWith(*req.URL, "type", "command"),
 					Selected: commands,
 				},
 			},
@@ -100,25 +122,10 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 			return err
 		}
 
-		// Render the table.
-		io.WriteString(w, `<table class="table table-sm">
-			<thead>
-				<tr>
-					<th>Path</th>
-					<th>Synopsis</th>
-				</tr>
-			</thead>
-			<tbody>`)
-		for _, p := range packages {
-			if p.Command != commands {
-				continue
-			}
-			html.Render(w, htmlg.TR(
-				htmlg.TD(htmlg.A(p.ImportPath, p.HomeURL())),
-				htmlg.TD(htmlg.Text(p.Doc)),
-			))
+		err = renderPackages(w, packages, commands)
+		if err != nil {
+			return err
 		}
-		io.WriteString(w, `</tbody></table>`)
 
 		_, err = io.WriteString(w, `</div>`)
 		if err != nil {
@@ -128,6 +135,68 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 		_, err = io.WriteString(w, `</body></html>`)
 		return err
 	})})
+}
+
+// patternFilter is an HTML component that displays currently applied filter,
+// with a link to clear it.
+type patternFilter struct {
+	Patterns []string
+	ClearURL string
+}
+
+func (f patternFilter) Render() []*html.Node {
+	div := &html.Node{
+		Type: html.ElementNode, Data: atom.Div.String(),
+		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "margin-bottom: 20px;"}},
+	}
+	div.AppendChild(htmlg.Strong("Filter"))
+	for _, pattern := range f.Patterns {
+		div.AppendChild(&html.Node{
+			Type: html.ElementNode, Data: atom.Code.String(),
+			Attr: []html.Attribute{{Key: atom.Style.String(), Val: `color: white;
+background-color: #4183c4;
+padding: 4px 8px;
+border-radius: 3px;
+margin: 0 4px 0 4px;`}},
+			FirstChild: htmlg.Text(pattern),
+		})
+	}
+	htmlg.AppendChildren(div, iconLink{Icon: octiconssvg.X, Text: "Clear", URL: f.ClearURL, Black: true}.Render()...)
+	return []*html.Node{div}
+}
+
+func renderPackages(w io.Writer, packages []goPackage, commands bool) error {
+	if len(packages) == 0 {
+		_, err := io.WriteString(w, `<div>No matching packages.</div>`)
+		return err
+	}
+
+	// Render the table.
+	_, err := io.WriteString(w, `<table class="table table-sm">
+		<thead>
+			<tr>
+				<th>Path</th>
+				<th>Synopsis</th>
+			</tr>
+		</thead>
+		<tbody>`)
+	if err != nil {
+		return err
+	}
+	for _, p := range packages {
+		if p.Command != commands {
+			continue
+		}
+		err := html.Render(w, htmlg.TR(
+			htmlg.TD(htmlg.A(p.ImportPath, p.HomeURL())),
+			htmlg.TD(htmlg.Text(p.Doc)),
+		))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = io.WriteString(w, `</tbody></table>`)
+	return err
 }
 
 // tabnav is a left-aligned horizontal row of tabs Primer CSS component.
@@ -171,6 +240,20 @@ func (t tab) Render() []*html.Node {
 	return []*html.Node{a}
 }
 
+// urlWith returns url with query key set to value.
+// If value is the empty string, query key is deleted.
+func urlWith(url url.URL, key, value string) string {
+	q := url.Query()
+	switch value {
+	default:
+		q.Set(key, value)
+	case "":
+		q.Del(key)
+	}
+	url.RawQuery = q.Encode()
+	return url.String()
+}
+
 // iconText is an icon with text on the right.
 // Icon must be not nil.
 type iconText struct {
@@ -185,19 +268,6 @@ func (it iconText) Render() []*html.Node {
 	})
 	text := htmlg.Text(it.Text)
 	return []*html.Node{icon, text}
-}
-
-var librariesCount, commandsCount int
-
-func init() {
-	for _, p := range packages {
-		switch p.Command {
-		case false:
-			librariesCount++
-		case true:
-			commandsCount++
-		}
-	}
 }
 
 type goPackage struct {
@@ -898,4 +968,54 @@ var packages = []goPackage{
 		Command:    false,
 		Doc:        "Package webdavfs implements webdav.FileSystem using an http.FileSystem.",
 	},
+}
+
+// expandPatterns returns the set of Go packages matched by specified
+// import path patterns, which may have the following forms:
+//
+//		example.org/single/package     # a single package
+//		example.org/dir/...            # all packages beneath dir
+//		exam.../tools/...              # all matching packages
+//		...                            # the entire workspace
+//
+// A trailing slash in a pattern is ignored.
+func expandPatterns(all []goPackage, patterns []string) []goPackage {
+	pkgs := make(map[string]struct{})
+	for _, pattern := range patterns {
+		if pattern == "..." {
+			// ... matches all packages.
+			return all
+		} else if strings.Contains(pattern, "...") {
+			match := matchPattern(pattern)
+			for _, p := range all {
+				if match(p.ImportPath) {
+					pkgs[p.ImportPath] = struct{}{}
+				}
+			}
+		} else {
+			// Single package.
+			pkgs[strings.TrimSuffix(pattern, "/")] = struct{}{}
+		}
+	}
+	var packages []goPackage
+	for _, p := range all {
+		if _, ok := pkgs[p.ImportPath]; !ok {
+			continue
+		}
+		packages = append(packages, p)
+	}
+	return packages
+}
+
+// matchPattern(pattern)(name) reports whether name matches pattern.
+// Pattern is a limited glob pattern in which '...' means 'any string',
+// foo/... matches foo too, and there is no other special syntax.
+func matchPattern(pattern string) func(name string) bool {
+	re := regexp.QuoteMeta(pattern)
+	re = strings.Replace(re, `\.\.\.`, `.*`, -1)
+	// Special case: foo/... matches foo too.
+	if strings.HasSuffix(re, `/.*`) {
+		re = re[:len(re)-len(`/.*`)] + `(/.*)?`
+	}
+	return regexp.MustCompile(`^` + re + `$`).MatchString
 }

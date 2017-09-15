@@ -1,7 +1,7 @@
 body {
 	margin: 20px;
 	font-family: Go;
-	font-size: 16px;
+	font-size: 14px;
 	color: rgb(35, 35, 35);
 }
 a {
@@ -11,9 +11,21 @@ a {
 a:hover {
 	text-decoration: underline;
 }
+a.black {
+	color: black;
+	text-decoration: none;
+}
+a.black:hover {
+	color: #4183c4;
+}
 
 .table {
 	font-size: 14px;
+}
+
+code {
+	font-family: "Go Mono";
+	font-size: 12px;
 }
 
 /* https://github.com/primer/primer-navigation */
