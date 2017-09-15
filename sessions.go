@@ -124,6 +124,39 @@ func clearAccessTokenCookie(w httputil.HeaderWriter) {
 	httputil.SetCookie(w, &http.Cookie{Path: "/", Name: accessTokenCookieName, MaxAge: -1})
 }
 
+// cookieAuth is a middleware that parses authentication information
+// from request cookies, and sets session as a context value.
+type cookieAuth struct {
+	Handler http.Handler
+}
+
+func (mw cookieAuth) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	s, extended, err := lookUpSessionViaCookie(req)
+	if err == errBadAccessToken {
+		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
+		clearAccessTokenCookie(w)
+	} else if err == nil && extended {
+		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
+		setAccessTokenCookie(w, s.AccessToken, s.Expiry)
+	}
+	mw.Handler.ServeHTTP(w, withSession(req, s))
+}
+
+// headerAuth is a middleware that parses authentication information
+// from request headers, and sets session as a context value.
+type headerAuth struct {
+	Handler http.Handler
+}
+
+func (mw headerAuth) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	s, err := lookUpSessionViaHeader(req)
+	if err != nil {
+		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	mw.Handler.ServeHTTP(w, withSession(req, s))
+}
+
 var errBadAccessToken = errors.New("bad access token")
 
 // lookUpSessionViaCookie retrieves the session from req by looking up
@@ -165,24 +198,6 @@ func lookUpSessionViaCookie(req *http.Request) (s *session, extended bool, err e
 	return s, extended, nil // Existing session.
 }
 
-// cookieAuth is a middleware that parses authentication information
-// from request cookies, and sets session as a context value.
-type cookieAuth struct {
-	Handler http.Handler
-}
-
-func (mw cookieAuth) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	s, extended, err := lookUpSessionViaCookie(req)
-	if err == errBadAccessToken {
-		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
-		clearAccessTokenCookie(w)
-	} else if err == nil && extended {
-		// TODO: Is it okay if we later set the same cookie again? Or should we avoid doing this here?
-		setAccessTokenCookie(w, s.AccessToken, s.Expiry)
-	}
-	mw.Handler.ServeHTTP(w, withSession(req, s))
-}
-
 // lookUpSessionViaHeader retrieves the session from req by looking up
 // the request's access token (via Authorization header) in the sessions map.
 // It returns a valid session (possibly nil) and nil error,
@@ -218,21 +233,6 @@ func lookUpSessionViaHeader(req *http.Request) (*session, error) {
 		return nil, errBadAccessToken
 	}
 	return s, nil // Existing session.
-}
-
-// headerAuth is a middleware that parses authentication information
-// from request headers, and sets session as a context value.
-type headerAuth struct {
-	Handler http.Handler
-}
-
-func (mw headerAuth) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	s, err := lookUpSessionViaHeader(req)
-	if err != nil {
-		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	mw.Handler.ServeHTTP(w, withSession(req, s))
 }
 
 type sessionsHandler struct {
