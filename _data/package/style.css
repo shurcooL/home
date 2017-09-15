@@ -11,3 +11,12 @@ a {
 a:hover {
 	text-decoration: underline;
 }
+
+pre {
+	font-family: "Go Mono";
+	line-height: 1.45;
+	padding: 16px;
+	background-color: #f7f7f7;
+	border-radius: 3px;
+	overflow: auto;
+}
