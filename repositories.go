@@ -122,6 +122,10 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			log.Println(err)
 		}
 	default:
+		if req.URL.Path != h.Path {
+			http.Error(w, "404 Not Found", http.StatusNotFound)
+			return
+		}
 		h.NonGit.ServeHTTP(w, req)
 	}
 }
