@@ -46,34 +46,39 @@ func run() error {
 		return err
 	}
 
+	storeDir := filepath.Join(os.Getenv("HOME"), "Dropbox", "Store")
+	if !*productionFlag {
+		storeDir = filepath.Join(os.TempDir(), "home-store")
+	}
+
 	users, userStore, err := newUsersService(
-		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "users")),
+		webdav.Dir(filepath.Join(storeDir, "users")),
 	)
 	if err != nil {
 		return err
 	}
 	reactions, err := newReactionsService(
-		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "reactions")),
+		webdav.Dir(filepath.Join(storeDir, "reactions")),
 		users)
 	if err != nil {
 		return err
 	}
 	notifications, err := initNotifications(
 		http.DefaultServeMux,
-		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "notifications")),
+		webdav.Dir(filepath.Join(storeDir, "notifications")),
 		users)
 	if err != nil {
 		return err
 	}
 	events, err := newEventsService(
-		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "events")),
+		webdav.Dir(filepath.Join(storeDir, "events")),
 		users,
 	)
 	if err != nil {
 		return err
 	}
 	issuesService, err := newIssuesService(
-		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues")),
+		webdav.Dir(filepath.Join(storeDir, "issues")),
 		notifications, events, users)
 	if err != nil {
 		return err
@@ -99,7 +104,7 @@ func run() error {
 	http.Handle("/api/events/list", headerAuth{httputil.ErrorHandler(users, eventsAPIHandler.List)})
 
 	userContentHandler := userContentHandler{
-		store: webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "usercontent")),
+		store: webdav.Dir(filepath.Join(storeDir, "usercontent")),
 		users: users,
 	}
 	http.Handle("/api/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Upload)})
@@ -134,7 +139,7 @@ func run() error {
 
 	initPackages(notifications, users)
 
-	err = initRepositories(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "repositories"),
+	err = initRepositories(filepath.Join(storeDir, "repositories"),
 		notifications, users)
 	if err != nil {
 		return err
