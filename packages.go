@@ -122,7 +122,7 @@ func initPackages(notifications notifications.Service, usersService users.Servic
 			return err
 		}
 
-		err = renderPackages(w, packages, commands)
+		err = renderPackages(w, packages, commands, count)
 		if err != nil {
 			return err
 		}
@@ -165,8 +165,9 @@ margin: 0 4px 0 4px;`}},
 	return []*html.Node{div}
 }
 
-func renderPackages(w io.Writer, packages []goPackage, commands bool) error {
-	if len(packages) == 0 {
+func renderPackages(w io.Writer, packages []goPackage, commands bool, count struct{ Libraries, Commands int }) error {
+	if !commands && count.Libraries == 0 ||
+		commands && count.Commands == 0 {
 		_, err := io.WriteString(w, `<div>No matching packages.</div>`)
 		return err
 	}
