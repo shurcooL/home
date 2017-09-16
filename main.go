@@ -140,7 +140,7 @@ func run() error {
 	initPackages(notifications, users)
 
 	err = initRepositories(filepath.Join(storeDir, "repositories"),
-		notifications, users)
+		notifications, events, users)
 	if err != nil {
 		return err
 	}
