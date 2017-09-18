@@ -11,6 +11,7 @@ import (
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
 )
 
@@ -92,15 +93,36 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	_, err = io.WriteString(w, `<h2>Package kebabcase</h2>
-			<p>Package kebabcase provides a parser for identifier names using kebab-case naming convention.<br>
+	_, err = io.WriteString(w, `<h2>Package kebabcase</h2>`)
+	if err != nil {
+		return err
+	}
+
+	// Render the tabnav.
+	err = htmlg.RenderComponents(w, tabnav{
+		Tabs: []tab{
+			{
+				Content:  iconText{Icon: octiconssvg.Book, Text: "Overview"},
+				URL:      "/kebabcase",
+				Selected: true,
+			},
+			{
+				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+				URL:     "/kebabcase/issues",
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `<p>Package kebabcase provides a parser for identifier names using kebab-case naming convention.<br>
 <br>
 Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers">https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers</a>.</p>
 			<h3>Installation</h3>
 			<p><pre>go get -u dmitri.shuralyov.com/kebabcase</pre></p>
 			<h3><a href="https://godoc.org/dmitri.shuralyov.com/kebabcase">Documentation</a></h3>
 			<h3><a href="https://gotools.org/dmitri.shuralyov.com/kebabcase">Code</a></h3>
-			<h3><a href="/kebabcase/issues">Issues</a></h3>
 		</div>
 	</body>
 </html>`)
