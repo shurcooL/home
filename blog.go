@@ -59,14 +59,6 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 		line-height: initial;
 		color: #373a3c;
 	}
-	a {
-		color: #0275d8;
-		text-decoration: none;
-	}
-	a:focus, a:hover {
-		color: #014c8c;
-		text-decoration: underline;
-	}
 	.btn {
 		font-family: inherit;
 		font-size: 11px;
