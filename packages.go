@@ -188,8 +188,25 @@ func renderPackages(w io.Writer, packages []goPackage, commands bool, count stru
 		if p.Command != commands {
 			continue
 		}
+		path := []*html.Node{
+			htmlg.A(p.ImportPath, p.HomeURL()),
+		}
+		if p.New {
+			new := &html.Node{
+				Type: html.ElementNode, Data: atom.Span.String(),
+				Attr: []html.Attribute{{Key: atom.Style.String(), Val: `font-size: 10px;
+vertical-align: middle;
+color: #e85d00;
+padding: 1px 4px;
+border: 1px solid #e85d00;
+border-radius: 3px;
+margin-left: 6px;`}},
+				FirstChild: htmlg.Text("New"),
+			}
+			path = append(path, new)
+		}
 		err := html.Render(w, htmlg.TR(
-			htmlg.TD(htmlg.A(p.ImportPath, p.HomeURL())),
+			htmlg.TD(path...),
 			htmlg.TD(htmlg.Text(p.Doc)),
 		))
 		if err != nil {
@@ -275,6 +292,7 @@ type goPackage struct {
 	ImportPath string
 	Command    bool
 	Doc        string
+	New        bool // New badge.
 }
 
 func (p goPackage) HomeURL() string {
@@ -290,6 +308,7 @@ func (p goPackage) HomeURL() string {
 
 var packages = []goPackage{
 	{
+		New:        true,
 		ImportPath: "dmitri.shuralyov.com/kebabcase",
 		Command:    false,
 		Doc:        "Package kebabcase provides a parser for identifier names using kebab-case naming convention.",
@@ -350,6 +369,36 @@ var packages = []goPackage{
 		Doc:        "Go Package Store displays updates for the Go packages in your GOPATH.",
 	},
 	//{
+	//	ImportPath: "github.com/shurcooL/Go-Package-Store/component",
+	//	Command:    false,
+	//	Doc:        "Package component contains Vecty HTML components used by Go Package Store.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend",
+	//	Command:    true,
+	//	Doc:        "Command frontend runs on frontend of Go Package Store.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend/action",
+	//	Command:    false,
+	//	Doc:        "Package action defines actions that can be applied to the data model in store.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend/model",
+	//	Command:    false,
+	//	Doc:        "Package model is a frontend data model for updates.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend/store",
+	//	Command:    false,
+	//	Doc:        "Package store is a store for updates.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/Go-Package-Store/presenter",
+	//	Command:    false,
+	//	Doc:        "Package presenter defines domain types for Go Package Store presenters.",
+	//},
+	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/presenter/github",
 	//	Command:    false,
 	//	Doc:        "Package github provides a GitHub API-powered presenter.",
@@ -374,30 +423,35 @@ var packages = []goPackage{
 		Command:    true,
 		Doc:        "Hover is a work-in-progress port of Hover, a game originally created by Eric Undersander in 2000.",
 	},
+	//{
+	//	ImportPath: "github.com/shurcooL/Hover/track",
+	//	Command:    false,
+	//	Doc:        "Package track defines Hover track data structure and provides loading functionality.",
+	//},
 	{
 		ImportPath: "github.com/shurcooL/binstale",
 		Command:    true,
 		Doc:        "binstale tells you whether the binaries in your GOPATH/bin are stale or up to date.",
 	},
 	//{
-	//	ImportPath: "github.com/shurcooL/cmd/dump_args",
+	//	ImportPath: "github.com/shurcooL/cmd/dumpargs",
 	//	Command:    true,
-	//	Doc:        "dump_args dumps the command-line arguments.",
+	//	Doc:        "dumpargs dumps the command-line arguments.",
 	//},
 	//{
-	//	ImportPath: "github.com/shurcooL/cmd/dump_glfw3_joysticks",
+	//	ImportPath: "github.com/shurcooL/cmd/dumpglfw3joysticks",
 	//	Command:    true,
-	//	Doc:        "dump_glfw3_joysticks dumps state of attached joysticks.",
+	//	Doc:        "dumpglfw3joysticks dumps state of attached joysticks.",
 	//},
 	//{
-	//	ImportPath: "github.com/shurcooL/cmd/dump_httpreq",
+	//	ImportPath: "github.com/shurcooL/cmd/dumphttpreq",
 	//	Command:    true,
-	//	Doc:        "dump_httpreq dumps incoming HTTP requests with full detail.",
+	//	Doc:        "dumphttpreq dumps incoming HTTP requests with full detail.",
 	//},
 	//{
-	//	ImportPath: "github.com/shurcooL/cmd/godoc_router",
+	//	ImportPath: "github.com/shurcooL/cmd/godocrouter",
 	//	Command:    true,
-	//	Doc:        "godoc_router is a reverse proxy that augments a private godoc server instance with global godoc.org instance.",
+	//	Doc:        "godocrouter is a reverse proxy that augments a private godoc server instance with global godoc.org instance.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/cmd/goimporters",
@@ -425,15 +479,15 @@ var packages = []goPackage{
 		Doc:        "jsonfmt pretty-prints JSON from stdin.",
 	},
 	//{
-	//	ImportPath: "github.com/shurcooL/cmd/rune_stats",
+	//	ImportPath: "github.com/shurcooL/cmd/runestats",
 	//	Command:    true,
-	//	Doc:        "rune_stats prints counts of total and unique runes from stdin.",
+	//	Doc:        "runestats prints counts of total and unique runes from stdin.",
 	//},
-	//{
-	//	ImportPath: "github.com/shurcooL/cmd/table",
-	//	Command:    true,
-	//	Doc:        "table is a chef client command-line tool.",
-	//},
+	{
+		ImportPath: "github.com/shurcooL/component",
+		Command:    false,
+		Doc:        "Package component is a collection of basic HTML components.",
+	},
 	{
 		ImportPath: "github.com/shurcooL/eX0/eX0-go",
 		Command:    true,
@@ -450,6 +504,27 @@ var packages = []goPackage{
 	//	Doc:        "Package packet is for TCP and UDP packets used in eX0 networking protocol.",
 	//},
 	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/events",
+		Command:    false,
+		Doc:        "Package events provides an events service definition.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/events/event",
+		Command:    false,
+		Doc:        "Package event defines event types.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/events/fs",
+		Command:    false,
+		Doc:        "Package fs implements events.Service using a virtual filesystem.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/events/githubapi",
+		Command:    false,
+		Doc:        "Package githubapi implements events.Service using GitHub API client.",
+	},
+	{
 		ImportPath: "github.com/shurcooL/frontend/checkbox",
 		Command:    false,
 		Doc:        "Package checkbox provides a checkbox connected to a query parameter.",
@@ -459,26 +534,21 @@ var packages = []goPackage{
 		Command:    false,
 		Doc:        "Package reactionsmenu provides a reactions menu component.",
 	},
-	//{
-	//	ImportPath: "github.com/shurcooL/frontend/select_menu",
-	//	Command:    false,
-	//	Doc:        "",
-	//},
+	{
+		ImportPath: "github.com/shurcooL/frontend/select_menu",
+		Command:    false,
+		Doc:        "Package select_menu provides a select menu component.",
+	},
 	//{
 	//	ImportPath: "github.com/shurcooL/frontend/table-of-contents/handler",
 	//	Command:    false,
-	//	Doc:        "",
+	//	Doc:        "Package handler registers \"/table-of-contents.{js,css}\" routes on http.DefaultServeMux on init.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/frontend/tabsupport",
 		Command:    false,
 		Doc:        "Package tabsupport offers functionality to add tab support to a textarea element.",
 	},
-	//{
-	//	ImportPath: "github.com/shurcooL/gostatus/status",
-	//	Command:    false,
-	//	Doc:        "Package status provides a func to check if two repo URLs are equal in the context of Go packages.",
-	//},
 	{
 		ImportPath: "github.com/shurcooL/git-branches",
 		Command:    true,
@@ -487,13 +557,24 @@ var packages = []goPackage{
 	{
 		ImportPath: "github.com/shurcooL/github_flavored_markdown",
 		Command:    false,
-		Doc:        "Package github_flavored_markdown provides a GitHub Flavored Markdown renderer with fenced code block highlighting, clickable header anchor links.",
+		Doc:        "Package github_flavored_markdown provides a GitHub Flavored Markdown renderer with fenced code block highlighting, clickable heading anchor links.",
 	},
 	{
 		ImportPath: "github.com/shurcooL/github_flavored_markdown/gfmstyle",
 		Command:    false,
 		Doc:        "Package gfmstyle contains CSS styles for rendering GitHub Flavored Markdown.",
 	},
+	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/githubql",
+		Command:    false,
+		Doc:        "Package githubql is a client library for accessing GitHub GraphQL API v4 (https://developer.github.com/v4/).",
+	},
+	//{
+	//	ImportPath: "github.com/shurcooL/githubql/example/githubqldev",
+	//	Command:    true,
+	//	Doc:        "githubqldev is a test program currently being used for developing githubql package.",
+	//},
 	{
 		ImportPath: "github.com/shurcooL/go-goon",
 		Command:    false,
@@ -510,6 +591,11 @@ var packages = []goPackage{
 		Doc:        "Package analysis provides a routine that determines if a file is generated or handcrafted.",
 	},
 	{
+		ImportPath: "github.com/shurcooL/go/browser",
+		Command:    false,
+		Doc:        "Package browser provides utilities for interacting with users' browsers.",
+	},
+	{
 		ImportPath: "github.com/shurcooL/go/ctxhttp",
 		Command:    false,
 		Doc:        "Package ctxhttp provides helper functions for performing context-aware HTTP requests.",
@@ -518,6 +604,12 @@ var packages = []goPackage{
 		ImportPath: "github.com/shurcooL/go/gddo",
 		Command:    false,
 		Doc:        "Package gddo is a simple client library for accessing the godoc.org API.",
+	},
+	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/go/generated",
+		Command:    false,
+		Doc:        "Package generated provides a function that parses a Go file and reports whether it contains a \"// Code generated … DO NOT EDIT.\" line comment.",
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/gfmutil",
@@ -635,9 +727,27 @@ var packages = []goPackage{
 		Doc:        "Package vfsutil implements some I/O utility functions for vfs.FileSystem.",
 	},
 	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/godecl",
+		Command:    true,
+		Doc:        "A godecl experiment.",
+	},
+	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/godecl/decl",
+		Command:    false,
+		Doc:        "Package decl implements functionality to convert fragments of Go code to an English representation.",
+	},
+	{
 		ImportPath: "github.com/shurcooL/goexec",
 		Command:    true,
 		Doc:        "goexec is a command line tool to execute Go code.",
+	},
+	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/gofontwoff",
+		Command:    false,
+		Doc:        "Package gofontwoff provides the Go font family in Web Open Font Format.",
 	},
 	{
 		ImportPath: "github.com/shurcooL/gopherjslib",
@@ -655,19 +765,35 @@ var packages = []goPackage{
 	//	Doc:        "Package status provides a func to check if two repo URLs are equal in the context of Go packages.",
 	//},
 	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/graphql",
+		Command:    false,
+		Doc:        "Package graphql provides a GraphQL client implementation.",
+	},
+	//{
+	//	ImportPath: "github.com/shurcooL/graphql/example/graphqldev",
+	//	Command:    true,
+	//	Doc:        "graphqldev is a test program currently being used for developing graphql package.",
+	//},
+	{
+		ImportPath: "github.com/shurcooL/graphql/ident",
+		Command:    false,
+		Doc:        "Package ident provides functions for parsing and converting identifier names between various naming convention.",
+	},
+	{
 		ImportPath: "github.com/shurcooL/gtdo",
 		Command:    true,
 		Doc:        "gtdo is the source for gotools.org.",
 	},
 	//{
+	//	ImportPath: "github.com/shurcooL/gtdo/assets",
+	//	Command:    false,
+	//	Doc:        "Package assets contains assets for gtdo.",
+	//},
+	//{
 	//	ImportPath: "github.com/shurcooL/gtdo/gtdo",
 	//	Command:    false,
 	//	Doc:        "Package gtdo contains common gtdo-specific consts for backend and frontend.",
-	//},
-	//{
-	//	ImportPath: "github.com/shurcooL/gtdo/internal/sanitizedanchorname",
-	//	Command:    false,
-	//	Doc:        "Package sanitizedanchorname provides a func to create sanitized anchor names.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/gtdo/page",
@@ -704,16 +830,31 @@ var packages = []goPackage{
 	//	Command:    false,
 	//	Doc:        "Package component contains individual components that can render themselves as HTML.",
 	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/home/exp/vec",
+	//	Command:    false,
+	//	Doc:        "Package vec provides a vecty-like API for backend HTML rendering.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/home/exp/vec/attr",
+	//	Command:    false,
+	//	Doc:        "Package attr defines functions to set attributes of an HTML node.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/home/exp/vec/elem",
+	//	Command:    false,
+	//	Doc:        "Package elem defines functions to create HTML elements.",
+	//},
 	{
 		ImportPath: "github.com/shurcooL/home/http",
 		Command:    false,
 		Doc:        "Package http contains service implementations over HTTP.",
 	},
-	//{
-	//	ImportPath: "github.com/shurcooL/home/httphandler",
-	//	Command:    false,
-	//	Doc:        "Package httphandler contains API handlers used by home.",
-	//},
+	{
+		ImportPath: "github.com/shurcooL/home/httphandler",
+		Command:    false,
+		Doc:        "Package httphandler contains API handlers used by home.",
+	},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/httputil",
 	//	Command:    false,
@@ -733,6 +874,11 @@ var packages = []goPackage{
 		ImportPath: "github.com/shurcooL/htmlg",
 		Command:    false,
 		Doc:        "Package htmlg contains helper funcs for generating HTML nodes and rendering them.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/httperror",
+		Command:    false,
+		Doc:        "Package httperror provides common basic building blocks for custom HTTP frameworks.",
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpfs/filter",
@@ -790,6 +936,18 @@ var packages = []goPackage{
 		Doc:        "Package githubapi implements issues.Service using GitHub API client.",
 	},
 	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/issues/githubqlapi",
+		Command:    false,
+		Doc:        "Package githubqlapi implements issues.Service using GitHub GraphQL API v4 client.",
+	},
+	{
+		New:        true,
+		ImportPath: "github.com/shurcooL/issues/maintner",
+		Command:    false,
+		Doc:        "Package maintner implements a read-only issues.Service using a x/build/maintner corpus.",
+	},
+	{
 		ImportPath: "github.com/shurcooL/issuesapp",
 		Command:    false,
 		Doc:        "Package issuesapp is a web frontend for an issues service.",
@@ -802,7 +960,32 @@ var packages = []goPackage{
 	//{
 	//	ImportPath: "github.com/shurcooL/issuesapp/common",
 	//	Command:    false,
-	//	Doc:        "",
+	//	Doc:        "Package common contains common code for backend and frontend.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/issuesapp/component",
+	//	Command:    false,
+	//	Doc:        "Package component contains individual components that can render themselves as HTML.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/issuesapp/frontend",
+	//	Command:    true,
+	//	Doc:        "frontend script for issuesapp.",
+	//},
+	{
+		ImportPath: "github.com/shurcooL/issuesapp/httpclient",
+		Command:    false,
+		Doc:        "Package httpclient contains issues.Service implementation over HTTP.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/issuesapp/httphandler",
+		Command:    false,
+		Doc:        "Package httphandler contains an API handler for issues.Service.",
+	},
+	//{
+	//	ImportPath: "github.com/shurcooL/issuesapp/httproute",
+	//	Command:    false,
+	//	Doc:        "Package httproute contains route paths for httpclient, httphandler.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/ivybrowser",
@@ -832,7 +1015,7 @@ var packages = []goPackage{
 	{
 		ImportPath: "github.com/shurcooL/notifications/githubapi",
 		Command:    false,
-		Doc:        "Package githubapi implements notifications.Service using GitHub API client.",
+		Doc:        "Package githubapi implements notifications.Service using GitHub API clients.",
 	},
 	{
 		ImportPath: "github.com/shurcooL/notificationsapp",
@@ -845,9 +1028,29 @@ var packages = []goPackage{
 	//	Doc:        "Package assets contains assets for notificationsapp.",
 	//},
 	//{
-	//	ImportPath: "github.com/shurcooL/notificationsapp/common",
+	//	ImportPath: "github.com/shurcooL/notificationsapp/component",
 	//	Command:    false,
-	//	Doc:        "",
+	//	Doc:        "Package component contains individual components that can render themselves as HTML.",
+	//},
+	//{
+	//	ImportPath: "github.com/shurcooL/notificationsapp/frontend",
+	//	Command:    true,
+	//	Doc:        "frontend script for notificationsapp.",
+	//},
+	{
+		ImportPath: "github.com/shurcooL/notificationsapp/httpclient",
+		Command:    false,
+		Doc:        "Package httpclient contains notifications.Service implementation over HTTP.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/notificationsapp/httphandler",
+		Command:    false,
+		Doc:        "Package httphandler contains an API handler for notifications.Service.",
+	},
+	//{
+	//	ImportPath: "github.com/shurcooL/notificationsapp/httproute",
+	//	Command:    false,
+	//	Doc:        "Package httproute contains route paths for httpclient, httphandler.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/octicons",
@@ -863,6 +1066,11 @@ var packages = []goPackage{
 		ImportPath: "github.com/shurcooL/reactions",
 		Command:    false,
 		Doc:        "Package reactions provides a reactions service definition.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/reactions/component",
+		Command:    false,
+		Doc:        "Package component contains individual components that can render themselves as HTML.",
 	},
 	{
 		ImportPath: "github.com/shurcooL/reactions/emojis",
@@ -882,7 +1090,7 @@ var packages = []goPackage{
 	{
 		ImportPath: "github.com/shurcooL/resume",
 		Command:    false,
-		Doc:        "Package resume is Dmitri Shuralyov's résumé.",
+		Doc:        "Package resume contains Dmitri Shuralyov's résumé.",
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/resume/component",
@@ -933,6 +1141,11 @@ var packages = []goPackage{
 		ImportPath: "github.com/shurcooL/users/asanaapi",
 		Command:    false,
 		Doc:        "Package asanaapi implements users.Service using Asana API client.",
+	},
+	{
+		ImportPath: "github.com/shurcooL/users/fs",
+		Command:    false,
+		Doc:        "Package fs implements an in-memory users.Store backed by a virtual filesystem.",
 	},
 	{
 		ImportPath: "github.com/shurcooL/users/githubapi",
