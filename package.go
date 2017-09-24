@@ -107,6 +107,10 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 				Selected: true,
 			},
 			{
+				Content: iconText{Icon: octiconssvg.History, Text: "History"},
+				URL:     "/kebabcase/commits",
+			},
+			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
 				URL:     "/kebabcase/issues",
 			},

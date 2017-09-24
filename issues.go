@@ -113,6 +113,10 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 					URL:     "/kebabcase",
 				},
 				{
+					Content: iconText{Icon: octiconssvg.History, Text: "History"},
+					URL:     "/kebabcase/commits",
+				},
+				{
 					Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
 					URL:      "/kebabcase/issues",
 					Selected: true,

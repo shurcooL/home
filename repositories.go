@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -23,7 +25,7 @@ import (
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/gitcmd"
 )
 
-func initRepositories(root string, notifications notifications.Service, events events.Service, users users.Service) error {
+func initRepositories(root string, notifications notifications.Service, events events.Service, usersService users.Service) error {
 	gitUploadPack, err := exec.LookPath("git-upload-pack")
 	if err != nil {
 		return err
@@ -33,22 +35,40 @@ func initRepositories(root string, notifications notifications.Service, events e
 		return err
 	}
 
+	// TODO: Add support for additional git users.
+	gitUsers := make(map[string]users.User)
+	shurcool, err := usersService.Get(context.Background(), shurcool)
+	if err != nil {
+		return err
+	}
+	gitUsers[strings.ToLower(shurcool.Email)] = shurcool
+
 	repo := "dmitri.shuralyov.com/kebabcase"
-	packageHandler := cookieAuth{httputil.ErrorHandler(users, (&packageHandler{
+	repoDir := filepath.Join(root, filepath.FromSlash(repo))
+	packageHandler := cookieAuth{httputil.ErrorHandler(usersService, (&packageHandler{
 		Repo:          repo,
 		notifications: notifications,
-		users:         users,
+		users:         usersService,
+	}).ServeHTTP)}
+	commitsHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitsHandler{
+		Repo:          repo,
+		RepoDir:       repoDir,
+		notifications: notifications,
+		users:         usersService,
+		gitUsers:      gitUsers,
 	}).ServeHTTP)}
 	h := &gitHandler{
 		GitUploadPack:  gitUploadPack,
 		GitReceivePack: gitReceivePack,
 		events:         events,
-		users:          users,
+		users:          usersService,
+		gitUsers:       gitUsers,
 
 		Repo:    repo,
 		Path:    repo[len("dmitri.shuralyov.com"):],
-		RepoDir: filepath.Join(root, filepath.FromSlash(repo)),
-		NonGit:  packageHandler,
+		RepoDir: repoDir,
+		Index:   packageHandler,
+		Commits: commitsHandler,
 	}
 	http.Handle("/kebabcase", h)
 	http.Handle("/kebabcase/", h)
@@ -60,12 +80,14 @@ type gitHandler struct {
 	GitReceivePack string // Path to git-receive-pack binary.
 	events         events.Service
 	users          users.Service
+	gitUsers       map[string]users.User // Key is lower git author email.
 
 	// Repo-specific fields.
 	Repo    string       // Repo root. E.g., "dmitri.shuralyov.com/kebabcase".
 	Path    string       // Path corresponding to repo root, without domain. E.g., "/kebabcase".
 	RepoDir string       // Path to repository directory on disk.
-	NonGit  http.Handler // Handler for non-git requests.
+	Index   http.Handler // Handler for index page.
+	Commits http.Handler // Handler for commits page.
 }
 
 func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -248,7 +270,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			const zero = "0000000000000000000000000000000000000000"
 			switch {
 			case e.Type == githttp.PUSH && e.Last != zero && e.Commit != zero:
-				commits, err := listCommits(h.RepoDir, e.Last, e.Commit)
+				commits, err := listCommits(h.RepoDir, e.Last, e.Commit, h.gitUsers)
 				if err != nil {
 					log.Println("listCommits:", err)
 				}
@@ -285,22 +307,19 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 	default:
-		if req.URL.Path != h.Path {
+		switch req.URL.Path {
+		case h.Path:
+			h.Index.ServeHTTP(w, req)
+		case h.Path + "/commits":
+			h.Commits.ServeHTTP(w, req)
+		default:
 			http.Error(w, "404 Not Found", http.StatusNotFound)
-			return
 		}
-		h.NonGit.ServeHTTP(w, req)
 	}
 }
 
 // listCommits returns a list of commits in repoDir from base to head.
-func listCommits(repoDir, base, head string) ([]event.Commit, error) {
-	// TODO: Add support for additional git users.
-	knownUser := users.User{
-		Email:     "shurcooL@gmail.com",
-		AvatarURL: "https://dmitri.shuralyov.com/avatar-s.jpg",
-	}
-
+func listCommits(repoDir, base, head string, gitUsers map[string]users.User) ([]event.Commit, error) {
 	r := &gitcmd.Repository{Dir: repoDir}
 	cs, _, err := r.Commits(vcs.CommitsOptions{
 		Head:    vcs.CommitID(head),
@@ -313,14 +332,20 @@ func listCommits(repoDir, base, head string) ([]event.Commit, error) {
 	var commits []event.Commit
 	for i := len(cs) - 1; i >= 0; i-- {
 		c := cs[i]
-		avatarURL := "https://secure.gravatar.com/avatar?d=mm&f=y&s=96"
-		if c.Author.Email == knownUser.Email {
-			avatarURL = knownUser.AvatarURL
+
+		user, ok := gitUsers[strings.ToLower(c.Author.Email)]
+		if !ok {
+			user = users.User{
+				Name:      c.Author.Name,
+				Email:     c.Author.Email,
+				AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96", // TODO: Use email.
+			}
 		}
+
 		commits = append(commits, event.Commit{
 			SHA:             string(c.ID),
 			CommitMessage:   c.Message,
-			AuthorAvatarURL: avatarURL,
+			AuthorAvatarURL: user.AvatarURL,
 			// TODO: Set HTMLURL once there's a commit page available.
 		})
 	}
