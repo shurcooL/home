@@ -660,7 +660,11 @@ func (c commit) Render() []*html.Node {
 	}
 	sha := &html.Node{
 		Type: html.ElementNode, Data: atom.Code.String(),
-		FirstChild: htmlg.Text(shortSHA(c.SHA)),
+		Attr: []html.Attribute{
+			{Key: atom.Style.String(), Val: "width: 8ch; overflow: hidden; display: inline-grid; white-space: nowrap;"},
+			{Key: atom.Title.String(), Val: c.SHA},
+		},
+		FirstChild: htmlg.Text(c.SHA),
 	}
 	if c.HTMLURL != "" {
 		sha = &html.Node{
@@ -694,24 +698,24 @@ type commitID struct {
 }
 
 func (c commitID) Render() []*html.Node {
-	code := &html.Node{
+	sha := &html.Node{
 		Type: html.ElementNode, Data: atom.Code.String(),
-		FirstChild: htmlg.Text(shortSHA(c.SHA)),
+		Attr: []html.Attribute{
+			{Key: atom.Style.String(), Val: "width: 8ch; overflow: hidden; display: inline-grid; white-space: nowrap;"},
+			{Key: atom.Title.String(), Val: c.SHA},
+		},
+		FirstChild: htmlg.Text(c.SHA),
 	}
 	if c.HTMLURL != "" {
-		code = &html.Node{
+		sha = &html.Node{
 			Type: html.ElementNode, Data: atom.A.String(),
 			Attr: []html.Attribute{
 				{Key: atom.Href.String(), Val: c.HTMLURL},
 			},
-			FirstChild: code,
+			FirstChild: sha,
 		}
 	}
-	return []*html.Node{code}
-}
-
-func shortSHA(sha string) string {
-	return sha[:8]
+	return []*html.Node{sha}
 }
 
 func shortCommit(s string) string {
