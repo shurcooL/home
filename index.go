@@ -34,6 +34,7 @@ var indexHTML = template.Must(template.New("").Parse(`<html>
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/index/style.css" rel="stylesheet" type="text/css">
+		<link href="https://github.com/shurcooL" rel="me">
 		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>
