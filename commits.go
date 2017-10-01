@@ -23,7 +23,7 @@ import (
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/gitcmd"
 )
 
-// commitsHandler is a handler for display a list of commits of a git repository.
+// commitsHandler is a handler for displaying a list of commits of a git repository.
 //
 // Currently, it is hardcoded for dmitri.shuralyov.com/kebabcase repo,
 // and returns an error if Repo != "dmitri.shuralyov.com/kebabcase".
@@ -55,23 +55,6 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := commitsHTML.Execute(w, struct {
-		Production bool
-		Name       string
-	}{
-		Production: *productionFlag,
-		Name:       "kebabcase",
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
-	if err != nil {
-		return err
-	}
-
 	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
 	if err != nil {
 		log.Println(err)
@@ -91,6 +74,23 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Head:    vcs.CommitID("master"),
 		NoTotal: true,
 	})
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err = commitsHTML.Execute(w, struct {
+		Production bool
+		Name       string
+	}{
+		Production: *productionFlag,
+		Name:       "kebabcase",
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (c Commit) Render() []*html.Node {
 		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "flex-grow: 1;"}},
 	}
 	{
-		commitTitle, commitDetails := commitMessage(c.Commit.Message)
+		commitSubject, commitBody := splitCommitMessage(c.Commit.Message)
 
 		title := htmlg.Div(
 			&html.Node{
@@ -247,10 +247,10 @@ func (c Commit) Render() []*html.Node {
 					{Key: atom.Class.String(), Val: "black"},
 					//{Key: atom.Href.String(), Val: "..."}, // TODO.
 				},
-				FirstChild: htmlg.Strong(commitTitle),
+				FirstChild: htmlg.Strong(commitSubject),
 			},
 		)
-		if commitDetails != "" {
+		if commitBody != "" {
 			htmlg.AppendChildren(title, homecomponent.EllipsisButton{OnClick: "ToggleDetails(this);"}.Render()...)
 		}
 		titleAndByline.AppendChild(title)
@@ -262,7 +262,7 @@ func (c Commit) Render() []*html.Node {
 		htmlg.AppendChildren(byline, issuescomponent.Time{Time: c.Commit.Author.Date.Time()}.Render()...)
 		titleAndByline.AppendChild(byline)
 
-		if commitDetails != "" {
+		if commitBody != "" {
 			pre := &html.Node{
 				Type: html.ElementNode, Data: atom.Pre.String(),
 				Attr: []html.Attribute{
@@ -273,7 +273,7 @@ color: #444;
 margin-top: 10px;
 margin-bottom: 0;
 display: none;`}},
-				FirstChild: htmlg.Text(commitDetails),
+				FirstChild: htmlg.Text(commitBody),
 			}
 			titleAndByline.AppendChild(pre)
 		}
@@ -299,8 +299,8 @@ display: none;`}},
 	return []*html.Node{listEntryDiv}
 }
 
-// commitMessage splits commit message s into title and details, if any.
-func commitMessage(s string) (title, details string) {
+// splitCommitMessage splits commit message s into subject and body, if any.
+func splitCommitMessage(s string) (subject, body string) {
 	i := strings.Index(s, "\n\n")
 	if i == -1 {
 		return s, ""
