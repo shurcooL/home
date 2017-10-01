@@ -245,7 +245,7 @@ func (c Commit) Render() []*html.Node {
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Class.String(), Val: "black"},
-					//{Key: atom.Href.String(), Val: "..."}, // TODO.
+					{Key: atom.Href.String(), Val: "commit/" + string(c.Commit.ID)},
 				},
 				FirstChild: htmlg.Strong(commitSubject),
 			},

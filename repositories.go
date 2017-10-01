@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,6 +58,13 @@ func initRepositories(root string, notifications notifications.Service, events e
 		users:         usersService,
 		gitUsers:      gitUsers,
 	}).ServeHTTP)}
+	commitHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitHandler{
+		Repo:          repo,
+		RepoDir:       repoDir,
+		notifications: notifications,
+		users:         usersService,
+		gitUsers:      gitUsers,
+	}).ServeHTTP)}
 	h := &gitHandler{
 		GitUploadPack:  gitUploadPack,
 		GitReceivePack: gitReceivePack,
@@ -69,6 +77,7 @@ func initRepositories(root string, notifications notifications.Service, events e
 		RepoDir: repoDir,
 		Index:   packageHandler,
 		Commits: commitsHandler,
+		Commit:  commitHandler,
 	}
 	http.Handle("/kebabcase", h)
 	http.Handle("/kebabcase/", h)
@@ -88,9 +97,11 @@ type gitHandler struct {
 	RepoDir string       // Path to repository directory on disk.
 	Index   http.Handler // Handler for index page.
 	Commits http.Handler // Handler for commits page.
+	Commit  http.Handler // Handler for commit page.
 }
 
 func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// TODO: Factor h.Path out?
 	switch req.URL.String() {
 	case h.Path + "/info/refs?service=git-upload-pack":
 		if req.Method != http.MethodGet {
@@ -307,11 +318,14 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 	default:
-		switch req.URL.Path {
-		case h.Path:
+		switch {
+		case req.URL.Path == h.Path:
 			h.Index.ServeHTTP(w, req)
-		case h.Path + "/commits":
+		case req.URL.Path == h.Path+"/commits":
 			h.Commits.ServeHTTP(w, req)
+		case strings.HasPrefix(req.URL.Path, h.Path+"/commit/"):
+			req = stripPrefix(req, len(h.Path)+len("/commit"))
+			h.Commit.ServeHTTP(w, req)
 		default:
 			http.Error(w, "404 Not Found", http.StatusNotFound)
 		}
@@ -350,4 +364,19 @@ func listCommits(repoDir, base, head string, gitUsers map[string]users.User) ([]
 		})
 	}
 	return commits, nil
+}
+
+// stripPrefix returns request r with prefix of length prefixLen stripped from r.URL.Path.
+// prefixLen must not be longer than len(r.URL.Path), otherwise stripPrefix panics.
+// If r.URL.Path is empty after the prefix is stripped, the path is changed to "/".
+func stripPrefix(r *http.Request, prefixLen int) *http.Request {
+	r2 := new(http.Request)
+	*r2 = *r
+	r2.URL = new(url.URL)
+	*r2.URL = *r.URL
+	r2.URL.Path = r.URL.Path[prefixLen:]
+	if r2.URL.Path == "" {
+		r2.URL.Path = "/"
+	}
+	return r2
 }
