@@ -67,6 +67,7 @@ div.multilist-entry:not(:first-child) {
 	border: 0;
 	border-radius: 1px;
 	margin-left: 6px;
+	cursor: pointer;
 }
 .ellipsis-button:hover {
 	background-color: #c6cbd1;
