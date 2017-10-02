@@ -111,37 +111,13 @@ func initAbout(notifications notifications.Service, users users.Service) {
 						attr.Style("font-size: 20px; font-weight: 300; color: #666;"),
 						shurcool.Login,
 					),
-				),
-				elem.Div(
-					attr.Style("margin-top: 24px;"),
-					elem.P(
-						"Dmitri Shuralyov is a software engineer and an avid ",
-						elem.A(attr.Title("Someone who uses Go."), attr.Href("https://golang.org"),
-							"gopher",
-						),
-						". He strives to make software more delightful.",
-					),
-					elem.P(
-						"Coming from a game development and graphics/UI background where C++ was used predominantly, ",
-						"he discovered and made a full switch to Go ",
-						elem.Abbr(attr.Title("2013."), attr.Href("https://golang.org"),
-							"four years ago",
-						),
-						", which lead to increased developer happiness.",
-					),
-					elem.P(
-						"In his spare time, he's mostly working on software development tools and ",
-						"exploring experimental ideas. He enjoys contributing to open source, ",
-						"fixing issues in existing tools and the ",
-						elem.A(attr.Href("https://github.com/golang/go/commits/master?author=shurcooL"),
-							"Go project",
-						),
-						" itself.",
-					),
-				),
-				elem.Div(
-					attr.Style("border-top: 1px solid #f0f0f0;"),
 					elem.Ul(
+						attr.Style("margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0;"),
+						elem.Li(iconLink{
+							Text: shurcool.Email,
+							URL:  "mailto:" + shurcool.Email,
+							Icon: faIcon("envelope-o"),
+						}),
 						elem.Li(iconLink{
 							Text: "github.com/shurcooL",
 							URL:  "https://github.com/shurcooL",
@@ -152,6 +128,30 @@ func initAbout(notifications notifications.Service, users users.Service) {
 							URL:  "https://twitter.com/shurcooL",
 							Icon: faIcon("twitter"),
 						}),
+					),
+				),
+				elem.Div(
+					elem.P(
+						shurcool.Name+" is a software engineer and an avid ",
+						elem.A(attr.Title("Someone who uses Go."), attr.Href("https://golang.org"),
+							"gopher",
+						),
+						". He strives to make software more delightful.",
+					),
+					elem.P(
+						"Coming from a game development and graphics/UI background where C++ was used predominantly, ",
+						"he discovered and made a full switch to Go ",
+						elem.Abbr(attr.Title("2013."), "four years ago"),
+						", which lead to increased developer happiness.",
+					),
+					elem.P(
+						"In his spare time, he's mostly working on software development tools and ",
+						"exploring experimental ideas. He enjoys contributing to open source, ",
+						"fixing issues in existing tools and the ",
+						elem.A(attr.Href("https://github.com/golang/go/commits/master?author=shurcooL"),
+							"Go project",
+						),
+						" itself.",
 					),
 				),
 			)
