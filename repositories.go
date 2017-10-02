@@ -281,7 +281,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			const zero = "0000000000000000000000000000000000000000"
 			switch {
 			case e.Type == githttp.PUSH && e.Last != zero && e.Commit != zero:
-				commits, err := listCommits(h.RepoDir, e.Last, e.Commit, h.gitUsers)
+				commits, err := listCommits(h.RepoDir, e.Last, e.Commit, h.commitHTMLURL, h.gitUsers)
 				if err != nil {
 					log.Println("listCommits:", err)
 				}
@@ -332,8 +332,12 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (h *gitHandler) commitHTMLURL(id vcs.CommitID) string {
+	return h.Path + "/commit/" + string(id)
+}
+
 // listCommits returns a list of commits in repoDir from base to head.
-func listCommits(repoDir, base, head string, gitUsers map[string]users.User) ([]event.Commit, error) {
+func listCommits(repoDir, base, head string, commitHTMLURL func(vcs.CommitID) string, gitUsers map[string]users.User) ([]event.Commit, error) {
 	r := &gitcmd.Repository{Dir: repoDir}
 	cs, _, err := r.Commits(vcs.CommitsOptions{
 		Head:    vcs.CommitID(head),
@@ -360,7 +364,7 @@ func listCommits(repoDir, base, head string, gitUsers map[string]users.User) ([]
 			SHA:             string(c.ID),
 			CommitMessage:   c.Message,
 			AuthorAvatarURL: user.AvatarURL,
-			// TODO: Set HTMLURL once there's a commit page available.
+			HTMLURL:         commitHTMLURL(c.ID),
 		})
 	}
 	return commits, nil
