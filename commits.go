@@ -7,9 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
-	"github.com/shurcooL/go/timeutil"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
@@ -179,40 +177,11 @@ func (cs Commits) Render() []*html.Node {
 		return []*html.Node{htmlg.DivClass("list-entry-border", div)}
 	}
 
-	var (
-		now      = time.Now()
-		headings = []struct {
-			Text string
-			End  time.Time
-		}{
-			{Text: "Today", End: timeutil.StartOfDay(now).Add(24 * time.Hour)},
-			{Text: "Yesterday", End: timeutil.StartOfDay(now)},
-			{Text: "This Week", End: timeutil.StartOfDay(now).Add(-24 * time.Hour)},
-			{Text: "Last Week", End: timeutil.StartOfWeek(now)},
-			{Text: "Earlier", End: timeutil.StartOfWeek(now).Add(-7 * 24 * time.Hour)},
-		}
-	)
-
 	var nodes []*html.Node
-	var commits *html.Node
 	for _, c := range cs.Commits {
-		// Heading.
-		if time := c.Commit.Committer.Date.Time(); len(headings) > 0 && headings[0].End.After(time) {
-			for len(headings) >= 2 && headings[1].End.After(time) {
-				headings = headings[1:]
-			}
-			commits = htmlg.DivClass("list-entry-border") // Create a new sequence of commits.
-			nodes = append(nodes,
-				htmlg.H4(htmlg.Text(headings[0].Text)),
-				commits,
-			)
-			headings = headings[1:]
-		}
-
-		// Commit.
-		htmlg.AppendChildren(commits, c.Render()...)
+		nodes = append(nodes, c.Render()...)
 	}
-	return nodes
+	return []*html.Node{htmlg.DivClass("list-entry-border", nodes...)}
 }
 
 type Commit struct {
