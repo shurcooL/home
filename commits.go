@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/htmlg"
@@ -140,16 +141,21 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 
 	var commits []Commit
 	for _, c := range cs {
-		user, ok := h.gitUsers[strings.ToLower(c.Author.Email)]
+		author, ok := h.gitUsers[strings.ToLower(c.Author.Email)]
 		if !ok {
-			user = users.User{
+			author = users.User{
 				Name:      c.Author.Name,
 				Email:     c.Author.Email,
 				AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96", // TODO: Use email.
 			}
 		}
 
-		commits = append(commits, Commit{Commit: c, User: user})
+		commits = append(commits, Commit{
+			SHA:        string(c.ID),
+			Message:    c.Message,
+			Author:     author,
+			AuthorTime: c.Author.Date.Time(),
+		})
 	}
 	err = htmlg.RenderComponents(w, Commits{Commits: commits})
 	if err != nil {
@@ -185,8 +191,10 @@ func (cs Commits) Render() []*html.Node {
 }
 
 type Commit struct {
-	Commit *vcs.Commit
-	User   users.User
+	SHA        string
+	Message    string
+	Author     users.User
+	AuthorTime time.Time
 }
 
 func (c Commit) Render() []*html.Node {
@@ -199,7 +207,7 @@ func (c Commit) Render() []*html.Node {
 		Type: html.ElementNode, Data: atom.Div.String(),
 		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "margin-right: 6px;"}},
 	}
-	htmlg.AppendChildren(avatarDiv, issuescomponent.Avatar{User: c.User, Size: 32}.Render()...)
+	htmlg.AppendChildren(avatarDiv, issuescomponent.Avatar{User: c.Author, Size: 32}.Render()...)
 	div.AppendChild(avatarDiv)
 
 	titleAndByline := &html.Node{
@@ -207,14 +215,14 @@ func (c Commit) Render() []*html.Node {
 		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "flex-grow: 1;"}},
 	}
 	{
-		commitSubject, commitBody := splitCommitMessage(c.Commit.Message)
+		commitSubject, commitBody := splitCommitMessage(c.Message)
 
 		title := htmlg.Div(
 			&html.Node{
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Class.String(), Val: "black"},
-					{Key: atom.Href.String(), Val: "commit/" + string(c.Commit.ID)},
+					{Key: atom.Href.String(), Val: "commit/" + c.SHA},
 				},
 				FirstChild: htmlg.Strong(commitSubject),
 			},
@@ -226,9 +234,9 @@ func (c Commit) Render() []*html.Node {
 
 		byline := htmlg.DivClass("gray tiny")
 		byline.Attr = append(byline.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 2px;"})
-		htmlg.AppendChildren(byline, issuescomponent.User{User: c.User}.Render()...)
+		htmlg.AppendChildren(byline, issuescomponent.User{User: c.Author}.Render()...)
 		byline.AppendChild(htmlg.Text(" committed "))
-		htmlg.AppendChildren(byline, issuescomponent.Time{Time: c.Commit.Author.Date.Time()}.Render()...)
+		htmlg.AppendChildren(byline, issuescomponent.Time{Time: c.AuthorTime}.Render()...)
 		titleAndByline.AppendChild(byline)
 
 		if commitBody != "" {
@@ -249,7 +257,7 @@ display: none;`}},
 	}
 	div.AppendChild(titleAndByline)
 
-	commitID := commitID{SHA: string(c.Commit.ID)}
+	commitID := commitID{SHA: c.SHA}
 	htmlg.AppendChildren(div, commitID.Render()...)
 
 	a := &html.Node{
@@ -257,7 +265,7 @@ display: none;`}},
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px; margin-left: 12px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/dmitri.shuralyov.com/kebabcase?rev=" + string(c.Commit.ID)},
+			{Key: atom.Href.String(), Val: "https://gotools.org/dmitri.shuralyov.com/kebabcase?rev=" + c.SHA},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octiconssvg.Code(),
