@@ -6,14 +6,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"strings"
+	"time"
 
+	"github.com/google/go-github/github"
+	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/events"
+	"github.com/shurcooL/githubql"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
+	"github.com/shurcooL/issues/githubqlapi"
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/httphandler"
 	"github.com/shurcooL/issuesapp/httproute"
@@ -23,10 +30,38 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/net/webdav"
+	"golang.org/x/oauth2"
 )
 
 func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (issues.Service, error) {
-	return fs.NewService(root, notifications, events, users)
+	local, err := fs.NewService(root, notifications, events, users)
+	if err != nil {
+		return nil, err
+	}
+
+	authTransport := &oauth2.Transport{
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_ISSUES")}),
+	}
+	cacheTransport := &httpcache.Transport{
+		Transport:           authTransport,
+		Cache:               httpcache.NewMemoryCache(),
+		MarkCachedResponses: true,
+	}
+	httpClient := &http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}
+	shurcoolGitHubIssues, err := githubqlapi.NewService(
+		github.NewClient(httpClient),
+		githubql.NewClient(httpClient),
+		notifications,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return shurcoolSeesGitHubIssues{
+		service:              local,
+		shurcoolGitHubIssues: shurcoolGitHubIssues,
+		users:                users,
+	}, nil
 }
 
 // initIssues registers handlers for the issues service HTTP API,
@@ -172,5 +207,200 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		mux.Handle(repo.BaseURL+"/", issuesHandler)
 	}
 
+	githubIssuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
+		// Parse "/issues/github.com/..." request.
+		elems := strings.SplitN(req.URL.Path[len("/issues/github.com/"):], "/", 3)
+		if len(elems) < 2 || elems[0] == "" || elems[1] == "" {
+			return os.ErrNotExist
+		}
+		specURL := "github.com/" + elems[0] + "/" + elems[1]
+		baseURL := "/issues/" + specURL
+
+		prefixLen := len(baseURL)
+		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
+			baseURL := prefix
+			if req.URL.RawQuery != "" {
+				baseURL += "?" + req.URL.RawQuery
+			}
+			return httperror.Redirect{URL: baseURL}
+		}
+		returnURL := req.RequestURI
+		req = copyRequestAndURL(req)
+		req.URL.Path = req.URL.Path[prefixLen:]
+		if req.URL.Path == "" {
+			req.URL.Path = "/"
+		}
+		rr := httptest.NewRecorder()
+		rr.HeaderMap = w.Header()
+		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: specURL}))
+		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, baseURL))
+		issuesApp.ServeHTTP(rr, req)
+		// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
+		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
+		if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
+			loginURL := (&url.URL{
+				Path:     "/login",
+				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
+			}).String()
+			return httperror.Redirect{URL: loginURL}
+		}
+		w.WriteHeader(rr.Code)
+		_, err := io.Copy(w, rr.Body)
+		return err
+	})}
+	mux.Handle("/issues/github.com/", githubIssuesHandler)
+
 	return nil
+}
+
+// shurcoolSeesGitHubIssues lets shurcooL also see issues on GitHub,
+// in addition to local ones.
+type shurcoolSeesGitHubIssues struct {
+	service              issues.Service
+	shurcoolGitHubIssues issues.Service
+	users                users.Service
+}
+
+func (s shurcoolSeesGitHubIssues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.List(ctx, repo, opt)
+	}
+
+	return s.service.List(ctx, repo, opt)
+}
+
+func (s shurcoolSeesGitHubIssues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return 0, err
+		}
+		if currentUser != shurcool {
+			return 0, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.Count(ctx, repo, opt)
+	}
+
+	return s.service.Count(ctx, repo, opt)
+}
+
+func (s shurcoolSeesGitHubIssues) Get(ctx context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return issues.Issue{}, err
+		}
+		if currentUser != shurcool {
+			return issues.Issue{}, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.Get(ctx, repo, id)
+	}
+
+	return s.service.Get(ctx, repo, id)
+}
+
+func (s shurcoolSeesGitHubIssues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.ListComments(ctx, repo, id, opt)
+	}
+
+	return s.service.ListComments(ctx, repo, id, opt)
+}
+
+func (s shurcoolSeesGitHubIssues) ListEvents(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.ListEvents(ctx, repo, id, opt)
+	}
+
+	return s.service.ListEvents(ctx, repo, id, opt)
+}
+
+func (s shurcoolSeesGitHubIssues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return issues.Issue{}, err
+		}
+		if currentUser != shurcool {
+			return issues.Issue{}, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.Create(ctx, repo, issue)
+	}
+
+	return s.service.Create(ctx, repo, issue)
+}
+
+func (s shurcoolSeesGitHubIssues) CreateComment(ctx context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return issues.Comment{}, err
+		}
+		if currentUser != shurcool {
+			return issues.Comment{}, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.CreateComment(ctx, repo, id, comment)
+	}
+
+	return s.service.CreateComment(ctx, repo, id, comment)
+}
+
+func (s shurcoolSeesGitHubIssues) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return issues.Issue{}, nil, err
+		}
+		if currentUser != shurcool {
+			return issues.Issue{}, nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.Edit(ctx, repo, id, ir)
+	}
+
+	return s.service.Edit(ctx, repo, id, ir)
+}
+
+func (s shurcoolSeesGitHubIssues) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return issues.Comment{}, err
+		}
+		if currentUser != shurcool {
+			return issues.Comment{}, os.ErrPermission
+		}
+		return s.shurcoolGitHubIssues.EditComment(ctx, repo, id, cr)
+	}
+
+	return s.service.EditComment(ctx, repo, id, cr)
 }
