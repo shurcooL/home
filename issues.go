@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -251,6 +252,19 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 	mux.Handle("/issues/github.com/", githubIssuesHandler)
 
 	return nil
+}
+
+// notificationsRouter implements notifications/githubapi.Router that targets GitHub issues
+// on local issuesapp.
+// TODO: It embeds issuesapp routing details; perhaps it should be moved there?
+type notificationsRouter struct{}
+
+func (notificationsRouter) IssueURL(owner, repo string, issueID, commentID uint64) string {
+	var fragment string
+	if commentID != 0 {
+		fragment = fmt.Sprintf("#comment-%d", commentID)
+	}
+	return fmt.Sprintf("/issues/github.com/%s/%s/%d%s", owner, repo, issueID, fragment)
 }
 
 // shurcoolSeesGitHubIssues lets shurcooL also see issues on GitHub,

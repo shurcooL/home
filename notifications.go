@@ -44,6 +44,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 	shurcoolGitHubNotifications := githubapi.NewService(
 		github.NewClient(httpClient),
 		githubql.NewClient(httpClient),
+		notificationsRouter{},
 	)
 
 	notificationsService := shurcoolSeesGitHubNotifications{
