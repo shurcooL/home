@@ -273,10 +273,10 @@ func (s shurcoolBlogService) Create(ctx context.Context, repo issues.RepoSpec, i
 	return s.Service.Create(ctx, repo, issue)
 }
 
-func (s shurcoolBlogService) ThreadType() string {
+func (s shurcoolBlogService) ThreadType(repo issues.RepoSpec) string {
 	return s.Service.(interface {
-		ThreadType() string
-	}).ThreadType()
+		ThreadType(issues.RepoSpec) string
+	}).ThreadType(repo)
 }
 
 // forceIssuesAppContextKey is a context key. It can be used to check whether

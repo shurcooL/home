@@ -418,3 +418,16 @@ func (s shurcoolSeesGitHubIssues) EditComment(ctx context.Context, repo issues.R
 
 	return s.service.EditComment(ctx, repo, id, cr)
 }
+
+func (s shurcoolSeesGitHubIssues) ThreadType(repo issues.RepoSpec) string {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		return s.shurcoolGitHubIssues.(interface {
+			ThreadType(issues.RepoSpec) string
+		}).ThreadType(repo)
+	}
+
+	return s.service.(interface {
+		ThreadType(issues.RepoSpec) string
+	}).ThreadType(repo)
+}
