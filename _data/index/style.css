@@ -59,7 +59,7 @@ div.activity code {
 	margin: 8px 0 0 48px;
 }
 .activity div.details a.black {
-	color: black;
+	color: rgb(35, 35, 35);
 	text-decoration: none;
 }
 .activity div.details a.black:hover {

@@ -61,7 +61,7 @@ header.header {
 }
 
 header.header a {
-	color: black;
+	color: rgb(35, 35, 35);
 	text-decoration: none;
 	font-weight: bold;
 }

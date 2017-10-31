@@ -12,7 +12,7 @@ a:hover {
 	text-decoration: underline;
 }
 a.black {
-	color: black;
+	color: rgb(35, 35, 35);
 	text-decoration: none;
 }
 a.black:hover {

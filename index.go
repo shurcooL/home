@@ -347,9 +347,11 @@ func (a activity) Render() []*html.Node {
 				Icon:       octiconssvg.RepoForked,
 				Action:     component.Text("forked"),
 				Details: iconLink{
-					Text: p.Container,
-					URL:  "https://" + p.Container,
-					Icon: octiconssvg.Repo,
+					Text:      p.Container,
+					URL:       "https://" + p.Container,
+					Black:     true,
+					Icon:      octiconssvg.Repo,
+					IconColor: &RGB{R: 35, G: 35, B: 35}, // Black (not pure).
 				},
 			}
 		case event.Delete:
