@@ -74,7 +74,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		font-family: Go;
 		font-size: 14px;
 		line-height: initial;
-		color: #373a3c;
+		color: rgb(35, 35, 35);
 	}
 </style>`,
 	}

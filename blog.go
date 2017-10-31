@@ -57,7 +57,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 		font-family: Go;
 		font-size: 14px;
 		line-height: initial;
-		color: #373a3c;
+		color: rgb(35, 35, 35);
 	}
 	.btn {
 		font-family: inherit;
@@ -75,7 +75,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
     	line-height: 1.6;
     }
     .post .black-link a, .black-link a:focus, .black-link a:hover {
-		color: #373a3c;
+		color: rgb(35, 35, 35);
 	}
 	.post ul.post-meta {
 		padding-left: 0;

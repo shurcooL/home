@@ -88,7 +88,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		font-family: Go;
 		font-size: 14px;
 		line-height: initial;
-		color: #373a3c;
+		color: rgb(35, 35, 35);
 	}
 	.btn {
 		font-family: inherit;

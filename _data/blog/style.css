@@ -20,7 +20,7 @@ li.post-meta {
 }
 
 .black-link a, .black-link a:focus, .black-link a:hover {
-	color: #373a3c;
+	color: rgb(35, 35, 35);
 }
 
 div.reactable-container {
