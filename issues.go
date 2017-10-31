@@ -214,6 +214,19 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		if len(elems) < 2 || elems[0] == "" || elems[1] == "" {
 			return os.ErrNotExist
 		}
+		currentUser, err := users.GetAuthenticatedSpec(req.Context())
+		if err != nil {
+			return err
+		}
+		if currentUser != shurcool {
+			// Redirect to GitHub.
+			switch len(elems) {
+			case 2:
+				return httperror.Redirect{URL: "https://github.com/" + elems[0] + "/" + elems[1] + "/issues"}
+			default:
+				return httperror.Redirect{URL: "https://github.com/" + elems[0] + "/" + elems[1] + "/issues/" + elems[2]}
+			}
+		}
 		specURL := "github.com/" + elems[0] + "/" + elems[1]
 		baseURL := "/issues/" + specURL
 
@@ -246,7 +259,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			return httperror.Redirect{URL: loginURL}
 		}
 		w.WriteHeader(rr.Code)
-		_, err := io.Copy(w, rr.Body)
+		_, err = io.Copy(w, rr.Body)
 		return err
 	})}
 	mux.Handle("/issues/github.com/", githubIssuesHandler)
