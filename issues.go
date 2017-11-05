@@ -26,6 +26,7 @@ import (
 	"github.com/shurcooL/issuesapp/httphandler"
 	"github.com/shurcooL/issuesapp/httproute"
 	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/notifications/githubapi"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -191,7 +192,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: repo.SpecURL}))
 			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, repo.BaseURL))
 			issuesApp.ServeHTTP(rr, req)
-			// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
+			// TODO: Have issuesApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
 			// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
 			if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
 				loginURL := (&url.URL{
@@ -270,7 +271,9 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 // notificationsRouter implements notifications/githubapi.Router that targets GitHub issues
 // on local issuesapp.
 // TODO: It embeds issuesapp routing details; perhaps it should be moved there?
-type notificationsRouter struct{}
+type notificationsRouter struct {
+	githubapi.Router
+}
 
 func (notificationsRouter) IssueURL(owner, repo string, issueID, commentID uint64) string {
 	var fragment string
