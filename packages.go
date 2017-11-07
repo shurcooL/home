@@ -931,15 +931,10 @@ var packages = []goPackage{
 		Doc:        "Package fs implements issues.Service using a filesystem.",
 	},
 	{
+		New:        true,
 		ImportPath: "github.com/shurcooL/issues/githubapi",
 		Command:    false,
-		Doc:        "Package githubapi implements issues.Service using GitHub API client.",
-	},
-	{
-		New:        true,
-		ImportPath: "github.com/shurcooL/issues/githubqlapi",
-		Command:    false,
-		Doc:        "Package githubqlapi implements issues.Service using GitHub GraphQL API v4 client.",
+		Doc:        "Package githubapi implements issues.Service using GitHub API clients.",
 	},
 	{
 		New:        true,

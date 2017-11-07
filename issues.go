@@ -21,12 +21,12 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
-	"github.com/shurcooL/issues/githubqlapi"
+	ghissues "github.com/shurcooL/issues/githubapi"
 	"github.com/shurcooL/issuesapp"
 	"github.com/shurcooL/issuesapp/httphandler"
 	"github.com/shurcooL/issuesapp/httproute"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/notifications/githubapi"
+	ghnotifications "github.com/shurcooL/notifications/githubapi"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -50,7 +50,7 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 		MarkCachedResponses: true,
 	}
 	httpClient := &http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}
-	shurcoolGitHubIssues, err := githubqlapi.NewService(
+	shurcoolGitHubIssues, err := ghissues.NewService(
 		github.NewClient(httpClient),
 		githubql.NewClient(httpClient),
 		notifications,
@@ -279,7 +279,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 // on local issuesapp.
 // TODO: It embeds issuesapp routing details; perhaps it should be moved there?
 type notificationsRouter struct {
-	githubapi.Router
+	ghnotifications.Router
 }
 
 func (notificationsRouter) IssueURL(owner, repo string, issueID, commentID uint64) string {
