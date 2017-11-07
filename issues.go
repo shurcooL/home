@@ -91,6 +91,13 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		line-height: initial;
 		color: rgb(35, 35, 35);
 	}
+	a {
+		color: #4183c4;
+		text-decoration: none;
+	}
+	a:hover {
+		text-decoration: underline;
+	}
 	.btn {
 		font-family: inherit;
 		font-size: 11px;
