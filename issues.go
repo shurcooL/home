@@ -15,7 +15,7 @@ import (
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/githubql"
-	"github.com/shurcooL/home/component"
+	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
@@ -23,6 +23,7 @@ import (
 	"github.com/shurcooL/issues/fs"
 	ghissues "github.com/shurcooL/issues/githubapi"
 	"github.com/shurcooL/issuesapp"
+	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/issuesapp/httphandler"
 	"github.com/shurcooL/issuesapp/httproute"
 	"github.com/shurcooL/notifications"
@@ -98,6 +99,12 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 	a:hover {
 		text-decoration: underline;
 	}
+	a.gray {
+		color: #bbb;
+	}
+	a.gray:hover {
+		color: black;
+	}
 	.btn {
 		font-family: inherit;
 		font-size: 11px;
@@ -135,40 +142,74 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		}
 		returnURL := req.RequestURI
 
-		header := component.Header{
+		header := homecomponent.Header{
 			CurrentUser:       authenticatedUser,
 			NotificationCount: nc,
 			ReturnURL:         returnURL,
 		}
 
-		if req.Context().Value(issuesapp.RepoSpecContextKey) != (issues.RepoSpec{URI: "dmitri.shuralyov.com/kebabcase"}) {
+		switch repo := req.Context().Value(issuesapp.RepoSpecContextKey).(issues.RepoSpec); {
+		default:
 			return []htmlg.Component{header}, nil
-		}
 
-		heading := htmlg.NodeComponent{
-			Type: html.ElementNode, Data: atom.H2.String(),
-			FirstChild: htmlg.Text("Package kebabcase"),
-		}
+		case repo.URI == "dmitri.shuralyov.com/kebabcase":
+			heading := htmlg.NodeComponent{
+				Type: html.ElementNode, Data: atom.H2.String(),
+				FirstChild: htmlg.Text("Package kebabcase"),
+			}
+			tabnav := tabnav{
+				Tabs: []tab{
+					{
+						Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
+						URL:     "/kebabcase",
+					},
+					{
+						Content: iconText{Icon: octiconssvg.History, Text: "History"},
+						URL:     "/kebabcase/commits",
+					},
+					{
+						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+						URL:      "/kebabcase/issues",
+						Selected: true,
+					},
+				},
+			}
+			return []htmlg.Component{header, heading, tabnav}, nil
 
-		tabnav := tabnav{
-			Tabs: []tab{
-				{
-					Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-					URL:     "/kebabcase",
-				},
-				{
-					Content: iconText{Icon: octiconssvg.History, Text: "History"},
-					URL:     "/kebabcase/commits",
-				},
-				{
-					Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-					URL:      "/kebabcase/issues",
-					Selected: true,
-				},
-			},
-		}
+		case strings.HasPrefix(repo.URI, "github.com/") &&
+			repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 
-		return []htmlg.Component{header, heading, tabnav}, nil
+			var githubURL string
+			switch issueID := req.Context().Value(issuesapp.StateContextKey).(common.State).IssueID; issueID {
+			case 0:
+				githubURL = fmt.Sprintf("https://%s/issues", repo.URI)
+			default:
+				githubURL = fmt.Sprintf("https://%s/issues/%d", repo.URI, issueID)
+			}
+			heading := &html.Node{
+				Type: html.ElementNode, Data: atom.H2.String(),
+			}
+			heading.AppendChild(htmlg.Text(repo.URI))
+			heading.AppendChild(&html.Node{
+				Type: html.ElementNode, Data: atom.A.String(),
+				Attr: []html.Attribute{
+					{Key: atom.Href.String(), Val: githubURL},
+					{Key: atom.Class.String(), Val: "gray"},
+					{Key: atom.Style.String(), Val: "margin-left: 10px;"},
+				},
+				FirstChild: octiconssvg.SetSize(octiconssvg.MarkGitHub(), 24),
+			})
+			tabnav := tabnav{
+				Tabs: []tab{
+					{
+						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+						URL:      "/issues/" + repo.URI,
+						Selected: true,
+					},
+				},
+			}
+			return []htmlg.Component{header, htmlg.NodeComponent(*heading), tabnav}, nil
+		}
 	}
 	issuesApp := issuesapp.New(issuesService, users, opt)
 
