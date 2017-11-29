@@ -17,11 +17,12 @@ import (
 
 // packageHandler is a handler for a Go package index page, as well as
 // its ?go-get=1 go-import meta tag page.
-//
-// Currently, it is hardcoded for dmitri.shuralyov.com/kebabcase repo,
-// and returns an error if Repo != "dmitri.shuralyov.com/kebabcase".
 type packageHandler struct {
-	Repo          string // Repo URI, e.g., "example.com/some/package".
+	Repo    string // Repo URI. E.g., "example.com/some/package".
+	Path    string // Path corresponding to repo root, without domain. E.g., "/some/package".
+	Name    string // Package name. E.g., "package".
+	DocHTML string // Package doc HTML. E.g., "<p>Package package provides some functionality.</p>".
+
 	notifications notifications.Service
 	users         users.Service
 }
@@ -38,17 +39,14 @@ var packageHTML = template.Must(template.New("").Parse(`<html>
 	<body>`))
 
 func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
-	if h.Repo != "dmitri.shuralyov.com/kebabcase" {
-		return fmt.Errorf("wrong repo")
-	}
 	if req.Method != "GET" {
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
 
 	if req.URL.Query().Get("go-get") == "1" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, err := io.WriteString(w, `<meta name="go-import" content="dmitri.shuralyov.com/kebabcase git https://dmitri.shuralyov.com/kebabcase">
-<meta name="go-source" content="dmitri.shuralyov.com/kebabcase https://dmitri.shuralyov.com/kebabcase https://gotools.org/dmitri.shuralyov.com/kebabcase{/dir} https://gotools.org/dmitri.shuralyov.com/kebabcase{/dir}#{file}-L{line}">`)
+		_, err := fmt.Fprintf(w, `<meta name="go-import" content="%[1]s git https://%[1]s">
+<meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[1]s{/dir} https://gotools.org/%[1]s{/dir}#{file}-L{line}">`, h.Repo)
 		return err
 	}
 
@@ -58,7 +56,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Name       string
 	}{
 		Production: *productionFlag,
-		Name:       "kebabcase",
+		Name:       h.Name,
 	})
 	if err != nil {
 		return err
@@ -93,7 +91,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	_, err = io.WriteString(w, `<h2>Package kebabcase</h2>`)
+	_, err = fmt.Fprintf(w, `<h2>Package %s</h2>`, h.Name)
 	if err != nil {
 		return err
 	}
@@ -103,16 +101,16 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Tabs: []tab{
 			{
 				Content:  iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:      "/kebabcase",
+				URL:      h.Path,
 				Selected: true,
 			},
 			{
 				Content: iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:     "/kebabcase/commits",
+				URL:     h.Path + "/commits",
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     "/kebabcase/issues",
+				URL:     h.Path + "/issues",
 			},
 		},
 	})
@@ -120,15 +118,16 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	_, err = io.WriteString(w, `<p>Package kebabcase provides a parser for identifier names using kebab-case naming convention.<br>
-<br>
-Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers">https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers</a>.</p>
-			<h3>Installation</h3>
-			<p><pre>go get -u dmitri.shuralyov.com/kebabcase</pre></p>
-			<h3><a href="https://godoc.org/dmitri.shuralyov.com/kebabcase">Documentation</a></h3>
-			<h3><a href="https://gotools.org/dmitri.shuralyov.com/kebabcase">Code</a></h3>
+	_, err = io.WriteString(w, h.DocHTML)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(w, `<h3>Installation</h3>
+			<p><pre>go get -u %[1]s</pre></p>
+			<h3><a href="https://godoc.org/%[1]s">Documentation</a></h3>
+			<h3><a href="https://gotools.org/%[1]s">Code</a></h3>
 		</div>
 	</body>
-</html>`)
+</html>`, h.Repo)
 	return err
 }

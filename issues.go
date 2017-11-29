@@ -176,6 +176,31 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			}
 			return []htmlg.Component{header, heading, tabnav}, nil
 
+		// TODO: Dedup.
+		case repo.URI == "dmitri.shuralyov.com/scratch":
+			heading := htmlg.NodeComponent{
+				Type: html.ElementNode, Data: atom.H2.String(),
+				FirstChild: htmlg.Text("Package scratch"),
+			}
+			tabnav := tabnav{
+				Tabs: []tab{
+					{
+						Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
+						URL:     "/scratch",
+					},
+					{
+						Content: iconText{Icon: octiconssvg.History, Text: "History"},
+						URL:     "/scratch/commits",
+					},
+					{
+						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+						URL:      "/scratch/issues",
+						Selected: true,
+					},
+				},
+			}
+			return []htmlg.Component{header, heading, tabnav}, nil
+
 		case strings.HasPrefix(repo.URI, "github.com/") &&
 			repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 
@@ -218,6 +243,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		{SpecURL: "github.com/shurcooL/notificationsapp", BaseURL: "/issues/github.com/shurcooL/notificationsapp"},
 		{SpecURL: "dmitri.shuralyov.com/idiomatic-go", BaseURL: "/idiomatic-go/entries"},
 		{SpecURL: "dmitri.shuralyov.com/kebabcase", BaseURL: "/kebabcase/issues"},
+		{SpecURL: "dmitri.shuralyov.com/scratch", BaseURL: "/scratch/issues"},
 	} {
 		repo := repo
 		issuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {

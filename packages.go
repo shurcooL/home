@@ -313,6 +313,12 @@ var packages = []goPackage{
 		Command:    false,
 		Doc:        "Package kebabcase provides a parser for identifier names using kebab-case naming convention.",
 	},
+	{
+		New:        true,
+		ImportPath: "dmitri.shuralyov.com/scratch",
+		Command:    false,
+		Doc:        "Package scratch is used for testing.",
+	},
 	//{
 	//	ImportPath: "github.com/goxjs/example/motionblur",
 	//	Command:    true,

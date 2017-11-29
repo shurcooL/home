@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go/doc"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	pathpkg "path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -44,43 +46,65 @@ func initRepositories(root string, notifications notifications.Service, events e
 	}
 	gitUsers[strings.ToLower(shurcool.Email)] = shurcool
 
-	repo := "dmitri.shuralyov.com/kebabcase"
-	repoDir := filepath.Join(root, filepath.FromSlash(repo))
-	packageHandler := cookieAuth{httputil.ErrorHandler(usersService, (&packageHandler{
-		Repo:          repo,
-		notifications: notifications,
-		users:         usersService,
-	}).ServeHTTP)}
-	commitsHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitsHandler{
-		Repo:          repo,
-		RepoDir:       repoDir,
-		notifications: notifications,
-		users:         usersService,
-		gitUsers:      gitUsers,
-	}).ServeHTTP)}
-	commitHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitHandler{
-		Repo:          repo,
-		RepoDir:       repoDir,
-		notifications: notifications,
-		users:         usersService,
-		gitUsers:      gitUsers,
-	}).ServeHTTP)}
-	h := &gitHandler{
-		GitUploadPack:  gitUploadPack,
-		GitReceivePack: gitReceivePack,
-		events:         events,
-		users:          usersService,
-		gitUsers:       gitUsers,
+	for _, repo := range []struct{ Spec, Doc string }{
+		{
+			Spec: "dmitri.shuralyov.com/kebabcase",
+			Doc: `Package kebabcase provides a parser for identifier names using kebab-case naming convention.
 
-		Repo:    repo,
-		Path:    repo[len("dmitri.shuralyov.com"):],
-		RepoDir: repoDir,
-		Index:   packageHandler,
-		Commits: commitsHandler,
-		Commit:  commitHandler,
+Reference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers.`,
+		},
+		{
+			Spec: "dmitri.shuralyov.com/scratch",
+			Doc:  "Package scratch is used for testing.",
+		},
+	} {
+		path := repo.Spec[len("dmitri.shuralyov.com"):]
+		name := pathpkg.Base(repo.Spec)
+		repoDir := filepath.Join(root, filepath.FromSlash(repo.Spec))
+
+		packageHandler := cookieAuth{httputil.ErrorHandler(usersService, (&packageHandler{
+			Repo:          repo.Spec,
+			Path:          path,
+			Name:          name,
+			DocHTML:       docHTML(repo.Doc),
+			notifications: notifications,
+			users:         usersService,
+		}).ServeHTTP)}
+		commitsHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitsHandler{
+			Repo:          repo.Spec,
+			Path:          path,
+			Name:          name,
+			RepoDir:       repoDir,
+			notifications: notifications,
+			users:         usersService,
+			gitUsers:      gitUsers,
+		}).ServeHTTP)}
+		commitHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitHandler{
+			Repo:          repo.Spec,
+			Path:          path,
+			Name:          name,
+			RepoDir:       repoDir,
+			notifications: notifications,
+			users:         usersService,
+			gitUsers:      gitUsers,
+		}).ServeHTTP)}
+		h := &gitHandler{
+			GitUploadPack:  gitUploadPack,
+			GitReceivePack: gitReceivePack,
+			events:         events,
+			users:          usersService,
+			gitUsers:       gitUsers,
+
+			Repo:    repo.Spec,
+			Path:    path,
+			RepoDir: repoDir,
+			Index:   packageHandler,
+			Commits: commitsHandler,
+			Commit:  commitHandler,
+		}
+		http.Handle(path, h)
+		http.Handle(path+"/", h)
 	}
-	http.Handle("/kebabcase", h)
-	http.Handle("/kebabcase/", h)
 	return nil
 }
 
@@ -368,6 +392,13 @@ func listCommits(repoDir, base, head string, commitHTMLURL func(vcs.CommitID) st
 		})
 	}
 	return commits, nil
+}
+
+// docHTML returns documentation comment text converted to formatted HTML.
+func docHTML(text string) string {
+	var buf bytes.Buffer
+	doc.ToHTML(&buf, text, nil)
+	return buf.String()
 }
 
 // stripPrefix returns request r with prefix of length prefixLen stripped from r.URL.Path.

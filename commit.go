@@ -30,11 +30,10 @@ import (
 )
 
 // commitHandler is a handler for displaying a commit of a git repository.
-//
-// Currently, it is hardcoded for dmitri.shuralyov.com/kebabcase repo,
-// and returns an error if Repo != "dmitri.shuralyov.com/kebabcase".
 type commitHandler struct {
-	Repo          string // Repo URI, e.g., "example.com/some/package".
+	Repo          string // Repo URI. E.g., "example.com/some/package".
+	Path          string // Path corresponding to repo root, without domain. E.g., "/some/package".
+	Name          string // Package name. E.g., "package".
 	RepoDir       string // Path to repository directory on disk.
 	notifications notifications.Service
 	users         users.Service
@@ -83,9 +82,6 @@ var commitHTML = template.Must(template.New("").Parse(`<html>
 `))
 
 func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
-	if h.Repo != "dmitri.shuralyov.com/kebabcase" {
-		return fmt.Errorf("wrong repo")
-	}
 	if req.Method != "GET" {
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
@@ -121,7 +117,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		Name       string
 	}{
 		Production: *productionFlag,
-		Name:       "kebabcase",
+		Name:       h.Name,
 	})
 	if err != nil {
 		return err
@@ -143,7 +139,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	_, err = io.WriteString(w, `<h2>Package kebabcase</h2>`)
+	_, err = fmt.Fprintf(w, `<h2>Package %s</h2>`, h.Name)
 	if err != nil {
 		return err
 	}
@@ -153,16 +149,16 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		Tabs: []tab{
 			{
 				Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:     "/kebabcase",
+				URL:     h.Path,
 			},
 			{
 				Content:  iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:      "/kebabcase/commits",
+				URL:      h.Path + "/commits",
 				Selected: true,
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     "/kebabcase/issues",
+				URL:     h.Path + "/issues",
 			},
 		},
 	})
@@ -171,6 +167,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	err = commitHTML.ExecuteTemplate(w, "CommitMessage", commitMessage{
+		RepoURL:    h.Repo,
 		CommitHash: c.CommitHash,
 		Subject:    c.Subject,
 		Body:       c.Body,
@@ -293,6 +290,7 @@ func readLine(b *[]byte) string {
 }
 
 type commitMessage struct {
+	RepoURL    string // TODO: This is more of import path rather than repo; it should change for subpackages.
 	CommitHash string
 	Subject    string
 	Body       string
@@ -306,7 +304,7 @@ func (c commitMessage) ViewCode() template.HTML {
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/dmitri.shuralyov.com/kebabcase?rev=" + c.CommitHash},
+			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.RepoURL + "?rev=" + c.CommitHash},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octiconssvg.Code(),
