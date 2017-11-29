@@ -295,7 +295,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Log events.
-		now := time.Now()
+		now := time.Now().UTC()
 		for _, e := range rpc.Events {
 			evt := event.Event{
 				Time:      now,
