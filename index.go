@@ -510,7 +510,7 @@ var compactMagnitudes = []humanize.RelTimeMagnitude{
 	{D: humanize.Day, Format: "%dh", DivBy: time.Hour},
 	{D: humanize.Week, Format: "%dd", DivBy: humanize.Day},
 	{D: humanize.Month, Format: "%dw", DivBy: humanize.Week},
-	{D: humanize.Year, Format: "%dm", DivBy: humanize.Month},
+	{D: humanize.Year, Format: "%dmo", DivBy: humanize.Month},
 	{D: math.MaxInt64, Format: "%dy", DivBy: humanize.Year},
 }
 
