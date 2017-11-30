@@ -13,11 +13,11 @@ import (
 )
 
 func newEventsService(root webdav.FileSystem, users users.Service) (events.Service, error) {
-	local, err := fs.NewService(root, shurcool)
+	shurcool, err := users.Get(context.Background(), shurcool)
 	if err != nil {
 		return nil, err
 	}
-	shurcool, err := users.Get(context.Background(), shurcool)
+	local, err := fs.NewService(root, shurcool)
 	if err != nil {
 		return nil, err
 	}
