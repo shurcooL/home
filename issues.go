@@ -201,20 +201,22 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			}
 			return []htmlg.Component{header, heading, tabnav}, nil
 
-		case strings.HasPrefix(repo.URI, "github.com/") &&
-			repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
-
-			var githubURL string
-			switch issueID := req.Context().Value(issuesapp.StateContextKey).(common.State).IssueID; issueID {
-			case 0:
-				githubURL = fmt.Sprintf("https://%s/issues", repo.URI)
-			default:
-				githubURL = fmt.Sprintf("https://%s/issues/%d", repo.URI, issueID)
-			}
+		case strings.HasPrefix(repo.URI, "github.com/"):
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),
 			}
 			heading.AppendChild(htmlg.Text(repo.URI))
+			var githubURL string
+			switch issueID := req.Context().Value(issuesapp.StateContextKey).(common.State).IssueID; {
+			case repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" &&
+				issueID == 0:
+				githubURL = fmt.Sprintf("https://%s/issues", repo.URI)
+			case repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" &&
+				issueID != 0:
+				githubURL = fmt.Sprintf("https://%s/issues/%d", repo.URI, issueID)
+			default:
+				githubURL = "https://" + repo.URI
+			}
 			heading.AppendChild(&html.Node{
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
