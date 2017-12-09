@@ -592,11 +592,6 @@ var packages = []goPackage{
 		Doc:        "Package bypass allows bypassing reflect restrictions on accessing unexported struct fields.",
 	},
 	{
-		ImportPath: "github.com/shurcooL/go/analysis",
-		Command:    false,
-		Doc:        "Package analysis provides a routine that determines if a file is generated or handcrafted.",
-	},
-	{
 		ImportPath: "github.com/shurcooL/go/browser",
 		Command:    false,
 		Doc:        "Package browser provides utilities for interacting with users' browsers.",
