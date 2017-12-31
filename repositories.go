@@ -45,6 +45,7 @@ func initRepositories(root string, notifications notifications.Service, events e
 		return err
 	}
 	gitUsers[strings.ToLower(shurcool.Email)] = shurcool
+	gitUsers[strings.ToLower("shurcooL@gmail.com")] = shurcool // Previous email.
 
 	for _, repo := range []struct{ Spec, Doc string }{
 		{
