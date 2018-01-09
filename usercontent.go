@@ -47,7 +47,11 @@ func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) er
 		return httperror.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 
-	name := uuid.NewV4().String() + ".png"
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		return httperror.JSONResponse{V: uploadResponse{Error: err.Error()}}
+	}
+	name := uuid.String() + ".png"
 	path := pathpkg.Join(dir, name)
 	f, err := uc.store.OpenFile(req.Context(), path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
