@@ -31,10 +31,9 @@ import (
 
 // commitHandler is a handler for displaying a commit of a git repository.
 type commitHandler struct {
-	Repo          string // Repo URI. E.g., "example.com/some/package".
-	Path          string // Path corresponding to repo root, without domain. E.g., "/some/package".
-	Name          string // Package name. E.g., "package".
-	RepoDir       string // Path to repository directory on disk.
+	Repo repoInfo
+	Pkg  pkgInfo
+
 	notifications notifications.Service
 	users         users.Service
 	gitUsers      map[string]users.User // Key is lower git author email.
@@ -42,7 +41,7 @@ type commitHandler struct {
 
 var commitHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Package {{.Name}} - Commit</title>
+		<title>Package {{.Name}} - Commit {{.Hash}}</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -103,7 +102,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	if err != nil {
 		return os.ErrNotExist
 	}
-	c, err := diffTree(req.Context(), h.RepoDir, commitHash, h.gitUsers)
+	c, err := diffTree(req.Context(), h.Repo.Dir, commitHash, h.gitUsers)
 	if err != nil {
 		return err
 	}
@@ -115,9 +114,11 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	err = commitHTML.Execute(w, struct {
 		Production bool
 		Name       string
+		Hash       string
 	}{
 		Production: *productionFlag,
-		Name:       h.Name,
+		Name:       h.Pkg.Name,
+		Hash:       shortSHA(c.CommitHash),
 	})
 	if err != nil {
 		return err
@@ -139,7 +140,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, `<h2>Package %s</h2>`, h.Name)
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Pkg.Spec)))
 	if err != nil {
 		return err
 	}
@@ -149,16 +150,16 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		Tabs: []tab{
 			{
 				Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:     h.Path,
+				URL:     h.Repo.Path,
 			},
 			{
 				Content:  iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:      h.Path + "/commits",
+				URL:      h.Repo.Path + "/commits",
 				Selected: true,
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     h.Path + "/issues",
+				URL:     h.Repo.Path + "/issues",
 			},
 		},
 	})
@@ -167,7 +168,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	err = commitHTML.ExecuteTemplate(w, "CommitMessage", commitMessage{
-		RepoURL:    h.Repo,
+		ImportPath: h.Pkg.Spec,
 		CommitHash: c.CommitHash,
 		Subject:    c.Subject,
 		Body:       c.Body,
@@ -206,6 +207,10 @@ func verifyCommitHash(commitHash string) (string, error) {
 		}
 	}
 	return commitHash, nil
+}
+
+func shortSHA(sha string) string {
+	return sha[:8]
 }
 
 func diffTree(ctx context.Context, repoDir, treeish string, gitUsers map[string]users.User) (diffTreeResponse, error) {
@@ -290,7 +295,7 @@ func readLine(b *[]byte) string {
 }
 
 type commitMessage struct {
-	RepoURL    string // TODO: This is more of import path rather than repo; it should change for subpackages.
+	ImportPath string // Import path of the package being viewed.
 	CommitHash string
 	Subject    string
 	Body       string
@@ -304,7 +309,7 @@ func (c commitMessage) ViewCode() template.HTML {
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.RepoURL + "?rev=" + c.CommitHash},
+			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.ImportPath + "?rev=" + c.CommitHash},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octiconssvg.Code(),

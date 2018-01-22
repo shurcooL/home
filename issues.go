@@ -155,7 +155,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		case repo.URI == "dmitri.shuralyov.com/kebabcase":
 			heading := htmlg.NodeComponent{
 				Type: html.ElementNode, Data: atom.H2.String(),
-				FirstChild: htmlg.Text("Package kebabcase"),
+				FirstChild: htmlg.Text(repo.URI),
 			}
 			tabnav := tabnav{
 				Tabs: []tab{
@@ -180,7 +180,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		case repo.URI == "dmitri.shuralyov.com/scratch":
 			heading := htmlg.NodeComponent{
 				Type: html.ElementNode, Data: atom.H2.String(),
-				FirstChild: htmlg.Text("Package scratch"),
+				FirstChild: htmlg.Text(repo.URI),
 			}
 			tabnav := tabnav{
 				Tabs: []tab{

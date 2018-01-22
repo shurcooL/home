@@ -59,32 +59,33 @@ Reference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multipl
 			Doc:  "Package scratch is used for testing.",
 		},
 	} {
-		path := repo.Spec[len("dmitri.shuralyov.com"):]
-		name := pathpkg.Base(repo.Spec)
-		repoDir := filepath.Join(root, filepath.FromSlash(repo.Spec))
+		repoInfo := repoInfo{
+			Spec: repo.Spec,
+			Path: repo.Spec[len("dmitri.shuralyov.com"):],
+			Dir:  filepath.Join(root, filepath.FromSlash(repo.Spec)),
+		}
+		pkgInfo := pkgInfo{
+			Spec:    repo.Spec,
+			Name:    pathpkg.Base(repo.Spec),
+			DocHTML: docHTML(repo.Doc),
+		}
 
 		packageHandler := cookieAuth{httputil.ErrorHandler(usersService, (&packageHandler{
-			Repo:          repo.Spec,
-			Path:          path,
-			Name:          name,
-			DocHTML:       docHTML(repo.Doc),
+			Repo:          repoInfo,
+			Pkg:           pkgInfo,
 			notifications: notifications,
 			users:         usersService,
 		}).ServeHTTP)}
 		commitsHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitsHandler{
-			Repo:          repo.Spec,
-			Path:          path,
-			Name:          name,
-			RepoDir:       repoDir,
+			Repo:          repoInfo,
+			Pkg:           pkgInfo,
 			notifications: notifications,
 			users:         usersService,
 			gitUsers:      gitUsers,
 		}).ServeHTTP)}
 		commitHandler := cookieAuth{httputil.ErrorHandler(usersService, (&commitHandler{
-			Repo:          repo.Spec,
-			Path:          path,
-			Name:          name,
-			RepoDir:       repoDir,
+			Repo:          repoInfo,
+			Pkg:           pkgInfo,
 			notifications: notifications,
 			users:         usersService,
 			gitUsers:      gitUsers,
@@ -96,17 +97,56 @@ Reference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multipl
 			users:          usersService,
 			gitUsers:       gitUsers,
 
-			Repo:    repo.Spec,
-			Path:    path,
-			RepoDir: repoDir,
+			Repo:    repoInfo,
 			Index:   packageHandler,
 			Commits: commitsHandler,
 			Commit:  commitHandler,
 		}
-		http.Handle(path, h)
-		http.Handle(path+"/", h)
+		http.Handle(repoInfo.Path, h)
+		http.Handle(repoInfo.Path+"/", h)
+	}
+
+	// TODO: Automate package discovery, dedup, etc.
+	for _, pkg := range []struct{ Repo, Package, Doc string }{
+		{
+			Repo:    "dmitri.shuralyov.com/scratch",
+			Package: "dmitri.shuralyov.com/scratch/hello",
+			Doc:     "",
+		},
+	} {
+		repoInfo := repoInfo{
+			Spec: pkg.Repo,
+			Path: pkg.Repo[len("dmitri.shuralyov.com"):],
+			Dir:  filepath.Join(root, filepath.FromSlash(pkg.Repo)),
+		}
+		pkgInfo := pkgInfo{
+			Spec:    pkg.Package,
+			Name:    pathpkg.Base(pkg.Package),
+			DocHTML: docHTML(pkg.Doc),
+		}
+		packagePath := pkg.Package[len("dmitri.shuralyov.com"):]
+
+		h := cookieAuth{httputil.ErrorHandler(usersService, (&packageHandler{
+			Repo:          repoInfo,
+			Pkg:           pkgInfo,
+			notifications: notifications,
+			users:         usersService,
+		}).ServeHTTP)}
+		http.Handle(packagePath, h)
 	}
 	return nil
+}
+
+type repoInfo struct {
+	Spec string // Repository spec. E.g., "example.com/repo".
+	Path string // Path corresponding to repository root, without domain. E.g., "/repo".
+	Dir  string // Path to repository directory on disk.
+}
+
+type pkgInfo struct {
+	Spec    string // Package import path. E.g., "example.com/repo/package".
+	Name    string // Package name. E.g., "package".
+	DocHTML string // Package doc HTML. E.g., "<p>Package package provides some functionality.</p>".
 }
 
 type gitHandler struct {
@@ -117,24 +157,22 @@ type gitHandler struct {
 	gitUsers       map[string]users.User // Key is lower git author email.
 
 	// Repo-specific fields.
-	Repo    string       // Repo root. E.g., "dmitri.shuralyov.com/kebabcase".
-	Path    string       // Path corresponding to repo root, without domain. E.g., "/kebabcase".
-	RepoDir string       // Path to repository directory on disk.
+	Repo    repoInfo
 	Index   http.Handler // Handler for index page.
 	Commits http.Handler // Handler for commits page.
 	Commit  http.Handler // Handler for commit page.
 }
 
 func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// TODO: Factor h.Path out?
+	// TODO: Factor h.Repo.Path out?
 	switch req.URL.String() {
-	case h.Path + "/info/refs?service=git-upload-pack":
+	case h.Repo.Path + "/info/refs?service=git-upload-pack":
 		if req.Method != http.MethodGet {
 			httperror.HandleMethod(w, httperror.Method{Allowed: []string{http.MethodGet}})
 			return
 		}
 		cmd := exec.CommandContext(req.Context(), h.GitUploadPack, "--strict", "--advertise-refs", ".")
-		cmd.Dir = h.RepoDir
+		cmd.Dir = h.Repo.Dir
 		var buf bytes.Buffer
 		cmd.Stdout = &buf
 		err := cmd.Start()
@@ -161,7 +199,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-	case h.Path + "/git-upload-pack":
+	case h.Repo.Path + "/git-upload-pack":
 		if req.Method != http.MethodPost {
 			httperror.HandleMethod(w, httperror.Method{Allowed: []string{http.MethodPost}})
 			return
@@ -172,7 +210,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		cmd := exec.CommandContext(req.Context(), h.GitUploadPack, "--strict", "--stateless-rpc", ".")
-		cmd.Dir = h.RepoDir
+		cmd.Dir = h.Repo.Dir
 		cmd.Stdin = req.Body
 		var buf bytes.Buffer
 		cmd.Stdout = &buf
@@ -199,7 +237,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			log.Println(err)
 		}
 
-	case h.Path + "/info/refs?service=git-receive-pack":
+	case h.Repo.Path + "/info/refs?service=git-receive-pack":
 		if req.Method != http.MethodGet {
 			httperror.HandleMethod(w, httperror.Method{Allowed: []string{http.MethodGet}})
 			return
@@ -217,7 +255,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 		cmd := exec.CommandContext(req.Context(), h.GitReceivePack, "--advertise-refs", ".")
-		cmd.Dir = h.RepoDir
+		cmd.Dir = h.Repo.Dir
 		var buf bytes.Buffer
 		cmd.Stdout = &buf
 		err := cmd.Start()
@@ -244,7 +282,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-	case h.Path + "/git-receive-pack":
+	case h.Repo.Path + "/git-receive-pack":
 		if req.Method != http.MethodPost {
 			httperror.HandleMethod(w, httperror.Method{Allowed: []string{http.MethodPost}})
 			return
@@ -267,7 +305,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 		cmd := exec.CommandContext(req.Context(), h.GitReceivePack, "--stateless-rpc", ".")
-		cmd.Dir = h.RepoDir
+		cmd.Dir = h.Repo.Dir
 		rpc := &githttp.RpcReader{
 			Reader: req.Body,
 			Rpc:    "receive-pack",
@@ -301,12 +339,12 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			evt := event.Event{
 				Time:      now,
 				Actor:     *user,
-				Container: h.Repo,
+				Container: h.Repo.Spec,
 			}
 			const zero = "0000000000000000000000000000000000000000"
 			switch {
 			case e.Type == githttp.PUSH && e.Last != zero && e.Commit != zero:
-				commits, err := listCommits(h.RepoDir, e.Last, e.Commit, h.commitHTMLURL, h.gitUsers)
+				commits, err := listCommits(h.Repo.Dir, e.Last, e.Commit, h.commitHTMLURL, h.gitUsers)
 				if err != nil {
 					log.Println("listCommits:", err)
 				}
@@ -344,12 +382,12 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	default:
 		switch {
-		case req.URL.Path == h.Path:
+		case req.URL.Path == h.Repo.Path:
 			h.Index.ServeHTTP(w, req)
-		case req.URL.Path == h.Path+"/commits":
+		case req.URL.Path == h.Repo.Path+"/commits":
 			h.Commits.ServeHTTP(w, req)
-		case strings.HasPrefix(req.URL.Path, h.Path+"/commit/"):
-			req = stripPrefix(req, len(h.Path)+len("/commit"))
+		case strings.HasPrefix(req.URL.Path, h.Repo.Path+"/commit/"):
+			req = stripPrefix(req, len(h.Repo.Path)+len("/commit"))
 			h.Commit.ServeHTTP(w, req)
 		default:
 			http.Error(w, "404 Not Found", http.StatusNotFound)
@@ -358,7 +396,7 @@ func (h *gitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *gitHandler) commitHTMLURL(id vcs.CommitID) string {
-	return h.Path + "/commit/" + string(id)
+	return h.Repo.Path + "/commit/" + string(id)
 }
 
 // listCommits returns a list of commits in repoDir from base to head.

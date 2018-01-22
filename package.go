@@ -13,15 +13,14 @@ import (
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
+	"golang.org/x/net/html"
 )
 
 // packageHandler is a handler for a Go package index page, as well as
 // its ?go-get=1 go-import meta tag page.
 type packageHandler struct {
-	Repo    string // Repo URI. E.g., "example.com/some/package".
-	Path    string // Path corresponding to repo root, without domain. E.g., "/some/package".
-	Name    string // Package name. E.g., "package".
-	DocHTML string // Package doc HTML. E.g., "<p>Package package provides some functionality.</p>".
+	Repo repoInfo
+	Pkg  pkgInfo
 
 	notifications notifications.Service
 	users         users.Service
@@ -46,7 +45,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	if req.URL.Query().Get("go-get") == "1" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, err := fmt.Fprintf(w, `<meta name="go-import" content="%[1]s git https://%[1]s">
-<meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[1]s{/dir} https://gotools.org/%[1]s{/dir}#{file}-L{line}">`, h.Repo)
+<meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[2]s https://gotools.org/%[2]s#{file}-L{line}">`, h.Repo.Spec, h.Pkg.Spec)
 		return err
 	}
 
@@ -56,7 +55,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Name       string
 	}{
 		Production: *productionFlag,
-		Name:       h.Name,
+		Name:       h.Pkg.Name,
 	})
 	if err != nil {
 		return err
@@ -91,7 +90,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, `<h2>Package %s</h2>`, h.Name)
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Pkg.Spec)))
 	if err != nil {
 		return err
 	}
@@ -101,16 +100,16 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Tabs: []tab{
 			{
 				Content:  iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:      h.Path,
-				Selected: true,
+				URL:      h.Repo.Path,
+				Selected: h.Repo.Spec == h.Pkg.Spec,
 			},
 			{
 				Content: iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:     h.Path + "/commits",
+				URL:     h.Repo.Path + "/commits",
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     h.Path + "/issues",
+				URL:     h.Repo.Path + "/issues",
 			},
 		},
 	})
@@ -118,7 +117,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	_, err = io.WriteString(w, h.DocHTML)
+	_, err = io.WriteString(w, h.Pkg.DocHTML)
 	if err != nil {
 		return err
 	}
@@ -128,6 +127,6 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 			<h3><a href="https://gotools.org/%[1]s">Code</a></h3>
 		</div>
 	</body>
-</html>`, h.Repo)
+</html>`, h.Pkg.Spec)
 	return err
 }

@@ -24,10 +24,9 @@ import (
 
 // commitsHandler is a handler for displaying a list of commits of a git repository.
 type commitsHandler struct {
-	Repo          string // Repo URI. E.g., "example.com/some/package".
-	Path          string // Path corresponding to repo root, without domain. E.g., "/some/package".
-	Name          string // Package name. E.g., "package".
-	RepoDir       string // Path to repository directory on disk.
+	Repo repoInfo
+	Pkg  pkgInfo
+
 	notifications notifications.Service
 	users         users.Service
 	gitUsers      map[string]users.User // Key is lower git author email.
@@ -64,7 +63,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	// TODO: Pagination support.
-	r := &gitcmd.Repository{Dir: h.RepoDir}
+	r := &gitcmd.Repository{Dir: h.Repo.Dir}
 	cs, _, err := r.Commits(vcs.CommitsOptions{
 		Head:    vcs.CommitID("master"),
 		NoTotal: true,
@@ -81,7 +80,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Name       string
 	}{
 		Production: *productionFlag,
-		Name:       h.Name,
+		Name:       h.Pkg.Name,
 	})
 	if err != nil {
 		return err
@@ -103,7 +102,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, `<h2>Package %s</h2>`, h.Name)
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Pkg.Spec)))
 	if err != nil {
 		return err
 	}
@@ -113,16 +112,16 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Tabs: []tab{
 			{
 				Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:     h.Path,
+				URL:     h.Repo.Path,
 			},
 			{
 				Content:  iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:      h.Path + "/commits",
+				URL:      h.Repo.Path + "/commits",
 				Selected: true,
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     h.Path + "/issues",
+				URL:     h.Repo.Path + "/issues",
 			},
 		},
 	})
@@ -149,7 +148,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		}
 
 		commits = append(commits, Commit{
-			RepoURL:    h.Repo,
+			ImportPath: h.Pkg.Spec,
 			SHA:        string(c.ID),
 			Message:    c.Message,
 			Author:     author,
@@ -190,7 +189,7 @@ func (cs Commits) Render() []*html.Node {
 }
 
 type Commit struct {
-	RepoURL    string // TODO: This is more of import path rather than repo; it should change for subpackages.
+	ImportPath string // Import path of the package being viewed.
 	SHA        string
 	Message    string
 	Author     users.User
@@ -265,7 +264,7 @@ display: none;`}},
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px; margin-left: 12px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.RepoURL + "?rev=" + c.SHA},
+			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.ImportPath + "?rev=" + c.SHA},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octiconssvg.Code(),
