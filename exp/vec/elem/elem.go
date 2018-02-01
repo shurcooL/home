@@ -80,6 +80,17 @@ func P(markup ...vec.MarkupOrComponentOrHTML) *vec.HTML {
 	return h
 }
 
+func Pre(markup ...vec.MarkupOrComponentOrHTML) *vec.HTML {
+	h := &vec.HTML{
+		Type:     html.ElementNode,
+		DataAtom: atom.Pre,
+	}
+	for _, m := range markup {
+		vec.Apply(h, m)
+	}
+	return h
+}
+
 func A(markup ...vec.MarkupOrComponentOrHTML) *vec.HTML {
 	h := &vec.HTML{
 		Type:     html.ElementNode,
@@ -106,6 +117,17 @@ func H2(markup ...vec.MarkupOrComponentOrHTML) *vec.HTML {
 	h := &vec.HTML{
 		Type:     html.ElementNode,
 		DataAtom: atom.H2,
+	}
+	for _, m := range markup {
+		vec.Apply(h, m)
+	}
+	return h
+}
+
+func H3(markup ...vec.MarkupOrComponentOrHTML) *vec.HTML {
+	h := &vec.HTML{
+		Type:     html.ElementNode,
+		DataAtom: atom.H3,
 	}
 	for _, m := range markup {
 		vec.Apply(h, m)

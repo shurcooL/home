@@ -10,10 +10,13 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// HTMLNode represents a node type whose Data is raw HTML.
+const HTMLNode html.NodeType = 100
+
 type HTML struct {
-	Type       html.NodeType // html.ElementNode or html.TextNode.
+	Type       html.NodeType // One of html.ElementNode, html.TextNode, HTMLNode.
 	DataAtom   atom.Atom     // Used when Type is html.ElementNode.
-	Data       string        // Used when Type is html.TextNode.
+	Data       string        // Used when Type is html.TextNode or HTMLNode.
 	Attributes map[atom.Atom]string
 
 	Children  []*HTML
@@ -106,6 +109,9 @@ func renderHTML(w io.Writer, h *HTML) error {
 	case html.TextNode:
 		_, err := io.WriteString(w, html.EscapeString(h.Data))
 		return err
+	case HTMLNode:
+		_, err := io.WriteString(w, h.Data)
+		return err
 	default:
 		panic(fmt.Errorf("unknown node type %v", h.Type))
 	}
@@ -133,6 +139,13 @@ func Apply(h *HTML, m MarkupOrComponentOrHTML) {
 		panic(fmt.Errorf("Component not supported"))
 	default:
 		panic(fmt.Errorf("invalid type %T does not match MarkupOrComponentOrHTML interface", m))
+	}
+}
+
+func UnsafeHTML(html string) *HTML {
+	return &HTML{
+		Type: HTMLNode,
+		Data: html,
 	}
 }
 
