@@ -288,7 +288,7 @@ func (a activity) Render() []*html.Node {
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
-				Action:     component.Join("pushed to ", code{Text: p.Branch}, " in"),
+				Action:     component.Join("pushed to ", codeText{Text: p.Branch}, " in"),
 			}
 			switch len(p.Commits) {
 			default:
@@ -317,21 +317,15 @@ func (a activity) Render() []*html.Node {
 			case "repository":
 				e.Icon = octiconssvg.Repo
 				e.Action = component.Text("created repository")
-				e.Details = text{
-					Text: p.Description,
-				}
+				e.Details = plainText{Text: p.Description}
 			case "branch":
 				e.Icon = octiconssvg.GitBranch
 				e.Action = component.Text("created branch in")
-				e.Details = code{
-					Text: p.Name,
-				}
+				e.Details = codeText{Text: p.Name}
 			case "tag":
 				e.Icon = octiconssvg.Tag
 				e.Action = component.Text("created tag in")
-				e.Details = code{
-					Text: p.Name,
-				}
+				e.Details = codeText{Text: p.Name}
 
 				//default:
 				//basicEvent.WIP = true
@@ -359,7 +353,7 @@ func (a activity) Render() []*html.Node {
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Trashcan,
 				Action:     component.Text(fmt.Sprintf("deleted %v in", p.Type)),
-				Details: code{
+				Details: codeText{
 					Text:          p.Name,
 					Strikethrough: true,
 				},
@@ -561,11 +555,11 @@ func (d iconLink) Render() []*html.Node {
 	return []*html.Node{a}
 }
 
-type text struct {
+type plainText struct {
 	Text string
 }
 
-func (d text) Render() []*html.Node {
+func (d plainText) Render() []*html.Node {
 	text := &html.Node{
 		Type: html.ElementNode, Data: atom.Span.String(),
 		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "font-size: 13px; color: #666;"}},
@@ -611,12 +605,12 @@ func shortTitle(s string) string {
 	return s[:35] + "…"
 }
 
-type code struct {
+type codeText struct {
 	Text          string
 	Strikethrough bool
 }
 
-func (d code) Render() []*html.Node {
+func (d codeText) Render() []*html.Node {
 	codeStyle := `padding: 2px 6px;
 background-color: rgb(232, 241, 246);
 border-radius: 3px;`
