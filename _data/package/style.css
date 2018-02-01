@@ -12,6 +12,9 @@ a:hover {
 	text-decoration: underline;
 }
 
+code {
+	font-family: "Go Mono";
+}
 pre {
 	font-family: "Go Mono";
 	line-height: 1.45;

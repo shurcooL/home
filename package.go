@@ -6,8 +6,13 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path"
 
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/exp/vec"
+	"github.com/shurcooL/home/exp/vec/attr"
+	"github.com/shurcooL/home/exp/vec/elem"
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
@@ -28,7 +33,7 @@ type packageHandler struct {
 
 var packageHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Package {{.Name}}</title>
+		<title>{{.Title}}</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -50,12 +55,18 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	var title string
+	if h.Pkg.Name == "main" {
+		title = "Command " + path.Base(h.Pkg.Spec)
+	} else {
+		title = "Package " + h.Pkg.Name
+	}
 	err := packageHTML.Execute(w, struct {
 		Production bool
-		Name       string
+		Title      string
 	}{
 		Production: *productionFlag,
-		Name:       h.Pkg.Name,
+		Title:      title,
 	})
 	if err != nil {
 		return err
@@ -90,7 +101,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	err = html.Render(w, htmlg.H2(htmlg.Text(h.Pkg.Spec)))
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Repo.Spec+"/...")))
 	if err != nil {
 		return err
 	}
@@ -99,17 +110,16 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	err = htmlg.RenderComponents(w, tabnav{
 		Tabs: []tab{
 			{
-				Content:  iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:      h.Repo.Path,
-				Selected: h.Repo.Spec == h.Pkg.Spec,
+				Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
+				URL:     route.RepoIndex(h.Repo.Path),
 			},
 			{
 				Content: iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:     h.Repo.Path + "/commits",
+				URL:     route.RepoHistory(h.Repo.Path),
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     h.Repo.Path + "/issues",
+				URL:     route.RepoIssues(h.Repo.Path),
 			},
 		},
 	})
@@ -117,16 +127,34 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	_, err = io.WriteString(w, h.Pkg.DocHTML)
+	err = vec.RenderHTML(w,
+		elem.H1(title),
+		elem.P(elem.Code(fmt.Sprintf(`import "%s"`, h.Pkg.Spec))),
+	)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(w, `<h3>Installation</h3>
-			<p><pre>go get -u %[1]s</pre></p>
-			<h3><a href="https://godoc.org/%[1]s">Documentation</a></h3>
-			<h3><a href="https://gotools.org/%[1]s">Code</a></h3>
-		</div>
-	</body>
-</html>`, h.Pkg.Spec)
+	if h.Pkg.DocHTML != "" {
+		err = vec.RenderHTML(w, elem.H3("Overview"), vec.UnsafeHTML(h.Pkg.DocHTML))
+		if err != nil {
+			return err
+		}
+	}
+	err = vec.RenderHTML(w,
+		elem.H3("Installation"),
+		elem.P(elem.Pre("go get -u "+h.Pkg.Spec)),
+		elem.H3(elem.A("Documentation", attr.Href("https://godoc.org/"+h.Pkg.Spec))),
+		elem.H3(elem.A("Code", attr.Href("https://gotools.org/"+h.Pkg.Spec))),
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `</div>`)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `</body></html>`)
 	return err
 }

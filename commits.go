@@ -1,15 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
 	homecomponent "github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	issuescomponent "github.com/shurcooL/issuesapp/component"
@@ -25,7 +26,6 @@ import (
 // commitsHandler is a handler for displaying a list of commits of a git repository.
 type commitsHandler struct {
 	Repo repoInfo
-	Pkg  pkgInfo
 
 	notifications notifications.Service
 	users         users.Service
@@ -34,7 +34,7 @@ type commitsHandler struct {
 
 var commitsHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Package {{.Name}} - History</title>
+		<title>Repository {{.Name}} - History</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -80,7 +80,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		Name       string
 	}{
 		Production: *productionFlag,
-		Name:       h.Pkg.Name,
+		Name:       path.Base(h.Repo.Spec),
 	})
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	err = html.Render(w, htmlg.H2(htmlg.Text(h.Pkg.Spec)))
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Repo.Spec+"/...")))
 	if err != nil {
 		return err
 	}
@@ -111,27 +111,20 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	err = htmlg.RenderComponents(w, tabnav{
 		Tabs: []tab{
 			{
-				Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:     h.Repo.Path,
+				Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
+				URL:     route.RepoIndex(h.Repo.Path),
 			},
 			{
 				Content:  iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:      h.Repo.Path + "/commits",
+				URL:      route.RepoHistory(h.Repo.Path),
 				Selected: true,
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     h.Repo.Path + "/issues",
+				URL:     route.RepoIssues(h.Repo.Path),
 			},
 		},
 	})
-	if err != nil {
-		return err
-	}
-
-	// TODO: Connect to real branches/tags data, add frontend logic, etc.
-	_, err = fmt.Fprintf(w, `<div style="margin: 14px 0;" title="Branch"><span style="display: inline-block; vertical-align: middle; margin-right: 6px;">%s</span><select><option selected>master</option></select></div>`,
-		htmlg.Render(octiconssvg.GitBranch()))
 	if err != nil {
 		return err
 	}
@@ -148,14 +141,13 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		}
 
 		commits = append(commits, Commit{
-			ImportPath: h.Pkg.Spec,
 			SHA:        string(c.ID),
 			Message:    c.Message,
 			Author:     author,
 			AuthorTime: c.Author.Date.Time(),
 		})
 	}
-	err = htmlg.RenderComponents(w, Commits{Commits: commits})
+	err = htmlg.RenderComponents(w, Commits{Commits: commits, Repo: h.Repo})
 	if err != nil {
 		return err
 	}
@@ -168,6 +160,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 
 type Commits struct {
 	Commits []Commit
+	Repo    repoInfo
 }
 
 func (cs Commits) Render() []*html.Node {
@@ -183,20 +176,19 @@ func (cs Commits) Render() []*html.Node {
 
 	var nodes []*html.Node
 	for _, c := range cs.Commits {
-		nodes = append(nodes, c.Render()...)
+		nodes = append(nodes, c.Render(cs.Repo)...)
 	}
 	return []*html.Node{htmlg.DivClass("list-entry-border", nodes...)}
 }
 
 type Commit struct {
-	ImportPath string // Import path of the package being viewed.
 	SHA        string
 	Message    string
 	Author     users.User
 	AuthorTime time.Time
 }
 
-func (c Commit) Render() []*html.Node {
+func (c Commit) Render(repo repoInfo) []*html.Node {
 	div := &html.Node{
 		Type: html.ElementNode, Data: atom.Div.String(),
 		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "display: flex;"}},
@@ -221,7 +213,7 @@ func (c Commit) Render() []*html.Node {
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Class.String(), Val: "black"},
-					{Key: atom.Href.String(), Val: "commit/" + c.SHA},
+					{Key: atom.Href.String(), Val: route.RepoCommit(repo.Path) + "/" + c.SHA},
 				},
 				FirstChild: htmlg.Strong(commitSubject),
 			},
@@ -264,7 +256,7 @@ display: none;`}},
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px; margin-left: 12px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.ImportPath + "?rev=" + c.SHA},
+			{Key: atom.Href.String(), Val: "https://gotools.org/" + repo.Spec + "?rev=" + c.SHA},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octiconssvg.Code(),

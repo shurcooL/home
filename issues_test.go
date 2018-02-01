@@ -25,7 +25,7 @@ func TestNewIssueRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = initIssues(mux, issues, notifications, users)
+	_, err = initIssues(mux, issues, notifications, users)
 	if err != nil {
 		t.Fatal(err)
 	}

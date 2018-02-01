@@ -17,6 +17,7 @@ import (
 	"github.com/shurcooL/githubql"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
@@ -69,7 +70,7 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 
 // initIssues registers handlers for the issues service HTTP API,
 // and handlers for the issues app.
-func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications notifications.Service, users users.Service) error {
+func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications notifications.Service, users users.Service) (issuesApp http.Handler, _ error) {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	mux.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.List)})
@@ -152,49 +153,25 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		default:
 			return []htmlg.Component{header}, nil
 
-		case repo.URI == "dmitri.shuralyov.com/kebabcase":
+		case strings.HasPrefix(repo.URI, "dmitri.shuralyov.com/"):
 			heading := htmlg.NodeComponent{
 				Type: html.ElementNode, Data: atom.H2.String(),
-				FirstChild: htmlg.Text(repo.URI),
+				FirstChild: htmlg.Text(repo.URI + "/..."),
 			}
+			repoPath := repo.URI[len("dmitri.shuralyov.com"):]
 			tabnav := tabnav{
 				Tabs: []tab{
 					{
-						Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-						URL:     "/kebabcase",
+						Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
+						URL:     route.RepoIndex(repoPath),
 					},
 					{
 						Content: iconText{Icon: octiconssvg.History, Text: "History"},
-						URL:     "/kebabcase/commits",
+						URL:     route.RepoHistory(repoPath),
 					},
 					{
 						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-						URL:      "/kebabcase/issues",
-						Selected: true,
-					},
-				},
-			}
-			return []htmlg.Component{header, heading, tabnav}, nil
-
-		// TODO: Dedup.
-		case repo.URI == "dmitri.shuralyov.com/scratch":
-			heading := htmlg.NodeComponent{
-				Type: html.ElementNode, Data: atom.H2.String(),
-				FirstChild: htmlg.Text(repo.URI),
-			}
-			tabnav := tabnav{
-				Tabs: []tab{
-					{
-						Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-						URL:     "/scratch",
-					},
-					{
-						Content: iconText{Icon: octiconssvg.History, Text: "History"},
-						URL:     "/scratch/commits",
-					},
-					{
-						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-						URL:      "/scratch/issues",
+						URL:      route.RepoIssues(repoPath),
 						Selected: true,
 					},
 				},
@@ -238,49 +215,18 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			return []htmlg.Component{header, htmlg.NodeComponent(*heading), tabnav}, nil
 		}
 	}
-	issuesApp := issuesapp.New(issuesService, users, opt)
+	issuesApp = issuesapp.New(issuesService, users, opt)
 
 	for _, repo := range []struct{ SpecURL, BaseURL string }{
 		{SpecURL: "github.com/shurcooL/issuesapp", BaseURL: "/issues/github.com/shurcooL/issuesapp"},
 		{SpecURL: "github.com/shurcooL/notificationsapp", BaseURL: "/issues/github.com/shurcooL/notificationsapp"},
 		{SpecURL: "dmitri.shuralyov.com/idiomatic-go", BaseURL: "/idiomatic-go/entries"},
-		{SpecURL: "dmitri.shuralyov.com/kebabcase", BaseURL: "/kebabcase/issues"},
-		{SpecURL: "dmitri.shuralyov.com/scratch", BaseURL: "/scratch/issues"},
 	} {
-		repo := repo
-		issuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
-			prefixLen := len(repo.BaseURL)
-			if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
-				baseURL := prefix
-				if req.URL.RawQuery != "" {
-					baseURL += "?" + req.URL.RawQuery
-				}
-				return httperror.Redirect{URL: baseURL}
-			}
-			returnURL := req.RequestURI
-			req = copyRequestAndURL(req)
-			req.URL.Path = req.URL.Path[prefixLen:]
-			if req.URL.Path == "" {
-				req.URL.Path = "/"
-			}
-			rr := httptest.NewRecorder()
-			rr.HeaderMap = w.Header()
-			req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: repo.SpecURL}))
-			req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, repo.BaseURL))
-			issuesApp.ServeHTTP(rr, req)
-			// TODO: Have issuesApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
-			// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
-			if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
-				loginURL := (&url.URL{
-					Path:     "/login",
-					RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
-				}).String()
-				return httperror.Redirect{URL: loginURL}
-			}
-			w.WriteHeader(rr.Code)
-			_, err := io.Copy(w, rr.Body)
-			return err
-		})}
+		issuesHandler := cookieAuth{httputil.ErrorHandler(users, issuesHandler{
+			SpecURL:   repo.SpecURL,
+			BaseURL:   repo.BaseURL,
+			issuesApp: issuesApp,
+		}.ServeHTTP)}
 		mux.Handle(repo.BaseURL, issuesHandler)
 		mux.Handle(repo.BaseURL+"/", issuesHandler)
 	}
@@ -341,7 +287,47 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 	})}
 	mux.Handle("/issues/github.com/", githubIssuesHandler)
 
-	return nil
+	return issuesApp, nil
+}
+
+type issuesHandler struct {
+	SpecURL   string
+	BaseURL   string
+	issuesApp http.Handler
+}
+
+func (h issuesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
+	prefixLen := len(h.BaseURL)
+	if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
+		baseURL := prefix
+		if req.URL.RawQuery != "" {
+			baseURL += "?" + req.URL.RawQuery
+		}
+		return httperror.Redirect{URL: baseURL}
+	}
+	returnURL := req.RequestURI
+	req = copyRequestAndURL(req)
+	req.URL.Path = req.URL.Path[prefixLen:]
+	if req.URL.Path == "" {
+		req.URL.Path = "/"
+	}
+	rr := httptest.NewRecorder()
+	rr.HeaderMap = w.Header()
+	req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: h.SpecURL}))
+	req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, h.BaseURL))
+	h.issuesApp.ServeHTTP(rr, req)
+	// TODO: Have issuesApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
+	// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
+	if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
+		loginURL := (&url.URL{
+			Path:     "/login",
+			RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
+		}).String()
+		return httperror.Redirect{URL: loginURL}
+	}
+	w.WriteHeader(rr.Code)
+	_, err := io.Copy(w, rr.Body)
+	return err
 }
 
 // notificationsRouter implements notifications/githubapi.Router that targets GitHub issues

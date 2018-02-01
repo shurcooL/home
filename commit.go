@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"sort"
 	"strings"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/shurcooL/highlight_diff"
 	homecomponent "github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	issuescomponent "github.com/shurcooL/issuesapp/component"
@@ -32,7 +34,6 @@ import (
 // commitHandler is a handler for displaying a commit of a git repository.
 type commitHandler struct {
 	Repo repoInfo
-	Pkg  pkgInfo
 
 	notifications notifications.Service
 	users         users.Service
@@ -41,7 +42,7 @@ type commitHandler struct {
 
 var commitHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Package {{.Name}} - Commit {{.Hash}}</title>
+		<title>Repository {{.Name}} - Commit {{.Hash}}</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -117,7 +118,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		Hash       string
 	}{
 		Production: *productionFlag,
-		Name:       h.Pkg.Name,
+		Name:       path.Base(h.Repo.Spec),
 		Hash:       shortSHA(c.CommitHash),
 	})
 	if err != nil {
@@ -140,7 +141,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	err = html.Render(w, htmlg.H2(htmlg.Text(h.Pkg.Spec)))
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Repo.Spec+"/...")))
 	if err != nil {
 		return err
 	}
@@ -149,17 +150,17 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	err = htmlg.RenderComponents(w, tabnav{
 		Tabs: []tab{
 			{
-				Content: iconText{Icon: octiconssvg.Book, Text: "Overview"},
-				URL:     h.Repo.Path,
+				Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
+				URL:     route.RepoIndex(h.Repo.Path),
 			},
 			{
 				Content:  iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:      h.Repo.Path + "/commits",
+				URL:      route.RepoHistory(h.Repo.Path),
 				Selected: true,
 			},
 			{
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     h.Repo.Path + "/issues",
+				URL:     route.RepoIssues(h.Repo.Path),
 			},
 		},
 	})
@@ -168,7 +169,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	err = commitHTML.ExecuteTemplate(w, "CommitMessage", commitMessage{
-		ImportPath: h.Pkg.Spec,
+		RepoRoot:   h.Repo.Spec,
 		CommitHash: c.CommitHash,
 		Subject:    c.Subject,
 		Body:       c.Body,
@@ -295,7 +296,7 @@ func readLine(b *[]byte) string {
 }
 
 type commitMessage struct {
-	ImportPath string // Import path of the package being viewed.
+	RepoRoot   string // Import path corresponding to repository root.
 	CommitHash string
 	Subject    string
 	Body       string
@@ -309,7 +310,7 @@ func (c commitMessage) ViewCode() template.HTML {
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.ImportPath + "?rev=" + c.CommitHash},
+			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.RepoRoot + "?rev=" + c.CommitHash},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octiconssvg.Code(),

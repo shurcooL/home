@@ -16,6 +16,7 @@ import (
 	"github.com/shurcooL/home/assets"
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
@@ -119,7 +120,7 @@ func run() error {
 		return err
 	}
 
-	err = initIssues(http.DefaultServeMux, issuesService, notifications, users)
+	issuesApp, err := initIssues(http.DefaultServeMux, issuesService, notifications, users)
 	if err != nil {
 		return err
 	}
@@ -137,13 +138,22 @@ func run() error {
 
 	initIdiomaticGo(issuesService, notifications, users)
 
-	initPackages(notifications, users)
-
-	err = initRepositories(filepath.Join(storeDir, "repositories"),
-		notifications, events, users)
+	// Code repositories.
+	reposDir := filepath.Join(storeDir, "repositories")
+	code, err := code.Discover(reposDir)
 	if err != nil {
 		return err
 	}
+	gitUsers, err := initGitUsers(users)
+	if err != nil {
+		return err
+	}
+	gitHandler, err := initGitHandler(code, reposDir, events, users, gitUsers)
+	if err != nil {
+		return err
+	}
+	codeHandler := codeHandler{code, reposDir, issuesApp, notifications, users, gitUsers}
+	servePackagesMaybe := initPackages(code, notifications, users)
 
 	initTalks(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))),
@@ -162,12 +172,25 @@ func run() error {
 		},
 	)}
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		switch req.URL.Path {
-		case "/":
+		// Serve index page.
+		if req.URL.Path == "/" {
 			indexHandler.ServeHTTP(w, req)
-		default:
-			staticFiles.ServeHTTP(w, req)
+			return
 		}
+		// Serve git protocol requests for existing repos, if the request matches.
+		if ok := gitHandler.ServeGitMaybe(w, req); ok {
+			return
+		}
+		// Serve code pages for existing repos/packages, if the request matches.
+		if ok := codeHandler.ServeCodeMaybe(w, req); ok {
+			return
+		}
+		// Serve remaining import path pattern queries, if the request matches.
+		if ok := servePackagesMaybe(w, req); ok {
+			return
+		}
+		// Serve static files last.
+		staticFiles.ServeHTTP(w, req)
 	})
 
 	if *statefileFlag != "" {
