@@ -24,6 +24,7 @@ Directories
 | [httphandler](https://godoc.org/github.com/shurcooL/home/httphandler) | Package httphandler contains API handlers used by home.                              |
 | [httputil](https://godoc.org/github.com/shurcooL/home/httputil)       | Package httputil is a custom HTTP framework created specifically for home.           |
 | [idiomaticgo](https://godoc.org/github.com/shurcooL/home/idiomaticgo) | Package idiomaticgo contains functionality for rendering /idiomatic-go page.         |
+| [internal/code](https://godoc.org/github.com/shurcooL/home/internal/code) | Package code implements discovery of Go code within a repository store.          |
 | [presentdata](https://godoc.org/github.com/shurcooL/home/presentdata) | Package presentdata contains static data for present format.                         |
 
 License
