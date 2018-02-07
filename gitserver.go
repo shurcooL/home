@@ -72,7 +72,7 @@ func (h *gitHandler) ServeGitMaybe(w http.ResponseWriter, req *http.Request) (ok
 	switch url := req.URL.String(); {
 	case strings.HasSuffix(url, "/info/refs?service=git-upload-pack"):
 		repoRoot := "dmitri.shuralyov.com" + url[:len(url)-len("/info/refs?service=git-upload-pack")]
-		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepository() {
+		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepoRoot() {
 			return false
 		}
 		h.serveGitInfoRefsUploadPack(w, req, repoInfo{
@@ -83,7 +83,7 @@ func (h *gitHandler) ServeGitMaybe(w http.ResponseWriter, req *http.Request) (ok
 		return true
 	case strings.HasSuffix(url, "/git-upload-pack"):
 		repoRoot := "dmitri.shuralyov.com" + url[:len(url)-len("/git-upload-pack")]
-		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepository() {
+		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepoRoot() {
 			return false
 		}
 		h.serveGitUploadPack(w, req, repoInfo{
@@ -94,7 +94,7 @@ func (h *gitHandler) ServeGitMaybe(w http.ResponseWriter, req *http.Request) (ok
 		return true
 	case strings.HasSuffix(url, "/info/refs?service=git-receive-pack"):
 		repoRoot := "dmitri.shuralyov.com" + url[:len(url)-len("/info/refs?service=git-receive-pack")]
-		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepository() {
+		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepoRoot() {
 			return false
 		}
 		h.serveGitInfoRefsReceivePack(w, req, repoInfo{
@@ -105,7 +105,7 @@ func (h *gitHandler) ServeGitMaybe(w http.ResponseWriter, req *http.Request) (ok
 		return true
 	case strings.HasSuffix(url, "/git-receive-pack"):
 		repoRoot := "dmitri.shuralyov.com" + url[:len(url)-len("/git-receive-pack")]
-		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepository() {
+		if dir, ok := h.code.ByImportPath[repoRoot]; !ok || !dir.IsRepoRoot() {
 			return false
 		}
 		h.serveGitReceivePack(w, req, repoInfo{

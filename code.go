@@ -25,15 +25,15 @@ type codeHandler struct {
 }
 
 func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (ok bool) {
-	// Parse the import path and wantRepo from the URL.
+	// Parse the import path and wantRepoRoot from the URL.
 	var (
-		importPath string
-		wantRepo   bool
+		importPath   string
+		wantRepoRoot bool
 	)
 	importPathPattern := "dmitri.shuralyov.com" + route.BeforeImportPathSeparator(req.URL.Path)
-	if strings.HasSuffix(importPathPattern, "/...") {
+	if strings.HasSuffix(importPathPattern, "/...") && !strings.Contains(importPathPattern[:len(importPathPattern)-len("/...")], "...") {
 		importPath = importPathPattern[:len(importPathPattern)-len("/...")]
-		wantRepo = true
+		wantRepoRoot = true
 	} else if strings.Contains(importPathPattern, "...") {
 		// Trailing "/..." is the only supported import path pattern.
 		return false
@@ -43,7 +43,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 
 	// Look up code directory by import path.
 	d, ok := h.code.ByImportPath[importPath]
-	if !ok || (wantRepo && !d.IsRepository()) {
+	if !ok || !d.WithinRepo() || (wantRepoRoot && !d.IsRepoRoot()) {
 		return false
 	}
 
@@ -54,12 +54,23 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 	}
 	pkgPath := d.ImportPath[len("dmitri.shuralyov.com"):]
 	switch {
-	case req.URL.Path == route.PkgIndex(pkgPath) && d.Package != nil:
+	case req.URL.Path == route.PkgIndex(pkgPath):
 		// Handle ?go-get=1 requests, serve a go-import meta tag page.
 		if req.Method == http.MethodGet && req.URL.Query().Get("go-get") == "1" {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			fmt.Fprintf(w, `<meta name="go-import" content="%[1]s git https://%[1]s">
 	<meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[2]s https://gotools.org/%[2]s#{file}-L{line}">`, d.RepoRoot, d.ImportPath)
+			return true
+		}
+
+		// If there's no Go package in this directory, redirect to "{ImportPath}/..." package listing.
+		if d.Package == nil {
+			u := *req.URL
+			u.Path += "/..."
+			if req.Method == http.MethodGet { // Workaround for https://groups.google.com/forum/#!topic/golang-nuts/9AVyMP9C8Ac.
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			}
+			http.Redirect(w, req, u.String(), http.StatusSeeOther)
 			return true
 		}
 

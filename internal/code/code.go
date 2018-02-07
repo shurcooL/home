@@ -27,7 +27,11 @@ type Directory struct {
 	Package    *Package
 }
 
-func (d Directory) IsRepository() bool { return d.ImportPath == d.RepoRoot }
+// WithinRepo reports whether directory d is contained by a repository.
+func (d Directory) WithinRepo() bool { return d.RepoRoot != "" }
+
+// IsRepoRoot reports whether directory corresponds to a repository root.
+func (d Directory) IsRepoRoot() bool { return d.RepoRoot == d.ImportPath }
 
 // Package represents a Go package inside a repository store.
 type Package struct {
