@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"go/doc"
 	"net/http"
 	"path/filepath"
@@ -54,6 +55,15 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 	pkgPath := d.ImportPath[len("dmitri.shuralyov.com"):]
 	switch {
 	case req.URL.Path == route.PkgIndex(pkgPath) && d.Package != nil:
+		// Handle ?go-get=1 requests, serve a go-import meta tag page.
+		if req.Method == http.MethodGet && req.URL.Query().Get("go-get") == "1" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			fmt.Fprintf(w, `<meta name="go-import" content="%[1]s git https://%[1]s">
+	<meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[2]s https://gotools.org/%[2]s#{file}-L{line}">`, d.RepoRoot, d.ImportPath)
+			return true
+		}
+
+		// Serve Go package index page.
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&packageHandler{
 			Repo: repo,
 			Pkg: pkgInfo{

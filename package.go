@@ -21,8 +21,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-// packageHandler is a handler for a Go package index page, as well as
-// its ?go-get=1 go-import meta tag page.
+// packageHandler is a handler for a Go package index page.
 type packageHandler struct {
 	Repo repoInfo
 	Pkg  pkgInfo
@@ -45,13 +44,6 @@ var packageHTML = template.Must(template.New("").Parse(`<html>
 func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return httperror.Method{Allowed: []string{"GET"}}
-	}
-
-	if req.URL.Query().Get("go-get") == "1" {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, err := fmt.Fprintf(w, `<meta name="go-import" content="%[1]s git https://%[1]s">
-<meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[2]s https://gotools.org/%[2]s#{file}-L{line}">`, h.Repo.Spec, h.Pkg.Spec)
-		return err
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
