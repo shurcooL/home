@@ -25,3 +25,4 @@ func RepoIndex(repoPath string) string   { return repoPath + "/..." }
 func RepoHistory(repoPath string) string { return repoPath + "/...$history" }
 func RepoCommit(repoPath string) string  { return repoPath + "/...$commit" }
 func RepoIssues(repoPath string) string  { return repoPath + "/...$issues" }
+func RepoChanges(repoPath string) string { return repoPath + "/...$changes" }

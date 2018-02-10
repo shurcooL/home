@@ -125,6 +125,11 @@ func run() error {
 		return err
 	}
 
+	err = initChanges(http.DefaultServeMux, notifications, users)
+	if err != nil {
+		return err
+	}
+
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))
 

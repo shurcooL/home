@@ -178,6 +178,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			}
 			return []htmlg.Component{header, heading, tabnav}, nil
 
+		// TODO: Dedup with changes (maybe; mind the githubURL difference).
 		case strings.HasPrefix(repo.URI, "github.com/"):
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),
@@ -209,6 +210,10 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
 						URL:      "/issues/" + repo.URI,
 						Selected: true,
+					},
+					{
+						Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+						URL:     "/changes/" + repo.URI,
 					},
 				},
 			}
@@ -246,7 +251,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			switch len(elems) {
 			case 2:
 				return httperror.Redirect{URL: "https://github.com/" + elems[0] + "/" + elems[1] + "/issues"}
-			default:
+			default: // 3 or more.
 				return httperror.Redirect{URL: "https://github.com/" + elems[0] + "/" + elems[1] + "/issues/" + elems[2]}
 			}
 		}
@@ -331,8 +336,9 @@ func (h issuesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 }
 
 // notificationsRouter implements notifications/githubapi.Router that targets GitHub issues
-// on local issuesapp.
-// TODO: It embeds issuesapp routing details; perhaps it should be moved there?
+// on local issuesapp, and GitHub pull requests on local changesapp.
+// TODO: It embeds home and issuesapp routing details; perhaps it should be split/moved?
+// TODO: It embeds home and changesapp routing details; perhaps it should be split/moved?
 type notificationsRouter struct {
 	ghnotifications.Router
 }
@@ -343,6 +349,14 @@ func (notificationsRouter) IssueURL(owner, repo string, issueID, commentID uint6
 		fragment = fmt.Sprintf("#comment-%d", commentID)
 	}
 	return fmt.Sprintf("/issues/github.com/%s/%s/%d%s", owner, repo, issueID, fragment)
+}
+
+func (notificationsRouter) PullRequestURL(owner, repo string, prID, commentID uint64) string {
+	var fragment string
+	if commentID != 0 {
+		fragment = fmt.Sprintf("#comment-%d", commentID)
+	}
+	return fmt.Sprintf("/changes/github.com/%s/%s/%d%s", owner, repo, prID, fragment)
 }
 
 // shurcoolSeesGitHubIssues lets shurcooL also see issues on GitHub,
