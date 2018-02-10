@@ -303,6 +303,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 			commits, err := listCommits(repo, e.Last, e.Commit, h.gitUsers)
 			if err != nil {
 				log.Println("listCommits:", err)
+				commits = nil
 			}
 			evt.Payload = event.Push{
 				Branch:  e.Branch,
