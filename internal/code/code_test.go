@@ -11,6 +11,10 @@ import (
 func TestDiscover(t *testing.T) {
 	want := []code.Directory{
 		{
+			ImportPath: "dmitri.shuralyov.com/emptyrepo",
+			RepoRoot:   "dmitri.shuralyov.com/emptyrepo",
+		},
+		{
 			ImportPath: "dmitri.shuralyov.com/kebabcase",
 			RepoRoot:   "dmitri.shuralyov.com/kebabcase",
 			Package: &code.Package{

@@ -11,6 +11,7 @@ import (
 
 	"github.com/shurcooL/go/vfs/godocfs/vfsutil"
 	"golang.org/x/tools/godoc/vfs"
+	"sourcegraph.com/sourcegraph/go-vcs/vcs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/git"
 )
 
@@ -107,7 +108,13 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 		return nil, err
 	}
 	head, err := r.ResolveRevision("HEAD")
-	if err != nil {
+	if err == vcs.ErrRevisionNotFound {
+		// Empty repository.
+		return []Directory{{
+			ImportPath: repoRoot,
+			RepoRoot:   repoRoot,
+		}}, nil
+	} else if err != nil {
 		return nil, err
 	}
 	fs, err := r.FileSystem(head)
