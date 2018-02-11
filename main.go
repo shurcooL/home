@@ -125,7 +125,7 @@ func run() error {
 		return err
 	}
 
-	err = initChanges(http.DefaultServeMux, notifications, users)
+	changesApp, err := initChanges(http.DefaultServeMux, notifications, users)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	codeHandler := codeHandler{code, reposDir, issuesApp, notifications, users, gitUsers}
+	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, notifications, users, gitUsers}
 	servePackagesMaybe := initPackages(code, notifications, users)
 
 	initTalks(

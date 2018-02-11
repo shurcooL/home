@@ -13,12 +13,15 @@ import (
 
 	"dmitri.shuralyov.com/app/changes"
 	"dmitri.shuralyov.com/app/changes/common"
+	"dmitri.shuralyov.com/service/change"
+	"dmitri.shuralyov.com/service/change/fs"
 	"dmitri.shuralyov.com/service/change/githubapi"
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/githubql"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
@@ -29,9 +32,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// initChanges registers handlers for the changes service HTTP API,
-// and handlers for the changes app.
-func initChanges(mux *http.ServeMux, notifications notifications.Service, users users.Service) error {
+func newChangeService(notifications notifications.Service, users users.Service) (change.Service, error) {
+	local := &fs.Service{}
+
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_ISSUES")}),
 	}
@@ -41,13 +44,28 @@ func initChanges(mux *http.ServeMux, notifications notifications.Service, users 
 		MarkCachedResponses: true,
 	}
 	httpClient := &http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}
-	change, err := githubapi.NewService(
+	shurcoolGitHubChange, err := githubapi.NewService(
 		github.NewClient(httpClient),
 		githubql.NewClient(httpClient),
 		notifications,
 	)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	return shurcoolSeesGitHubChanges{
+		service:              local,
+		shurcoolGitHubChange: shurcoolGitHubChange,
+		users:                users,
+	}, nil
+}
+
+// initChanges registers handlers for the change service HTTP API,
+// and handlers for the changes app.
+func initChanges(mux *http.ServeMux, notifications notifications.Service, users users.Service) (changesApp http.Handler, _ error) {
+	change, err := newChangeService(notifications, users)
+	if err != nil {
+		return nil, err
 	}
 
 	// Register HTTP API endpoints.
@@ -128,6 +146,35 @@ func initChanges(mux *http.ServeMux, notifications notifications.Service, users 
 		default:
 			return []htmlg.Component{header}, nil
 
+		case strings.HasPrefix(repoSpec, "dmitri.shuralyov.com/"):
+			heading := htmlg.NodeComponent{
+				Type: html.ElementNode, Data: atom.H2.String(),
+				FirstChild: htmlg.Text(repoSpec + "/..."),
+			}
+			repoPath := repoSpec[len("dmitri.shuralyov.com"):]
+			tabnav := tabnav{
+				Tabs: []tab{
+					{
+						Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
+						URL:     route.RepoIndex(repoPath),
+					},
+					{
+						Content: iconText{Icon: octiconssvg.History, Text: "History"},
+						URL:     route.RepoHistory(repoPath),
+					},
+					{
+						Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+						URL:     route.RepoIssues(repoPath),
+					},
+					{
+						Content:  iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+						URL:      route.RepoChanges(repoPath),
+						Selected: true,
+					},
+				},
+			}
+			return []htmlg.Component{header, heading, tabnav}, nil
+
 		// TODO: Dedup with issues (maybe; mind the githubURL difference).
 		case strings.HasPrefix(repoSpec, "github.com/"):
 			heading := &html.Node{
@@ -166,7 +213,7 @@ func initChanges(mux *http.ServeMux, notifications notifications.Service, users 
 			return []htmlg.Component{header, htmlg.NodeComponent(*heading), tabnav}, nil
 		}
 	}
-	changesApp := changes.New(change, users, opt)
+	changesApp = changes.New(change, users, opt)
 
 	githubChangesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		// Parse "/changes/github.com/..." request.
@@ -224,5 +271,155 @@ func initChanges(mux *http.ServeMux, notifications notifications.Service, users 
 	})}
 	mux.Handle("/changes/github.com/", githubChangesHandler)
 
-	return nil
+	return changesApp, nil
+}
+
+type changesHandler struct {
+	SpecURL    string
+	BaseURL    string
+	changesApp http.Handler
+}
+
+func (h changesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
+	prefixLen := len(h.BaseURL)
+	if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
+		baseURL := prefix
+		if req.URL.RawQuery != "" {
+			baseURL += "?" + req.URL.RawQuery
+		}
+		return httperror.Redirect{URL: baseURL}
+	}
+	returnURL := req.RequestURI
+	req = copyRequestAndURL(req)
+	req.URL.Path = req.URL.Path[prefixLen:]
+	if req.URL.Path == "" {
+		req.URL.Path = "/"
+	}
+	rr := httptest.NewRecorder()
+	rr.HeaderMap = w.Header()
+	req = req.WithContext(context.WithValue(req.Context(), changes.RepoSpecContextKey, h.SpecURL))
+	req = req.WithContext(context.WithValue(req.Context(), changes.BaseURIContextKey, h.BaseURL))
+	h.changesApp.ServeHTTP(rr, req)
+	// TODO: Have changesApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
+	// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
+	if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
+		loginURL := (&url.URL{
+			Path:     "/login",
+			RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
+		}).String()
+		return httperror.Redirect{URL: loginURL}
+	}
+	w.WriteHeader(rr.Code)
+	_, err := io.Copy(w, rr.Body)
+	return err
+}
+
+// shurcoolSeesGitHubChanges lets shurcooL also see changes on GitHub,
+// in addition to local ones.
+type shurcoolSeesGitHubChanges struct {
+	service              change.Service
+	shurcoolGitHubChange change.Service
+	users                users.Service
+}
+
+func (s shurcoolSeesGitHubChanges) List(ctx context.Context, repo string, opt change.ListOptions) ([]change.Change, error) {
+	if strings.HasPrefix(repo, "github.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubChange.List(ctx, repo, opt)
+	}
+
+	return s.service.List(ctx, repo, opt)
+}
+
+func (s shurcoolSeesGitHubChanges) Count(ctx context.Context, repo string, opt change.ListOptions) (uint64, error) {
+	if strings.HasPrefix(repo, "github.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return 0, err
+		}
+		if currentUser != shurcool {
+			return 0, os.ErrPermission
+		}
+		return s.shurcoolGitHubChange.Count(ctx, repo, opt)
+	}
+
+	return s.service.Count(ctx, repo, opt)
+}
+
+func (s shurcoolSeesGitHubChanges) Get(ctx context.Context, repo string, id uint64) (change.Change, error) {
+	if strings.HasPrefix(repo, "github.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return change.Change{}, err
+		}
+		if currentUser != shurcool {
+			return change.Change{}, os.ErrPermission
+		}
+		return s.shurcoolGitHubChange.Get(ctx, repo, id)
+	}
+
+	return s.service.Get(ctx, repo, id)
+}
+
+func (s shurcoolSeesGitHubChanges) ListTimeline(ctx context.Context, repo string, id uint64, opt *change.ListTimelineOptions) ([]interface{}, error) {
+	if strings.HasPrefix(repo, "github.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubChange.ListTimeline(ctx, repo, id, opt)
+	}
+
+	return s.service.ListTimeline(ctx, repo, id, opt)
+}
+
+func (s shurcoolSeesGitHubChanges) ListCommits(ctx context.Context, repo string, id uint64) ([]change.Commit, error) {
+	if strings.HasPrefix(repo, "github.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubChange.ListCommits(ctx, repo, id)
+	}
+
+	return s.service.ListCommits(ctx, repo, id)
+}
+
+func (s shurcoolSeesGitHubChanges) GetDiff(ctx context.Context, repo string, id uint64, opt *change.GetDiffOptions) ([]byte, error) {
+	if strings.HasPrefix(repo, "github.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		return s.shurcoolGitHubChange.GetDiff(ctx, repo, id, opt)
+	}
+
+	return s.service.GetDiff(ctx, repo, id, opt)
+}
+
+func (s shurcoolSeesGitHubChanges) ThreadType(repo string) string {
+	if strings.HasPrefix(repo, "github.com/") {
+		return s.shurcoolGitHubChange.(interface {
+			ThreadType(string) string
+		}).ThreadType(repo)
+	}
+
+	return s.service.(interface {
+		ThreadType(string) string
+	}).ThreadType(repo)
 }

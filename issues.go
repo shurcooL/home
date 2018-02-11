@@ -174,6 +174,10 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 						URL:      route.RepoIssues(repoPath),
 						Selected: true,
 					},
+					{
+						Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+						URL:     route.RepoChanges(repoPath),
+					},
 				},
 			}
 			return []htmlg.Component{header, heading, tabnav}, nil

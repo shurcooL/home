@@ -19,6 +19,7 @@ type codeHandler struct {
 	code          code.Code
 	reposDir      string
 	issuesApp     http.Handler
+	changesApp    http.Handler
 	notifications notifications.Service
 	users         users.Service
 	gitUsers      map[string]users.User // Key is lower git author email.
@@ -122,6 +123,16 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 			SpecURL:   repo.Spec, // Issues trackers are mapped to repo roots at this time.
 			BaseURL:   route.RepoIssues(repo.Path),
 			issuesApp: h.issuesApp,
+		}.ServeHTTP)}
+		h.ServeHTTP(w, req)
+		return true
+	case req.URL.Path == route.RepoChanges(repo.Path) ||
+		strings.HasPrefix(req.URL.Path, route.RepoChanges(repo.Path)+"/"):
+
+		h := cookieAuth{httputil.ErrorHandler(h.users, changesHandler{
+			SpecURL:    repo.Spec, // Change trackers are mapped to repo roots at this time.
+			BaseURL:    route.RepoChanges(repo.Path),
+			changesApp: h.changesApp,
 		}.ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true

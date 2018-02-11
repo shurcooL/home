@@ -113,6 +113,10 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
 				URL:     route.RepoIssues(h.Repo.Path),
 			},
+			{
+				Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+				URL:     route.RepoChanges(h.Repo.Path),
+			},
 		},
 	})
 	if err != nil {
