@@ -78,7 +78,7 @@ pre.highlight {
 	overflow-x: scroll;
 }
 
-.highlight .input-block { display: table; width: 100%; }
+.highlight .input-block { display: block; width: 100%; }
 .highlight .gi { color: #000; background-color: #dfd; }
 .highlight .gi .x { color: #000; background-color: #afa; }
 .highlight .gd { color: #000; background-color: #fdd; }
