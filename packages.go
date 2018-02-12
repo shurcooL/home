@@ -146,7 +146,7 @@ func renderPackages(w io.Writer, packages []code.Directory) error {
 	for _, p := range packages {
 		err := html.Render(w, htmlg.TR(
 			htmlg.TD(htmlg.A(p.ImportPath, packageHomeURL(p.ImportPath))),
-			htmlg.TD(htmlg.Text(p.Package.Doc)),
+			htmlg.TD(htmlg.Text(p.Package.Synopsis)),
 		))
 		if err != nil {
 			return err
@@ -175,327 +175,327 @@ var githubPackages = []code.Directory{
 	//{
 	//	ImportPath: "github.com/goxjs/example/motionblur",
 	//	Command:    true,
-	//	Doc:        "Render a square with and without motion blur.",
+	//	Synopsis:   "Render a square with and without motion blur.",
 	//},
 	//{
 	//	ImportPath: "github.com/goxjs/example/triangle",
 	//	Command:    true,
-	//	Doc:        "Render a basic triangle.",
+	//	Synopsis:   "Render a basic triangle.",
 	//},
 	{
 		ImportPath: "github.com/goxjs/gl",
 		RepoRoot:   "github.com/goxjs/gl",
 		Package: &code.Package{
-			Name: "gl",
-			Doc:  "Package gl is a Go cross-platform binding for OpenGL, with an OpenGL ES 2-like API.",
+			Name:     "gl",
+			Synopsis: "Package gl is a Go cross-platform binding for OpenGL, with an OpenGL ES 2-like API.",
 		},
 	},
 	{
 		ImportPath: "github.com/goxjs/gl/glutil",
 		RepoRoot:   "github.com/goxjs/gl",
 		Package: &code.Package{
-			Name: "glutil",
-			Doc:  "Package glutil implements OpenGL utility functions.",
+			Name:     "glutil",
+			Synopsis: "Package glutil implements OpenGL utility functions.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/goxjs/gl/test",
 	//	Command:    false,
-	//	Doc:        "Package test contains tests for goxjs/gl.",
+	//	Synopsis:   "Package test contains tests for goxjs/gl.",
 	//},
 	{
 		ImportPath: "github.com/goxjs/glfw",
 		RepoRoot:   "github.com/goxjs/glfw",
 		Package: &code.Package{
-			Name: "glfw",
-			Doc:  "Package glfw experimentally provides a glfw-like API with desktop (via glfw) and browser (via HTML5 canvas) backends.",
+			Name:     "glfw",
+			Synopsis: "Package glfw experimentally provides a glfw-like API with desktop (via glfw) and browser (via HTML5 canvas) backends.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/goxjs/glfw/test/events",
 	//	Command:    true,
-	//	Doc:        "events hooks every available callback and outputs their arguments.",
+	//	Synopsis:   "events hooks every available callback and outputs their arguments.",
 	//},
 	{
 		ImportPath: "github.com/goxjs/websocket",
 		RepoRoot:   "github.com/goxjs/websocket",
 		Package: &code.Package{
-			Name: "websocket",
-			Doc:  "Package websocket is a Go cross-platform implementation of a client for the WebSocket protocol.",
+			Name:     "websocket",
+			Synopsis: "Package websocket is a Go cross-platform implementation of a client for the WebSocket protocol.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store",
 	//	Command:    false,
-	//	Doc:        "Package gps defines domain types for Go Package Store.",
+	//	Synopsis:   "Package gps defines domain types for Go Package Store.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/assets",
 	//	Command:    false,
-	//	Doc:        "Package assets contains assets for Go Package Store.",
+	//	Synopsis:   "Package assets contains assets for Go Package Store.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/Go-Package-Store/cmd/Go-Package-Store",
 		RepoRoot:   "github.com/shurcooL/Go-Package-Store",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "Go Package Store displays updates for the Go packages in your GOPATH.",
+			Name:     "main",
+			Synopsis: "Go Package Store displays updates for the Go packages in your GOPATH.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/component",
 	//	Command:    false,
-	//	Doc:        "Package component contains Vecty HTML components used by Go Package Store.",
+	//	Synopsis:   "Package component contains Vecty HTML components used by Go Package Store.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend",
 	//	Command:    true,
-	//	Doc:        "Command frontend runs on frontend of Go Package Store.",
+	//	Synopsis:   "Command frontend runs on frontend of Go Package Store.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend/action",
 	//	Command:    false,
-	//	Doc:        "Package action defines actions that can be applied to the data model in store.",
+	//	Synopsis:   "Package action defines actions that can be applied to the data model in store.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend/model",
 	//	Command:    false,
-	//	Doc:        "Package model is a frontend data model for updates.",
+	//	Synopsis:   "Package model is a frontend data model for updates.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/frontend/store",
 	//	Command:    false,
-	//	Doc:        "Package store is a store for updates.",
+	//	Synopsis:   "Package store is a store for updates.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/presenter",
 	//	Command:    false,
-	//	Doc:        "Package presenter defines domain types for Go Package Store presenters.",
+	//	Synopsis:   "Package presenter defines domain types for Go Package Store presenters.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/presenter/github",
 	//	Command:    false,
-	//	Doc:        "Package github provides a GitHub API-powered presenter.",
+	//	Synopsis:   "Package github provides a GitHub API-powered presenter.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/presenter/gitiles",
 	//	Command:    false,
-	//	Doc:        "Package gitiles provides a Gitiles API-powered presenter.",
+	//	Synopsis:   "Package gitiles provides a Gitiles API-powered presenter.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/updater",
 	//	Command:    false,
-	//	Doc:        "Package updater contains gps.Updater implementations.",
+	//	Synopsis:   "Package updater contains gps.Updater implementations.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/Go-Package-Store/workspace",
 	//	Command:    false,
-	//	Doc:        "Package workspace contains a pipeline for processing a Go workspace.",
+	//	Synopsis:   "Package workspace contains a pipeline for processing a Go workspace.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/Hover",
 		RepoRoot:   "github.com/shurcooL/Hover",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "Hover is a work-in-progress port of Hover, a game originally created by Eric Undersander in 2000.",
+			Name:     "main",
+			Synopsis: "Hover is a work-in-progress port of Hover, a game originally created by Eric Undersander in 2000.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/Hover/track",
 	//	Command:    false,
-	//	Doc:        "Package track defines Hover track data structure and provides loading functionality.",
+	//	Synopsis:   "Package track defines Hover track data structure and provides loading functionality.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/binstale",
 		RepoRoot:   "github.com/shurcooL/binstale",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "binstale tells you whether the binaries in your GOPATH/bin are stale or up to date.",
+			Name:     "main",
+			Synopsis: "binstale tells you whether the binaries in your GOPATH/bin are stale or up to date.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/cmd/dumpargs",
 	//	Command:    true,
-	//	Doc:        "dumpargs dumps the command-line arguments.",
+	//	Synopsis:   "dumpargs dumps the command-line arguments.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/cmd/dumpglfw3joysticks",
 	//	Command:    true,
-	//	Doc:        "dumpglfw3joysticks dumps state of attached joysticks.",
+	//	Synopsis:   "dumpglfw3joysticks dumps state of attached joysticks.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/cmd/dumphttpreq",
 	//	Command:    true,
-	//	Doc:        "dumphttpreq dumps incoming HTTP requests with full detail.",
+	//	Synopsis:   "dumphttpreq dumps incoming HTTP requests with full detail.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/cmd/godocrouter",
 	//	Command:    true,
-	//	Doc:        "godocrouter is a reverse proxy that augments a private godoc server instance with global godoc.org instance.",
+	//	Synopsis:   "godocrouter is a reverse proxy that augments a private godoc server instance with global godoc.org instance.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/cmd/goimporters",
 		RepoRoot:   "github.com/shurcooL/cmd",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "goimporters displays an import graph of Go packages that import the specified Go package in your GOPATH workspace.",
+			Name:     "main",
+			Synopsis: "goimporters displays an import graph of Go packages that import the specified Go package in your GOPATH workspace.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/cmd/goimportgraph",
 		RepoRoot:   "github.com/shurcooL/cmd",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "goimportgraph displays an import graph within specified Go packages.",
+			Name:     "main",
+			Synopsis: "goimportgraph displays an import graph within specified Go packages.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/cmd/gopathshadow",
 		RepoRoot:   "github.com/shurcooL/cmd",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "gopathshadow reports if you have any shadowed Go packages in your GOPATH workspaces.",
+			Name:     "main",
+			Synopsis: "gopathshadow reports if you have any shadowed Go packages in your GOPATH workspaces.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/cmd/gorepogen",
 		RepoRoot:   "github.com/shurcooL/cmd",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "gorepogen generates boilerplate files for Go repositories hosted on GitHub.",
+			Name:     "main",
+			Synopsis: "gorepogen generates boilerplate files for Go repositories hosted on GitHub.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/cmd/jsonfmt",
 		RepoRoot:   "github.com/shurcooL/cmd",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "jsonfmt pretty-prints JSON from stdin.",
+			Name:     "main",
+			Synopsis: "jsonfmt pretty-prints JSON from stdin.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/cmd/runestats",
 	//	Command:    true,
-	//	Doc:        "runestats prints counts of total and unique runes from stdin.",
+	//	Synopsis:   "runestats prints counts of total and unique runes from stdin.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/component",
 		RepoRoot:   "github.com/shurcooL/component",
 		Package: &code.Package{
-			Name: "component",
-			Doc:  "Package component is a collection of basic HTML components.",
+			Name:     "component",
+			Synopsis: "Package component is a collection of basic HTML components.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/eX0/eX0-go",
 		RepoRoot:   "github.com/shurcooL/eX0",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "eX0-go is a work in progress Go implementation of eX0.",
+			Name:     "main",
+			Synopsis: "eX0-go is a work in progress Go implementation of eX0.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/eX0/eX0-go/gpc",
 	//	Command:    false,
-	//	Doc:        "Package gpc parses GPC format files.",
+	//	Synopsis:   "Package gpc parses GPC format files.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/eX0/eX0-go/packet",
 	//	Command:    false,
-	//	Doc:        "Package packet is for TCP and UDP packets used in eX0 networking protocol.",
+	//	Synopsis:   "Package packet is for TCP and UDP packets used in eX0 networking protocol.",
 	//},
 	{
 		//New:        true,
 		ImportPath: "github.com/shurcooL/events",
 		RepoRoot:   "github.com/shurcooL/events",
 		Package: &code.Package{
-			Name: "events",
-			Doc:  "Package events provides an events service definition.",
+			Name:     "events",
+			Synopsis: "Package events provides an events service definition.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/events/event",
 		RepoRoot:   "github.com/shurcooL/events",
 		Package: &code.Package{
-			Name: "event",
-			Doc:  "Package event defines event types.",
+			Name:     "event",
+			Synopsis: "Package event defines event types.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/events/fs",
 		RepoRoot:   "github.com/shurcooL/events",
 		Package: &code.Package{
-			Name: "fs",
-			Doc:  "Package fs implements events.Service using a virtual filesystem.",
+			Name:     "fs",
+			Synopsis: "Package fs implements events.Service using a virtual filesystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/events/githubapi",
 		RepoRoot:   "github.com/shurcooL/events",
 		Package: &code.Package{
-			Name: "githubapi",
-			Doc:  "Package githubapi implements events.Service using GitHub API client.",
+			Name:     "githubapi",
+			Synopsis: "Package githubapi implements events.Service using GitHub API client.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/frontend/checkbox",
 		RepoRoot:   "github.com/shurcooL/frontend",
 		Package: &code.Package{
-			Name: "checkbox",
-			Doc:  "Package checkbox provides a checkbox connected to a query parameter.",
+			Name:     "checkbox",
+			Synopsis: "Package checkbox provides a checkbox connected to a query parameter.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/frontend/reactionsmenu",
 		RepoRoot:   "github.com/shurcooL/frontend",
 		Package: &code.Package{
-			Name: "reactionsmenu",
-			Doc:  "Package reactionsmenu provides a reactions menu component.",
+			Name:     "reactionsmenu",
+			Synopsis: "Package reactionsmenu provides a reactions menu component.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/frontend/select_menu",
 		RepoRoot:   "github.com/shurcooL/frontend",
 		Package: &code.Package{
-			Name: "select_menu",
-			Doc:  "Package select_menu provides a select menu component.",
+			Name:     "select_menu",
+			Synopsis: "Package select_menu provides a select menu component.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/frontend/table-of-contents/handler",
 	//	Command:    false,
-	//	Doc:        "Package handler registers \"/table-of-contents.{js,css}\" routes on http.DefaultServeMux on init.",
+	//	Synopsis:   "Package handler registers \"/table-of-contents.{js,css}\" routes on http.DefaultServeMux on init.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/frontend/tabsupport",
 		RepoRoot:   "github.com/shurcooL/frontend",
 		Package: &code.Package{
-			Name: "tabsupport",
-			Doc:  "Package tabsupport offers functionality to add tab support to a textarea element.",
+			Name:     "tabsupport",
+			Synopsis: "Package tabsupport offers functionality to add tab support to a textarea element.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/git-branches",
 		RepoRoot:   "github.com/shurcooL/git-branches",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "git-branches is a go gettable command that displays branches with behind/ahead commit counts.",
+			Name:     "main",
+			Synopsis: "git-branches is a go gettable command that displays branches with behind/ahead commit counts.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/github_flavored_markdown",
 		RepoRoot:   "github.com/shurcooL/github_flavored_markdown",
 		Package: &code.Package{
-			Name: "github_flavored_markdown",
-			Doc:  "Package github_flavored_markdown provides a GitHub Flavored Markdown renderer with fenced code block highlighting, clickable heading anchor links.",
+			Name:     "github_flavored_markdown",
+			Synopsis: "Package github_flavored_markdown provides a GitHub Flavored Markdown renderer with fenced code block highlighting, clickable heading anchor links.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/github_flavored_markdown/gfmstyle",
 		RepoRoot:   "github.com/shurcooL/github_flavored_markdown",
 		Package: &code.Package{
-			Name: "gfmstyle",
-			Doc:  "Package gfmstyle contains CSS styles for rendering GitHub Flavored Markdown.",
+			Name:     "gfmstyle",
+			Synopsis: "Package gfmstyle contains CSS styles for rendering GitHub Flavored Markdown.",
 		},
 	},
 	{
@@ -503,53 +503,53 @@ var githubPackages = []code.Directory{
 		ImportPath: "github.com/shurcooL/githubql",
 		RepoRoot:   "github.com/shurcooL/githubql",
 		Package: &code.Package{
-			Name: "githubql",
-			Doc:  "Package githubql is a client library for accessing GitHub GraphQL API v4 (https://developer.github.com/v4/).",
+			Name:     "githubql",
+			Synopsis: "Package githubql is a client library for accessing GitHub GraphQL API v4 (https://developer.github.com/v4/).",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/githubql/example/githubqldev",
 	//	Command:    true,
-	//	Doc:        "githubqldev is a test program currently being used for developing githubql package.",
+	//	Synopsis:   "githubqldev is a test program currently being used for developing githubql package.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/go-goon",
 		RepoRoot:   "github.com/shurcooL/go-goon",
 		Package: &code.Package{
-			Name: "goon",
-			Doc:  "Package goon is a deep pretty printer with Go-like notation.",
+			Name:     "goon",
+			Synopsis: "Package goon is a deep pretty printer with Go-like notation.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go-goon/bypass",
 		RepoRoot:   "github.com/shurcooL/go-goon",
 		Package: &code.Package{
-			Name: "bypass",
-			Doc:  "Package bypass allows bypassing reflect restrictions on accessing unexported struct fields.",
+			Name:     "bypass",
+			Synopsis: "Package bypass allows bypassing reflect restrictions on accessing unexported struct fields.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/browser",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "browser",
-			Doc:  "Package browser provides utilities for interacting with users' browsers.",
+			Name:     "browser",
+			Synopsis: "Package browser provides utilities for interacting with users' browsers.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/ctxhttp",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "ctxhttp",
-			Doc:  "Package ctxhttp provides helper functions for performing context-aware HTTP requests.",
+			Name:     "ctxhttp",
+			Synopsis: "Package ctxhttp provides helper functions for performing context-aware HTTP requests.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/gddo",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "gddo",
-			Doc:  "Package gddo is a simple client library for accessing the godoc.org API.",
+			Name:     "gddo",
+			Synopsis: "Package gddo is a simple client library for accessing the godoc.org API.",
 		},
 	},
 	{
@@ -557,192 +557,192 @@ var githubPackages = []code.Directory{
 		ImportPath: "github.com/shurcooL/go/generated",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "generated",
-			Doc:  "Package generated provides a function that parses a Go file and reports whether it contains a \"// Code generated … DO NOT EDIT.\" line comment.",
+			Name:     "generated",
+			Synopsis: "Package generated provides a function that parses a Go file and reports whether it contains a \"// Code generated … DO NOT EDIT.\" line comment.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/gfmutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "gfmutil",
-			Doc:  "Package gfmutil offers functionality to render GitHub Flavored Markdown to io.Writer.",
+			Name:     "gfmutil",
+			Synopsis: "Package gfmutil offers functionality to render GitHub Flavored Markdown to io.Writer.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/gopathutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "gopathutil",
-			Doc:  "Package gopathutil provides tools to operate on GOPATH workspace.",
+			Name:     "gopathutil",
+			Synopsis: "Package gopathutil provides tools to operate on GOPATH workspace.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/gopherjs_http",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "gopherjs_http",
-			Doc:  "Package gopherjs_http provides helpers for compiling Go using GopherJS and serving it over HTTP.",
+			Name:     "gopherjs_http",
+			Synopsis: "Package gopherjs_http provides helpers for compiling Go using GopherJS and serving it over HTTP.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/gopherjs_http/jsutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "jsutil",
-			Doc:  "Package jsutil provides utility functions for interacting with native JavaScript APIs.",
+			Name:     "jsutil",
+			Synopsis: "Package jsutil provides utility functions for interacting with native JavaScript APIs.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/importgraphutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "importgraphutil",
-			Doc:  "Package importgraphutil augments \"golang.org/x/tools/refactor/importgraph\" with a way to build graphs ignoring tests.",
+			Name:     "importgraphutil",
+			Synopsis: "Package importgraphutil augments \"golang.org/x/tools/refactor/importgraph\" with a way to build graphs ignoring tests.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/indentwriter",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "indentwriter",
-			Doc:  "Package indentwriter implements an io.Writer wrapper that indents every non-empty line with specified number of tabs.",
+			Name:     "indentwriter",
+			Synopsis: "Package indentwriter implements an io.Writer wrapper that indents every non-empty line with specified number of tabs.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/ioutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "ioutil",
-			Doc:  "Package ioutil provides a WriteFile func with an io.Reader as input.",
+			Name:     "ioutil",
+			Synopsis: "Package ioutil provides a WriteFile func with an io.Reader as input.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/open",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "open",
-			Doc:  "Package open offers ability to open files or URLs as if user double-clicked it in their OS.",
+			Name:     "open",
+			Synopsis: "Package open offers ability to open files or URLs as if user double-clicked it in their OS.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/openutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "openutil",
-			Doc:  "Package openutil displays Markdown or HTML in a new browser tab.",
+			Name:     "openutil",
+			Synopsis: "Package openutil displays Markdown or HTML in a new browser tab.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/ospath",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "ospath",
-			Doc:  "Package ospath provides utilities to get OS-specific directories.",
+			Name:     "ospath",
+			Synopsis: "Package ospath provides utilities to get OS-specific directories.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/osutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "osutil",
-			Doc:  "Package osutil offers a utility for manipulating a set of environment variables.",
+			Name:     "osutil",
+			Synopsis: "Package osutil offers a utility for manipulating a set of environment variables.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/parserutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "parserutil",
-			Doc:  "Package parserutil offers convenience functions for parsing Go code to AST.",
+			Name:     "parserutil",
+			Synopsis: "Package parserutil offers convenience functions for parsing Go code to AST.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/pipeutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "pipeutil",
-			Doc:  "Package pipeutil provides additional functionality for gopkg.in/pipe.v2 package.",
+			Name:     "pipeutil",
+			Synopsis: "Package pipeutil provides additional functionality for gopkg.in/pipe.v2 package.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/printerutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "printerutil",
-			Doc:  "Package printerutil provides formatted printing of AST nodes.",
+			Name:     "printerutil",
+			Synopsis: "Package printerutil provides formatted printing of AST nodes.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/reflectfind",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "reflectfind",
-			Doc:  "Package reflectfind offers funcs to perform deep-search via reflect to find instances that satisfy given query.",
+			Name:     "reflectfind",
+			Synopsis: "Package reflectfind offers funcs to perform deep-search via reflect to find instances that satisfy given query.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/reflectsource",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "reflectsource",
-			Doc:  "Package sourcereflect implements run-time source reflection, allowing a program to look up string representation of objects from the underlying .go source files.",
+			Name:     "reflectsource",
+			Synopsis: "Package sourcereflect implements run-time source reflection, allowing a program to look up string representation of objects from the underlying .go source files.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/timeutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "timeutil",
-			Doc:  "Package timeutil provides a func for getting start of week of given time.",
+			Name:     "timeutil",
+			Synopsis: "Package timeutil provides a func for getting start of week of given time.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/trash",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "trash",
-			Doc:  "Package trash implements functionality to move files into trash.",
+			Name:     "trash",
+			Synopsis: "Package trash implements functionality to move files into trash.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/trim",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "trim",
-			Doc:  "Package trim contains helpers for trimming strings.",
+			Name:     "trim",
+			Synopsis: "Package trim contains helpers for trimming strings.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/vfs/godocfs/godocfs",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "godocfs",
-			Doc:  "Package godocfs implements vfs.FileSystem using a http.FileSystem.",
+			Name:     "godocfs",
+			Synopsis: "Package godocfs implements vfs.FileSystem using a http.FileSystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/vfs/godocfs/html/vfstemplate",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "vfstemplate",
-			Doc:  "Package vfstemplate offers html/template helpers that use vfs.FileSystem.",
+			Name:     "vfstemplate",
+			Synopsis: "Package vfstemplate offers html/template helpers that use vfs.FileSystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/vfs/godocfs/path/vfspath",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "vfspath",
-			Doc:  "Package vfspath implements utility routines for manipulating virtual file system paths.",
+			Name:     "vfspath",
+			Synopsis: "Package vfspath implements utility routines for manipulating virtual file system paths.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/go/vfs/godocfs/vfsutil",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
-			Name: "vfsutil",
-			Doc:  "Package vfsutil implements some I/O utility functions for vfs.FileSystem.",
+			Name:     "vfsutil",
+			Synopsis: "Package vfsutil implements some I/O utility functions for vfs.FileSystem.",
 		},
 	},
 	{
@@ -750,8 +750,8 @@ var githubPackages = []code.Directory{
 		ImportPath: "github.com/shurcooL/godecl",
 		RepoRoot:   "github.com/shurcooL/godecl",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "A godecl experiment.",
+			Name:     "main",
+			Synopsis: "A godecl experiment.",
 		},
 	},
 	{
@@ -759,16 +759,16 @@ var githubPackages = []code.Directory{
 		ImportPath: "github.com/shurcooL/godecl/decl",
 		RepoRoot:   "github.com/shurcooL/godecl",
 		Package: &code.Package{
-			Name: "decl",
-			Doc:  "Package decl implements functionality to convert fragments of Go code to an English representation.",
+			Name:     "decl",
+			Synopsis: "Package decl implements functionality to convert fragments of Go code to an English representation.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/goexec",
 		RepoRoot:   "github.com/shurcooL/goexec",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "goexec is a command line tool to execute Go code.",
+			Name:     "main",
+			Synopsis: "goexec is a command line tool to execute Go code.",
 		},
 	},
 	{
@@ -776,258 +776,258 @@ var githubPackages = []code.Directory{
 		ImportPath: "github.com/shurcooL/gofontwoff",
 		RepoRoot:   "github.com/shurcooL/gofontwoff",
 		Package: &code.Package{
-			Name: "gofontwoff",
-			Doc:  "Package gofontwoff provides the Go font family in Web Open Font Format.",
+			Name:     "gofontwoff",
+			Synopsis: "Package gofontwoff provides the Go font family in Web Open Font Format.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/gopherjslib",
 		RepoRoot:   "github.com/shurcooL/gopherjslib",
 		Package: &code.Package{
-			Name: "gopherjslib",
-			Doc:  "Package gopherjslib provides helpers for in-process GopherJS compilation.",
+			Name:     "gopherjslib",
+			Synopsis: "Package gopherjslib provides helpers for in-process GopherJS compilation.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/gostatus",
 		RepoRoot:   "github.com/shurcooL/gostatus",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "gostatus is a command line tool that shows the status of Go repositories.",
+			Name:     "main",
+			Synopsis: "gostatus is a command line tool that shows the status of Go repositories.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/gostatus/status",
 	//	Command:    false,
-	//	Doc:        "Package status provides a func to check if two repo URLs are equal in the context of Go packages.",
+	//	Synopsis:   "Package status provides a func to check if two repo URLs are equal in the context of Go packages.",
 	//},
 	{
 		//New:        true,
 		ImportPath: "github.com/shurcooL/graphql",
 		RepoRoot:   "github.com/shurcooL/graphql",
 		Package: &code.Package{
-			Name: "graphql",
-			Doc:  "Package graphql provides a GraphQL client implementation.",
+			Name:     "graphql",
+			Synopsis: "Package graphql provides a GraphQL client implementation.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/graphql/example/graphqldev",
 	//	Command:    true,
-	//	Doc:        "graphqldev is a test program currently being used for developing graphql package.",
+	//	Synopsis:   "graphqldev is a test program currently being used for developing graphql package.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/graphql/ident",
 		RepoRoot:   "github.com/shurcooL/graphql",
 		Package: &code.Package{
-			Name: "ident",
-			Doc:  "Package ident provides functions for parsing and converting identifier names between various naming convention.",
+			Name:     "ident",
+			Synopsis: "Package ident provides functions for parsing and converting identifier names between various naming convention.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/gtdo",
 		RepoRoot:   "github.com/shurcooL/gtdo",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "gtdo is the source for gotools.org.",
+			Name:     "main",
+			Synopsis: "gtdo is the source for gotools.org.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/gtdo/assets",
 	//	Command:    false,
-	//	Doc:        "Package assets contains assets for gtdo.",
+	//	Synopsis:   "Package assets contains assets for gtdo.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/gtdo/gtdo",
 	//	Command:    false,
-	//	Doc:        "Package gtdo contains common gtdo-specific consts for backend and frontend.",
+	//	Synopsis:   "Package gtdo contains common gtdo-specific consts for backend and frontend.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/gtdo/page",
 	//	Command:    false,
-	//	Doc:        "Package page contains code to render pages that can be used from backend and frontend.",
+	//	Synopsis:   "Package page contains code to render pages that can be used from backend and frontend.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/highlight_diff",
 		RepoRoot:   "github.com/shurcooL/highlight_diff",
 		Package: &code.Package{
-			Name: "highlight_diff",
-			Doc:  "Package highlight_diff provides syntaxhighlight.Printer and syntaxhighlight.Annotator implementations for diff format.",
+			Name:     "highlight_diff",
+			Synopsis: "Package highlight_diff provides syntaxhighlight.Printer and syntaxhighlight.Annotator implementations for diff format.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/highlight_go",
 		RepoRoot:   "github.com/shurcooL/highlight_go",
 		Package: &code.Package{
-			Name: "highlight_go",
-			Doc:  "Package highlight_go provides a syntax highlighter for Go, using go/scanner.",
+			Name:     "highlight_go",
+			Synopsis: "Package highlight_go provides a syntax highlighter for Go, using go/scanner.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/home",
 		RepoRoot:   "github.com/shurcooL/home",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "home is Dmitri Shuralyov's personal website.",
+			Name:     "main",
+			Synopsis: "home is Dmitri Shuralyov's personal website.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/assets",
 	//	Command:    false,
-	//	Doc:        "Package assets contains assets for home.",
+	//	Synopsis:   "Package assets contains assets for home.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/blog",
 	//	Command:    false,
-	//	Doc:        "Package blog contains functionality for rendering /blog page.",
+	//	Synopsis:   "Package blog contains functionality for rendering /blog page.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/component",
 	//	Command:    false,
-	//	Doc:        "Package component contains individual components that can render themselves as HTML.",
+	//	Synopsis:   "Package component contains individual components that can render themselves as HTML.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/exp/vec",
 	//	Command:    false,
-	//	Doc:        "Package vec provides a vecty-like API for backend HTML rendering.",
+	//	Synopsis:   "Package vec provides a vecty-like API for backend HTML rendering.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/exp/vec/attr",
 	//	Command:    false,
-	//	Doc:        "Package attr defines functions to set attributes of an HTML node.",
+	//	Synopsis:   "Package attr defines functions to set attributes of an HTML node.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/exp/vec/elem",
 	//	Command:    false,
-	//	Doc:        "Package elem defines functions to create HTML elements.",
+	//	Synopsis:   "Package elem defines functions to create HTML elements.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/home/http",
 		RepoRoot:   "github.com/shurcooL/home",
 		Package: &code.Package{
-			Name: "http",
-			Doc:  "Package http contains service implementations over HTTP.",
+			Name:     "http",
+			Synopsis: "Package http contains service implementations over HTTP.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/home/httphandler",
 		RepoRoot:   "github.com/shurcooL/home",
 		Package: &code.Package{
-			Name: "httphandler",
-			Doc:  "Package httphandler contains API handlers used by home.",
+			Name:     "httphandler",
+			Synopsis: "Package httphandler contains API handlers used by home.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/httputil",
 	//	Command:    false,
-	//	Doc:        "Package httputil is a custom HTTP framework created specifically for home.",
+	//	Synopsis:   "Package httputil is a custom HTTP framework created specifically for home.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/home/idiomaticgo",
 	//	Command:    false,
-	//	Doc:        "Package idiomaticgo contains functionality for rendering /idiomatic-go page.",
+	//	Synopsis:   "Package idiomaticgo contains functionality for rendering /idiomatic-go page.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/home/presentdata",
 		RepoRoot:   "github.com/shurcooL/home",
 		Package: &code.Package{
-			Name: "presentdata",
-			Doc:  "Package presentdata contains static data for present format.",
+			Name:     "presentdata",
+			Synopsis: "Package presentdata contains static data for present format.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/htmlg",
 		RepoRoot:   "github.com/shurcooL/htmlg",
 		Package: &code.Package{
-			Name: "htmlg",
-			Doc:  "Package htmlg contains helper funcs for generating HTML nodes and rendering them.",
+			Name:     "htmlg",
+			Synopsis: "Package htmlg contains helper funcs for generating HTML nodes and rendering them.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httperror",
 		RepoRoot:   "github.com/shurcooL/httperror",
 		Package: &code.Package{
-			Name: "httperror",
-			Doc:  "Package httperror provides common basic building blocks for custom HTTP frameworks.",
+			Name:     "httperror",
+			Synopsis: "Package httperror provides common basic building blocks for custom HTTP frameworks.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpfs/filter",
 		RepoRoot:   "github.com/shurcooL/httpfs",
 		Package: &code.Package{
-			Name: "filter",
-			Doc:  "Package filter offers an http.FileSystem wrapper with the ability to keep or skip files.",
+			Name:     "filter",
+			Synopsis: "Package filter offers an http.FileSystem wrapper with the ability to keep or skip files.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpfs/html/vfstemplate",
 		RepoRoot:   "github.com/shurcooL/httpfs",
 		Package: &code.Package{
-			Name: "vfstemplate",
-			Doc:  "Package vfstemplate offers html/template helpers that use http.FileSystem.",
+			Name:     "vfstemplate",
+			Synopsis: "Package vfstemplate offers html/template helpers that use http.FileSystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpfs/httputil",
 		RepoRoot:   "github.com/shurcooL/httpfs",
 		Package: &code.Package{
-			Name: "httputil",
-			Doc:  "Package httputil implements HTTP utility functions for http.FileSystem.",
+			Name:     "httputil",
+			Synopsis: "Package httputil implements HTTP utility functions for http.FileSystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpfs/path/vfspath",
 		RepoRoot:   "github.com/shurcooL/httpfs",
 		Package: &code.Package{
-			Name: "vfspath",
-			Doc:  "Package vfspath implements utility routines for manipulating virtual file system paths.",
+			Name:     "vfspath",
+			Synopsis: "Package vfspath implements utility routines for manipulating virtual file system paths.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpfs/union",
 		RepoRoot:   "github.com/shurcooL/httpfs",
 		Package: &code.Package{
-			Name: "union",
-			Doc:  "Package union offers a simple http.FileSystem that can unify multiple filesystems at various mount points.",
+			Name:     "union",
+			Synopsis: "Package union offers a simple http.FileSystem that can unify multiple filesystems at various mount points.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpfs/vfsutil",
 		RepoRoot:   "github.com/shurcooL/httpfs",
 		Package: &code.Package{
-			Name: "vfsutil",
-			Doc:  "Package vfsutil implements some I/O utility functions for http.FileSystem.",
+			Name:     "vfsutil",
+			Synopsis: "Package vfsutil implements some I/O utility functions for http.FileSystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/httpgzip",
 		RepoRoot:   "github.com/shurcooL/httpgzip",
 		Package: &code.Package{
-			Name: "httpgzip",
-			Doc:  "Package httpgzip provides net/http-like primitives that use gzip compression when serving HTTP requests.",
+			Name:     "httpgzip",
+			Synopsis: "Package httpgzip provides net/http-like primitives that use gzip compression when serving HTTP requests.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/issues",
 		RepoRoot:   "github.com/shurcooL/issues",
 		Package: &code.Package{
-			Name: "issues",
-			Doc:  "Package issues provides an issues service definition.",
+			Name:     "issues",
+			Synopsis: "Package issues provides an issues service definition.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/issues/asanaapi",
 		RepoRoot:   "github.com/shurcooL/issues",
 		Package: &code.Package{
-			Name: "asanaapi",
-			Doc:  "Package asanaapi implements issues.Service using Asana API client.",
+			Name:     "asanaapi",
+			Synopsis: "Package asanaapi implements issues.Service using Asana API client.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/issues/fs",
 		RepoRoot:   "github.com/shurcooL/issues",
 		Package: &code.Package{
-			Name: "fs",
-			Doc:  "Package fs implements issues.Service using a filesystem.",
+			Name:     "fs",
+			Synopsis: "Package fs implements issues.Service using a filesystem.",
 		},
 	},
 	{
@@ -1035,8 +1035,8 @@ var githubPackages = []code.Directory{
 		ImportPath: "github.com/shurcooL/issues/githubapi",
 		RepoRoot:   "github.com/shurcooL/issues",
 		Package: &code.Package{
-			Name: "githubapi",
-			Doc:  "Package githubapi implements issues.Service using GitHub API clients.",
+			Name:     "githubapi",
+			Synopsis: "Package githubapi implements issues.Service using GitHub API clients.",
 		},
 	},
 	{
@@ -1044,345 +1044,345 @@ var githubPackages = []code.Directory{
 		ImportPath: "github.com/shurcooL/issues/maintner",
 		RepoRoot:   "github.com/shurcooL/issues",
 		Package: &code.Package{
-			Name: "maintner",
-			Doc:  "Package maintner implements a read-only issues.Service using a x/build/maintner corpus.",
+			Name:     "maintner",
+			Synopsis: "Package maintner implements a read-only issues.Service using a x/build/maintner corpus.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/issuesapp",
 		RepoRoot:   "github.com/shurcooL/issuesapp",
 		Package: &code.Package{
-			Name: "issuesapp",
-			Doc:  "Package issuesapp is a web frontend for an issues service.",
+			Name:     "issuesapp",
+			Synopsis: "Package issuesapp is a web frontend for an issues service.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/issuesapp/assets",
 	//	Command:    false,
-	//	Doc:        "Package assets contains assets for issuesapp.",
+	//	Synopsis:   "Package assets contains assets for issuesapp.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/issuesapp/common",
 	//	Command:    false,
-	//	Doc:        "Package common contains common code for backend and frontend.",
+	//	Synopsis:   "Package common contains common code for backend and frontend.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/issuesapp/component",
 	//	Command:    false,
-	//	Doc:        "Package component contains individual components that can render themselves as HTML.",
+	//	Synopsis:   "Package component contains individual components that can render themselves as HTML.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/issuesapp/frontend",
 	//	Command:    true,
-	//	Doc:        "frontend script for issuesapp.",
+	//	Synopsis:   "frontend script for issuesapp.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/issuesapp/httpclient",
 		RepoRoot:   "github.com/shurcooL/issuesapp",
 		Package: &code.Package{
-			Name: "httpclient",
-			Doc:  "Package httpclient contains issues.Service implementation over HTTP.",
+			Name:     "httpclient",
+			Synopsis: "Package httpclient contains issues.Service implementation over HTTP.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/issuesapp/httphandler",
 		RepoRoot:   "github.com/shurcooL/issuesapp",
 		Package: &code.Package{
-			Name: "httphandler",
-			Doc:  "Package httphandler contains an API handler for issues.Service.",
+			Name:     "httphandler",
+			Synopsis: "Package httphandler contains an API handler for issues.Service.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/issuesapp/httproute",
 	//	Command:    false,
-	//	Doc:        "Package httproute contains route paths for httpclient, httphandler.",
+	//	Synopsis:   "Package httproute contains route paths for httpclient, httphandler.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/ivybrowser",
 		RepoRoot:   "github.com/shurcooL/ivybrowser",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "ivy in the browser.",
+			Name:     "main",
+			Synopsis: "ivy in the browser.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/markdownfmt",
 		RepoRoot:   "github.com/shurcooL/markdownfmt",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "markdownfmt formats Markdown.",
+			Name:     "main",
+			Synopsis: "markdownfmt formats Markdown.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/markdownfmt/markdown",
 		RepoRoot:   "github.com/shurcooL/markdownfmt",
 		Package: &code.Package{
-			Name: "markdown",
-			Doc:  "Package markdown provides a Markdown renderer.",
+			Name:     "markdown",
+			Synopsis: "Package markdown provides a Markdown renderer.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/notifications",
 		RepoRoot:   "github.com/shurcooL/notifications",
 		Package: &code.Package{
-			Name: "notifications",
-			Doc:  "Package notifications provides a notifications service definition.",
+			Name:     "notifications",
+			Synopsis: "Package notifications provides a notifications service definition.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/notifications/fs",
 		RepoRoot:   "github.com/shurcooL/notifications",
 		Package: &code.Package{
-			Name: "fs",
-			Doc:  "Package fs implements notifications.Service using a virtual filesystem.",
+			Name:     "fs",
+			Synopsis: "Package fs implements notifications.Service using a virtual filesystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/notifications/githubapi",
 		RepoRoot:   "github.com/shurcooL/notifications",
 		Package: &code.Package{
-			Name: "githubapi",
-			Doc:  "Package githubapi implements notifications.Service using GitHub API clients.",
+			Name:     "githubapi",
+			Synopsis: "Package githubapi implements notifications.Service using GitHub API clients.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/notificationsapp",
 		RepoRoot:   "github.com/shurcooL/notificationsapp",
 		Package: &code.Package{
-			Name: "notificationsapp",
-			Doc:  "Package notificationsapp is a web frontend for a notifications service.",
+			Name:     "notificationsapp",
+			Synopsis: "Package notificationsapp is a web frontend for a notifications service.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/notificationsapp/assets",
 	//	Command:    false,
-	//	Doc:        "Package assets contains assets for notificationsapp.",
+	//	Synopsis:   "Package assets contains assets for notificationsapp.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/notificationsapp/component",
 	//	Command:    false,
-	//	Doc:        "Package component contains individual components that can render themselves as HTML.",
+	//	Synopsis:   "Package component contains individual components that can render themselves as HTML.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/notificationsapp/frontend",
 	//	Command:    true,
-	//	Doc:        "frontend script for notificationsapp.",
+	//	Synopsis:   "frontend script for notificationsapp.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/notificationsapp/httpclient",
 		RepoRoot:   "github.com/shurcooL/notificationsapp",
 		Package: &code.Package{
-			Name: "httpclient",
-			Doc:  "Package httpclient contains notifications.Service implementation over HTTP.",
+			Name:     "httpclient",
+			Synopsis: "Package httpclient contains notifications.Service implementation over HTTP.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/notificationsapp/httphandler",
 		RepoRoot:   "github.com/shurcooL/notificationsapp",
 		Package: &code.Package{
-			Name: "httphandler",
-			Doc:  "Package httphandler contains an API handler for notifications.Service.",
+			Name:     "httphandler",
+			Synopsis: "Package httphandler contains an API handler for notifications.Service.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/notificationsapp/httproute",
 	//	Command:    false,
-	//	Doc:        "Package httproute contains route paths for httpclient, httphandler.",
+	//	Synopsis:   "Package httproute contains route paths for httpclient, httphandler.",
 	//},
 	//{
 	//	ImportPath: "github.com/shurcooL/octicons",
 	//	Command:    false,
-	//	Doc:        "Package octicons provides GitHub Octicons.",
+	//	Synopsis:   "Package octicons provides GitHub Octicons.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/octiconssvg",
 		RepoRoot:   "github.com/shurcooL/octiconssvg",
 		Package: &code.Package{
-			Name: "octiconssvg",
-			Doc:  "Package octiconssvg provides GitHub Octicons in SVG format.",
+			Name:     "octiconssvg",
+			Synopsis: "Package octiconssvg provides GitHub Octicons in SVG format.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/reactions",
 		RepoRoot:   "github.com/shurcooL/reactions",
 		Package: &code.Package{
-			Name: "reactions",
-			Doc:  "Package reactions provides a reactions service definition.",
+			Name:     "reactions",
+			Synopsis: "Package reactions provides a reactions service definition.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/reactions/component",
 		RepoRoot:   "github.com/shurcooL/reactions",
 		Package: &code.Package{
-			Name: "component",
-			Doc:  "Package component contains individual components that can render themselves as HTML.",
+			Name:     "component",
+			Synopsis: "Package component contains individual components that can render themselves as HTML.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/reactions/emojis",
 		RepoRoot:   "github.com/shurcooL/reactions",
 		Package: &code.Package{
-			Name: "emojis",
-			Doc:  "Package emojis contains emojis image data.",
+			Name:     "emojis",
+			Synopsis: "Package emojis contains emojis image data.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/reactions/fs",
 		RepoRoot:   "github.com/shurcooL/reactions",
 		Package: &code.Package{
-			Name: "fs",
-			Doc:  "Package fs implements reactions.Service using a virtual filesystem.",
+			Name:     "fs",
+			Synopsis: "Package fs implements reactions.Service using a virtual filesystem.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/reactions/mousemoveclick",
 	//	Command:    true,
-	//	Doc:        "mousemoveclick is a script to demonstrate a peculiar browser behavior on iOS.",
+	//	Synopsis:   "mousemoveclick is a script to demonstrate a peculiar browser behavior on iOS.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/resume",
 		RepoRoot:   "github.com/shurcooL/resume",
 		Package: &code.Package{
-			Name: "resume",
-			Doc:  "Package resume contains Dmitri Shuralyov's résumé.",
+			Name:     "resume",
+			Synopsis: "Package resume contains Dmitri Shuralyov's résumé.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/resume/component",
 	//	Command:    false,
-	//	Doc:        "Package component contains individual components that can render themselves as HTML.",
+	//	Synopsis:   "Package component contains individual components that can render themselves as HTML.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/resume/frontend",
 		RepoRoot:   "github.com/shurcooL/resume",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "frontend renders the resume entirely on the frontend.",
+			Name:     "main",
+			Synopsis: "frontend renders the resume entirely on the frontend.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/sanitized_anchor_name",
 		RepoRoot:   "github.com/shurcooL/sanitized_anchor_name",
 		Package: &code.Package{
-			Name: "sanitized_anchor_name",
-			Doc:  "Package sanitized_anchor_name provides a func to create sanitized anchor names.",
+			Name:     "sanitized_anchor_name",
+			Synopsis: "Package sanitized_anchor_name provides a func to create sanitized anchor names.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/tictactoe",
 		RepoRoot:   "github.com/shurcooL/tictactoe",
 		Package: &code.Package{
-			Name: "tictactoe",
-			Doc:  "Package tictactoe defines the game of tic-tac-toe.",
+			Name:     "tictactoe",
+			Synopsis: "Package tictactoe defines the game of tic-tac-toe.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/tictactoe/cmd/tictactoe",
 		RepoRoot:   "github.com/shurcooL/tictactoe",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "tictactoe plays a game of tic-tac-toe with two players.",
+			Name:     "main",
+			Synopsis: "tictactoe plays a game of tic-tac-toe with two players.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/tictactoe/player/bad",
 		RepoRoot:   "github.com/shurcooL/tictactoe",
 		Package: &code.Package{
-			Name: "bad",
-			Doc:  "Package bad contains a bad tic-tac-toe player.",
+			Name:     "bad",
+			Synopsis: "Package bad contains a bad tic-tac-toe player.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/tictactoe/player/random",
 		RepoRoot:   "github.com/shurcooL/tictactoe",
 		Package: &code.Package{
-			Name: "random",
-			Doc:  "Package random implements a random player of tic-tac-toe.",
+			Name:     "random",
+			Synopsis: "Package random implements a random player of tic-tac-toe.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/trayhost",
 		RepoRoot:   "github.com/shurcooL/trayhost",
 		Package: &code.Package{
-			Name: "trayhost",
-			Doc:  "Package trayhost is a cross-platform Go library to place an icon in the host operating system's taskbar.",
+			Name:     "trayhost",
+			Synopsis: "Package trayhost is a cross-platform Go library to place an icon in the host operating system's taskbar.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/users",
 		RepoRoot:   "github.com/shurcooL/users",
 		Package: &code.Package{
-			Name: "users",
-			Doc:  "Package users provides a users service definition.",
+			Name:     "users",
+			Synopsis: "Package users provides a users service definition.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/users/asanaapi",
 		RepoRoot:   "github.com/shurcooL/users",
 		Package: &code.Package{
-			Name: "asanaapi",
-			Doc:  "Package asanaapi implements users.Service using Asana API client.",
+			Name:     "asanaapi",
+			Synopsis: "Package asanaapi implements users.Service using Asana API client.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/users/fs",
 		RepoRoot:   "github.com/shurcooL/users",
 		Package: &code.Package{
-			Name: "fs",
-			Doc:  "Package fs implements an in-memory users.Store backed by a virtual filesystem.",
+			Name:     "fs",
+			Synopsis: "Package fs implements an in-memory users.Store backed by a virtual filesystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/users/githubapi",
 		RepoRoot:   "github.com/shurcooL/users",
 		Package: &code.Package{
-			Name: "githubapi",
-			Doc:  "Package githubapi implements users.Service using GitHub API client.",
+			Name:     "githubapi",
+			Synopsis: "Package githubapi implements users.Service using GitHub API client.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/vcsstate",
 		RepoRoot:   "github.com/shurcooL/vcsstate",
 		Package: &code.Package{
-			Name: "vcsstate",
-			Doc:  "Package vcsstate allows getting the state of version control system repositories.",
+			Name:     "vcsstate",
+			Synopsis: "Package vcsstate allows getting the state of version control system repositories.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/vfsgen",
 		RepoRoot:   "github.com/shurcooL/vfsgen",
 		Package: &code.Package{
-			Name: "vfsgen",
-			Doc:  "Package vfsgen takes an http.FileSystem (likely at `go generate` time) and generates Go code that statically implements the provided http.FileSystem.",
+			Name:     "vfsgen",
+			Synopsis: "Package vfsgen takes an http.FileSystem (likely at `go generate` time) and generates Go code that statically implements the provided http.FileSystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/vfsgen/cmd/vfsgendev",
 		RepoRoot:   "github.com/shurcooL/vfsgen",
 		Package: &code.Package{
-			Name: "main",
-			Doc:  "vfsgendev is a convenience tool for using vfsgen in a common development configuration.",
+			Name:     "main",
+			Synopsis: "vfsgendev is a convenience tool for using vfsgen in a common development configuration.",
 		},
 	},
 	//{
 	//	ImportPath: "github.com/shurcooL/vfsgen/test",
 	//	Command:    false,
-	//	Doc:        "Package test contains tests for virtual filesystem implementation generated by vfsgen.",
+	//	Synopsis:   "Package test contains tests for virtual filesystem implementation generated by vfsgen.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/webdavfs/vfsutil",
 		RepoRoot:   "github.com/shurcooL/webdavfs",
 		Package: &code.Package{
-			Name: "vfsutil",
-			Doc:  "Package vfsutil implements some I/O utility functions for webdav.FileSystem.",
+			Name:     "vfsutil",
+			Synopsis: "Package vfsutil implements some I/O utility functions for webdav.FileSystem.",
 		},
 	},
 	{
 		ImportPath: "github.com/shurcooL/webdavfs/webdavfs",
 		RepoRoot:   "github.com/shurcooL/webdavfs",
 		Package: &code.Package{
-			Name: "webdavfs",
-			Doc:  "Package webdavfs implements webdav.FileSystem using an http.FileSystem.",
+			Name:     "webdavfs",
+			Synopsis: "Package webdavfs implements webdav.FileSystem using an http.FileSystem.",
 		},
 	},
 }

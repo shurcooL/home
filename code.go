@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"go/doc"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -81,7 +79,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 			Pkg: pkgInfo{
 				Spec:    d.ImportPath,
 				Name:    d.Package.Name,
-				DocHTML: docHTML(d.Package.Doc),
+				DocHTML: d.Package.DocHTML,
 			},
 			notifications: h.notifications,
 			users:         h.users,
@@ -149,14 +147,7 @@ type repoInfo struct {
 }
 
 type pkgInfo struct {
-	Spec    string // Package import path. E.g., "example.com/repo/go-package".
-	Name    string // Package name. E.g., "package".
-	DocHTML string // Package documentation synopsis HTML. E.g., "<p>Package package provides some functionality.</p>".
-}
-
-// docHTML returns documentation comment text converted to formatted HTML.
-func docHTML(text string) string {
-	var buf bytes.Buffer
-	doc.ToHTML(&buf, text, nil)
-	return buf.String()
+	Spec    string // Package import path. E.g., "example.com/repo/package".
+	Name    string // Package name. E.g., "pkg".
+	DocHTML string // Package documentation HTML. E.g., "<p>Package pkg provides some functionality.</p><p>More information about pkg.</p>".
 }

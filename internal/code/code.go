@@ -2,7 +2,9 @@
 package code
 
 import (
+	"bytes"
 	"go/build"
+	"go/doc"
 	"io"
 	"os"
 	"path"
@@ -36,8 +38,9 @@ func (d Directory) IsRepoRoot() bool { return d.RepoRoot == d.ImportPath }
 
 // Package represents a Go package inside a repository store.
 type Package struct {
-	Name string
-	Doc  string // Documentation synopsis.
+	Name     string
+	Synopsis string // Package documentation synopsis.
+	DocHTML  string // Package documentation HTML.
 }
 
 func (p Package) IsCommand() bool { return p.Name == "main" }
@@ -133,7 +136,7 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 		if strings.HasPrefix(fi.Name(), ".") || strings.HasPrefix(fi.Name(), "_") || fi.Name() == "testdata" {
 			return filepath.SkipDir
 		}
-		pkg, err := loadPackage(fs, dir)
+		pkg, err := loadPackage(fs, dir, path.Join(repoRoot, dir))
 		if err != nil {
 			return err
 		}
@@ -147,7 +150,7 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 	return dirs, err
 }
 
-func loadPackage(fs vfs.FileSystem, dir string) (*Package, error) {
+func loadPackage(fs vfs.FileSystem, dir, importPath string) (*Package, error) {
 	bctx := build.Context{
 		GOOS:        "linux",
 		GOARCH:      "amd64",
@@ -173,9 +176,22 @@ func loadPackage(fs vfs.FileSystem, dir string) (*Package, error) {
 	} else if err != nil {
 		return nil, err
 	}
+	// TODO: Automate this.
+	doc := p.Doc
+	switch importPath {
+	case "dmitri.shuralyov.com/kebabcase":
+		doc += "\n\nReference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers."
+	case "dmitri.shuralyov.com/scratch/image/jpeg":
+		doc += "\n\nJPEG is defined in ITU-T T.81: http://www.w3.org/Graphics/JPEG/itu-t81.pdf."
+	case "dmitri.shuralyov.com/scratch/image/png":
+		doc += "\n\nThe PNG specification is at http://www.w3.org/TR/PNG/."
+	case "dmitri.shuralyov.com/font/woff2":
+		doc += "\n\nThe WOFF2 font packaging format is specified at https://www.w3.org/TR/WOFF2/."
+	}
 	return &Package{
-		Name: p.Name,
-		Doc:  p.Doc,
+		Name:     p.Name,
+		Synopsis: p.Doc,
+		DocHTML:  docHTML(doc),
 	}, nil
 }
 
@@ -191,4 +207,11 @@ func hasSubdir(root, dir string) (rel string, ok bool) {
 		return "", false
 	}
 	return dir[len(root):], true
+}
+
+// docHTML returns documentation comment text converted to formatted HTML.
+func docHTML(text string) string {
+	var buf bytes.Buffer
+	doc.ToHTML(&buf, text, nil)
+	return buf.String()
 }
