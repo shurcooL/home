@@ -224,15 +224,15 @@ func (a activity) Render() []*html.Node {
 			}
 			e.Details = details
 			displayEvent = e
-		case event.PullRequest:
+		case event.Change:
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitPullRequest,
-				Action:     component.Text(fmt.Sprintf("%v a pull request in", p.Action)),
+				Action:     component.Text(fmt.Sprintf("%v a change in", p.Action)),
 			}
 			details := iconLink{
-				Text:  p.PullRequestTitle,
-				URL:   p.PullRequestHTMLURL,
+				Text:  p.ChangeTitle,
+				URL:   p.ChangeHTMLURL,
 				Black: true,
 			}
 			switch p.Action {
@@ -247,7 +247,7 @@ func (a activity) Render() []*html.Node {
 				details.IconColor = &RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 
 				//default:
-				//log.Println("activity.Render: unsupported event.PullRequest action:", p.Action)
+				//log.Println("activity.Render: unsupported event.Change action:", p.Action)
 				//details.Icon = octiconssvg.GitPullRequest
 			}
 			e.Details = details
@@ -263,11 +263,11 @@ func (a activity) Render() []*html.Node {
 					Text:     shortBody(p.CommentBody),
 				},
 			}
-		case event.PullRequestComment:
+		case event.ChangeComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.CommentDiscussion,
-				Action:     component.Join("commented on ", prName(p), " in"),
+				Action:     component.Join("commented on ", changeName(p), " in"),
 				Details: imageText{
 					ImageURL: e.Actor.AvatarURL,
 					Text:     shortBody(p.CommentBody),
@@ -404,13 +404,13 @@ func issueName(p event.IssueComment) htmlg.Component {
 	}
 	return n
 }
-func prName(p event.PullRequestComment) htmlg.Component {
+func changeName(p event.ChangeComment) htmlg.Component {
 	n := iconLink{
-		Text:    shortTitle(p.PullRequestTitle),
-		Tooltip: p.PullRequestTitle,
+		Text:    shortTitle(p.ChangeTitle),
+		Tooltip: p.ChangeTitle,
 		URL:     p.CommentHTMLURL,
 	}
-	switch p.PullRequestState {
+	switch p.ChangeState {
 	case "open":
 		n.Icon = octiconssvg.GitPullRequest
 		n.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
@@ -422,7 +422,7 @@ func prName(p event.PullRequestComment) htmlg.Component {
 		n.IconColor = &RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 
 		//default:
-		//log.Println("prName: unsupported event.PullRequestComment State:", p.State)
+		//log.Println("changeName: unsupported event.ChangeComment State:", p.State)
 		//n.Icon = octiconssvg.GitPullRequest
 	}
 	return n
