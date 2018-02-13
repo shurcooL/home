@@ -451,6 +451,41 @@ func (s shurcoolSeesGitHubIssues) ListEvents(ctx context.Context, repo issues.Re
 	return s.service.ListEvents(ctx, repo, id, opt)
 }
 
+func (s shurcoolSeesGitHubIssues) IsTimelineLister(repo issues.RepoSpec) bool {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		tl, ok := s.shurcoolGitHubIssues.(issues.TimelineLister)
+		return ok && tl.IsTimelineLister(repo)
+	}
+
+	tl, ok := s.service.(issues.TimelineLister)
+	return ok && tl.IsTimelineLister(repo)
+}
+
+func (s shurcoolSeesGitHubIssues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
+	if strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != shurcool {
+			return nil, os.ErrPermission
+		}
+		tl, ok := s.shurcoolGitHubIssues.(issues.TimelineLister)
+		if !ok {
+			return nil, fmt.Errorf("s.shurcoolGitHubIssues doesn't implement issues.TimelineLister")
+		}
+		return tl.ListTimeline(ctx, repo, id, opt)
+	}
+
+	tl, ok := s.service.(issues.TimelineLister)
+	if !ok {
+		return nil, fmt.Errorf("s.service doesn't implement issues.TimelineLister")
+	}
+	return tl.ListTimeline(ctx, repo, id, opt)
+}
+
 func (s shurcoolSeesGitHubIssues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
 	if strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
