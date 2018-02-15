@@ -28,7 +28,6 @@ import (
 	"github.com/shurcooL/issuesapp/httphandler"
 	"github.com/shurcooL/issuesapp/httproute"
 	"github.com/shurcooL/notifications"
-	ghnotifications "github.com/shurcooL/notifications/githubapi"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -337,30 +336,6 @@ func (h issuesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	w.WriteHeader(rr.Code)
 	_, err := io.Copy(w, rr.Body)
 	return err
-}
-
-// notificationsRouter implements notifications/githubapi.Router that targets GitHub issues
-// on local issuesapp, and GitHub pull requests on local changesapp.
-// TODO: It embeds home and issuesapp routing details; perhaps it should be split/moved?
-// TODO: It embeds home and changesapp routing details; perhaps it should be split/moved?
-type notificationsRouter struct {
-	ghnotifications.Router
-}
-
-func (notificationsRouter) IssueURL(owner, repo string, issueID, commentID uint64) string {
-	var fragment string
-	if commentID != 0 {
-		fragment = fmt.Sprintf("#comment-%d", commentID)
-	}
-	return fmt.Sprintf("/issues/github.com/%s/%s/%d%s", owner, repo, issueID, fragment)
-}
-
-func (notificationsRouter) PullRequestURL(owner, repo string, prID, commentID uint64) string {
-	var fragment string
-	if commentID != 0 {
-		fragment = fmt.Sprintf("#comment-%d", commentID)
-	}
-	return fmt.Sprintf("/changes/github.com/%s/%s/%d%s", owner, repo, prID, fragment)
 }
 
 // shurcoolSeesGitHubIssues lets shurcooL also see issues on GitHub,

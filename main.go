@@ -64,15 +64,18 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	githubRouter := shurcoolSeesHomeRouter{users: users}
 	notifications, err := initNotifications(
 		http.DefaultServeMux,
 		webdav.Dir(filepath.Join(storeDir, "notifications")),
+		githubRouter,
 		users)
 	if err != nil {
 		return err
 	}
 	events, err := newEventsService(
 		webdav.Dir(filepath.Join(storeDir, "events")),
+		githubRouter,
 		users,
 	)
 	if err != nil {

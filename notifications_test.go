@@ -17,7 +17,7 @@ func TestNotificationsRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = initNotifications(mux, webdav.NewMemFS(), users)
+	_, err = initNotifications(mux, webdav.NewMemFS(), nil, users)
 	if err != nil {
 		t.Fatal(err)
 	}

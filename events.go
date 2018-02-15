@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"dmitri.shuralyov.com/route/github"
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/events/event"
 	"github.com/shurcooL/events/fs"
@@ -12,7 +13,7 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-func newEventsService(root webdav.FileSystem, users users.Service) (events.Service, error) {
+func newEventsService(root webdav.FileSystem, router github.Router, users users.Service) (events.Service, error) {
 	shurcool, err := users.Get(context.Background(), shurcool)
 	if err != nil {
 		return nil, err
@@ -21,7 +22,7 @@ func newEventsService(root webdav.FileSystem, users users.Service) (events.Servi
 	if err != nil {
 		return nil, err
 	}
-	github, err := githubapi.NewService(unauthenticatedGitHubClient, shurcool)
+	github, err := githubapi.NewService(unauthenticatedGitHubClient, shurcool, router)
 	if err != nil {
 		return nil, err
 	}

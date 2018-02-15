@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/github"
+	"dmitri.shuralyov.com/route/github"
+	githubV3 "github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/githubql"
 	"github.com/shurcooL/home/component"
@@ -31,7 +32,7 @@ import (
 // initNotifications creates and returns a notification service,
 // registers handlers for its HTTP API,
 // and handlers for the notifications app.
-func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.Service) (notifications.Service, error) {
+func initNotifications(mux *http.ServeMux, root webdav.FileSystem, router github.Router, users users.Service) (notifications.Service, error) {
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_NOTIFICATIONS")}),
 	}
@@ -42,9 +43,9 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 	}
 	httpClient := &http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}
 	shurcoolGitHubNotifications := githubapi.NewService(
-		github.NewClient(httpClient),
+		githubV3.NewClient(httpClient),
 		githubql.NewClient(httpClient),
-		notificationsRouter{githubapi.GitHubRouter{}},
+		router,
 	)
 
 	notificationsService := shurcoolSeesGitHubNotifications{
