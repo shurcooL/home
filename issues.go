@@ -152,7 +152,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 		default:
 			return []htmlg.Component{header}, nil
 
-		case strings.HasPrefix(repo.URI, "dmitri.shuralyov.com/"):
+		case strings.HasPrefix(repo.URI, "dmitri.shuralyov.com/") && repo.URI != "dmitri.shuralyov.com/idiomatic-go":
 			heading := htmlg.NodeComponent{
 				Type: html.ElementNode, Data: atom.H2.String(),
 				FirstChild: htmlg.Text(repo.URI + "/..."),
