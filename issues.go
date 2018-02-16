@@ -186,7 +186,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),
 			}
-			heading.AppendChild(htmlg.Text(repo.URI))
+			heading.AppendChild(htmlg.Text(repo.URI + "/..."))
 			var githubURL string
 			switch issueID := req.Context().Value(issuesapp.StateContextKey).(common.State).IssueID; {
 			case repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" &&

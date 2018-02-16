@@ -180,7 +180,7 @@ func initChanges(mux *http.ServeMux, notifications notifications.Service, users 
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),
 			}
-			heading.AppendChild(htmlg.Text(repoSpec))
+			heading.AppendChild(htmlg.Text(repoSpec + "/..."))
 			var githubURL string
 			switch st.ChangeID {
 			case 0:
