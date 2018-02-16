@@ -18,7 +18,7 @@ func newEventsService(root webdav.FileSystem, router github.Router, users users.
 	if err != nil {
 		return nil, err
 	}
-	local, err := fs.NewService(root, shurcool)
+	local, err := fs.NewService(root, shurcool, users)
 	if err != nil {
 		return nil, err
 	}

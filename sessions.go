@@ -235,20 +235,20 @@ func lookUpSessionViaHeader(req *http.Request) (*session, error) {
 	return s, nil // Existing session.
 }
 
-// lookUpUserViaBasicAuth retrieves the user from req by looking up
+// lookUpSessionUserViaBasicAuth retrieves the session+user from req by looking up
 // the request's access token (via Basic Auth) in the sessions map,
 // and then getting the user via usersService.
-// It returns a valid user (possibly nil) and nil error,
-// or nil user and errBadAccessToken.
-func lookUpUserViaBasicAuth(req *http.Request, usersService users.Service) (*users.User, error) {
+// It returns a valid session+user (possibly nil) and nil error,
+// or nil session+user and errBadAccessToken.
+func lookUpSessionUserViaBasicAuth(req *http.Request, usersService users.Service) (*session, *users.User, error) {
 	username, password, ok := req.BasicAuth()
 	if !ok {
-		return nil, nil // No user.
+		return nil, nil, nil // No session+user.
 	}
 	encodedAccessToken := password
 	accessTokenBytes, err := base64.RawURLEncoding.DecodeString(encodedAccessToken)
 	if err != nil {
-		return nil, errBadAccessToken
+		return nil, nil, errBadAccessToken
 	}
 	accessToken := string(accessTokenBytes)
 	var s *session
@@ -262,18 +262,18 @@ func lookUpUserViaBasicAuth(req *http.Request, usersService users.Service) (*use
 	}
 	global.mu.Unlock()
 	if s == nil {
-		return nil, errBadAccessToken
+		return nil, nil, errBadAccessToken
 	}
 	// Existing session, now get user and verify the username matches.
 	user, err := usersService.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"})
 	if err != nil {
-		log.Println("lookUpUserViaBasicAuth: failed to get user:", err)
-		return nil, errBadAccessToken
+		log.Println("lookUpSessionUserViaBasicAuth: failed to get user:", err)
+		return nil, nil, errBadAccessToken
 	}
 	if username != user.Login {
-		return nil, errBadAccessToken
+		return nil, nil, errBadAccessToken
 	}
-	return &user, nil // Existing user.
+	return s, &user, nil // Existing session+user.
 }
 
 type sessionsHandler struct {

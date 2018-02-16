@@ -199,7 +199,7 @@ func (h *gitHandler) serveGitInfoRefsReceivePack(w http.ResponseWriter, req *htt
 	}
 
 	// Authorization check.
-	user, _ := lookUpUserViaBasicAuth(req, h.users)
+	session, user, _ := lookUpSessionUserViaBasicAuth(req, h.users)
 	if user == nil {
 		w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
 		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
@@ -208,6 +208,7 @@ func (h *gitHandler) serveGitInfoRefsReceivePack(w http.ResponseWriter, req *htt
 		http.Error(w, "403 Forbidden", http.StatusForbidden)
 		return
 	}
+	req = withSession(req, session)
 
 	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
@@ -250,7 +251,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 	}
 
 	// Authorization check.
-	user, _ := lookUpUserViaBasicAuth(req, h.users)
+	session, user, _ := lookUpSessionUserViaBasicAuth(req, h.users)
 	if user == nil {
 		w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
 		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
@@ -259,6 +260,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		http.Error(w, "403 Forbidden", http.StatusForbidden)
 		return
 	}
+	req = withSession(req, session)
 
 	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
