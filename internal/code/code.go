@@ -179,7 +179,7 @@ func loadPackage(fs vfs.FileSystem, dir, importPath string) (*Package, error) {
 	// TODO: Automate this.
 	doc := p.Doc
 	switch importPath {
-	case "dmitri.shuralyov.com/kebabcase":
+	case "dmitri.shuralyov.com/text/kebabcase", "dmitri.shuralyov.com/kebabcase":
 		doc += "\n\nReference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers."
 	case "dmitri.shuralyov.com/scratch/image/jpeg":
 		doc += "\n\nJPEG is defined in ITU-T T.81: http://www.w3.org/Graphics/JPEG/itu-t81.pdf."
