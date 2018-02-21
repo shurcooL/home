@@ -570,14 +570,6 @@ var githubPackages = []code.Directory{
 		},
 	},
 	{
-		ImportPath: "github.com/shurcooL/go/gopathutil",
-		RepoRoot:   "github.com/shurcooL/go",
-		Package: &code.Package{
-			Name:     "gopathutil",
-			Synopsis: "Package gopathutil provides tools to operate on GOPATH workspace.",
-		},
-	},
-	{
 		ImportPath: "github.com/shurcooL/go/gopherjs_http",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
