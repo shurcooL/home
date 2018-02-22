@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"dmitri.shuralyov.com/html/belt"
 	"github.com/dustin/go-humanize"
 	"github.com/shurcooL/component"
 	"github.com/shurcooL/events"
@@ -288,7 +289,7 @@ func (a activity) Render() []*html.Node {
 			e := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.GitCommit,
-				Action:     component.Join("pushed to ", codeText{Text: p.Branch}, " in"),
+				Action:     component.Join("pushed to ", belt.Reference{Name: p.Branch}, " in"),
 			}
 			switch len(p.Commits) {
 			default:
@@ -296,8 +297,8 @@ func (a activity) Render() []*html.Node {
 					Commits: p.Commits,
 				}
 			case 0:
-				before := commitID{SHA: p.Before, HTMLURL: p.BeforeHTMLURL}
-				head := commitID{SHA: p.Head, HTMLURL: p.HeadHTMLURL}
+				before := belt.CommitID{SHA: p.Before, HTMLURL: p.BeforeHTMLURL}
+				head := belt.CommitID{SHA: p.Head, HTMLURL: p.HeadHTMLURL}
 				e.Details = component.Join(before, " → ", head)
 			}
 			displayEvent = e
@@ -321,11 +322,11 @@ func (a activity) Render() []*html.Node {
 			case "branch":
 				e.Icon = octiconssvg.GitBranch
 				e.Action = component.Text("created branch in")
-				e.Details = codeText{Text: p.Name}
+				e.Details = belt.Reference{Name: p.Name}
 			case "tag":
 				e.Icon = octiconssvg.Tag
 				e.Action = component.Text("created tag in")
-				e.Details = codeText{Text: p.Name}
+				e.Details = belt.Reference{Name: p.Name}
 
 				//default:
 				//basicEvent.WIP = true
@@ -353,8 +354,8 @@ func (a activity) Render() []*html.Node {
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Trashcan,
 				Action:     component.Text(fmt.Sprintf("deleted %v in", p.Type)),
-				Details: codeText{
-					Text:          p.Name,
+				Details: belt.Reference{
+					Name:          p.Name,
 					Strikethrough: true,
 				},
 			}
@@ -605,26 +606,6 @@ func shortTitle(s string) string {
 	return s[:35] + "…"
 }
 
-type codeText struct {
-	Text          string
-	Strikethrough bool
-}
-
-func (d codeText) Render() []*html.Node {
-	codeStyle := `padding: 2px 6px;
-background-color: rgb(232, 241, 246);
-border-radius: 3px;`
-	if d.Strikethrough {
-		codeStyle += `text-decoration: line-through; color: gray;`
-	}
-	code := &html.Node{
-		Type: html.ElementNode, Data: atom.Code.String(),
-		Attr:       []html.Attribute{{Key: atom.Style.String(), Val: codeStyle}},
-		FirstChild: htmlg.Text(d.Text),
-	}
-	return []*html.Node{code}
-}
-
 type commits struct {
 	Commits []event.Commit // Ordered from earliest to most recent (head).
 }
@@ -686,33 +667,6 @@ func (c commit) Render() []*html.Node {
 		message.AppendChild(htmlg.Text(shortCommit(firstParagraph(c.CommitMessage))))
 	}
 	return []*html.Node{avatar, sha, message}
-}
-
-// commitID is a component that displays a linked commit ID. E.g., "c0de1234".
-type commitID struct {
-	SHA     string
-	HTMLURL string // Optional.
-}
-
-func (c commitID) Render() []*html.Node {
-	sha := &html.Node{
-		Type: html.ElementNode, Data: atom.Code.String(),
-		Attr: []html.Attribute{
-			{Key: atom.Style.String(), Val: "width: 8ch; overflow: hidden; display: inline-grid; white-space: nowrap;"},
-			{Key: atom.Title.String(), Val: c.SHA},
-		},
-		FirstChild: htmlg.Text(c.SHA),
-	}
-	if c.HTMLURL != "" {
-		sha = &html.Node{
-			Type: html.ElementNode, Data: atom.A.String(),
-			Attr: []html.Attribute{
-				{Key: atom.Href.String(), Val: c.HTMLURL},
-			},
-			FirstChild: sha,
-		}
-	}
-	return []*html.Node{sha}
 }
 
 func shortCommit(s string) string {

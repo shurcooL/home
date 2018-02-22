@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"dmitri.shuralyov.com/html/belt"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
@@ -252,7 +253,7 @@ display: none;`}},
 	}
 	div.AppendChild(titleAndByline)
 
-	commitID := commitID{SHA: c.SHA}
+	commitID := belt.CommitID{SHA: c.SHA}
 	htmlg.AppendChildren(div, commitID.Render()...)
 
 	a := &html.Node{
