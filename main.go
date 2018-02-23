@@ -128,7 +128,7 @@ func run() error {
 		return err
 	}
 
-	changesApp, err := initChanges(http.DefaultServeMux, notifications, users)
+	changesApp, err := initChanges(http.DefaultServeMux, reactions, notifications, users)
 	if err != nil {
 		return err
 	}

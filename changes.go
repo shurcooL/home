@@ -16,6 +16,8 @@ import (
 	"dmitri.shuralyov.com/service/change"
 	"dmitri.shuralyov.com/service/change/fs"
 	"dmitri.shuralyov.com/service/change/githubapi"
+	"dmitri.shuralyov.com/service/change/httphandler"
+	"dmitri.shuralyov.com/service/change/httproute"
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/githubql"
@@ -26,14 +28,15 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/oauth2"
 )
 
-func newChangeService(notifications notifications.Service, users users.Service) (change.Service, error) {
-	local := &fs.Service{}
+func newChangeService(reactions reactions.Service, notifications notifications.Service, users users.Service) (change.Service, error) {
+	local := &fs.Service{Reactions: reactions}
 
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_ISSUES")}),
@@ -62,14 +65,15 @@ func newChangeService(notifications notifications.Service, users users.Service) 
 
 // initChanges registers handlers for the change service HTTP API,
 // and handlers for the changes app.
-func initChanges(mux *http.ServeMux, notifications notifications.Service, users users.Service) (changesApp http.Handler, _ error) {
-	change, err := newChangeService(notifications, users)
+func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications notifications.Service, users users.Service) (changesApp http.Handler, _ error) {
+	change, err := newChangeService(reactions, notifications, users)
 	if err != nil {
 		return nil, err
 	}
 
 	// Register HTTP API endpoints.
-	// ...
+	changeAPIHandler := httphandler.Change{Change: change}
+	mux.Handle(httproute.EditComment, headerAuth{httputil.ErrorHandler(users, changeAPIHandler.EditComment)})
 
 	opt := changes.Options{
 		Notifications: notifications,
@@ -410,6 +414,21 @@ func (s shurcoolSeesGitHubChanges) GetDiff(ctx context.Context, repo string, id 
 	}
 
 	return s.service.GetDiff(ctx, repo, id, opt)
+}
+
+func (s shurcoolSeesGitHubChanges) EditComment(ctx context.Context, repo string, id uint64, cr change.CommentRequest) (change.Comment, error) {
+	if strings.HasPrefix(repo, "github.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return change.Comment{}, err
+		}
+		if currentUser != shurcool {
+			return change.Comment{}, os.ErrPermission
+		}
+		return s.shurcoolGitHubChange.EditComment(ctx, repo, id, cr)
+	}
+
+	return s.service.EditComment(ctx, repo, id, cr)
 }
 
 func (s shurcoolSeesGitHubChanges) ThreadType(repo string) string {
