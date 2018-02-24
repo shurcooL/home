@@ -360,7 +360,7 @@ func (a activity) Render() []*html.Node {
 				},
 			}
 
-		case event.Gollum:
+		case event.Wiki:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octiconssvg.Book,
@@ -636,23 +636,7 @@ func (c commit) Render() []*html.Node {
 			{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 4px;"},
 		},
 	}
-	sha := &html.Node{
-		Type: html.ElementNode, Data: atom.Code.String(),
-		Attr: []html.Attribute{
-			{Key: atom.Style.String(), Val: "width: 8ch; overflow: hidden; display: inline-grid; white-space: nowrap;"},
-			{Key: atom.Title.String(), Val: c.SHA},
-		},
-		FirstChild: htmlg.Text(c.SHA),
-	}
-	if c.HTMLURL != "" {
-		sha = &html.Node{
-			Type: html.ElementNode, Data: atom.A.String(),
-			Attr: []html.Attribute{
-				{Key: atom.Href.String(), Val: c.HTMLURL},
-			},
-			FirstChild: sha,
-		}
-	}
+	commitID := belt.CommitID{SHA: c.SHA, HTMLURL: c.HTMLURL}
 	message := &html.Node{
 		Type: html.ElementNode, Data: atom.Span.String(),
 		Attr: []html.Attribute{
@@ -666,7 +650,12 @@ func (c commit) Render() []*html.Node {
 	case true:
 		message.AppendChild(htmlg.Text(shortCommit(firstParagraph(c.CommitMessage))))
 	}
-	return []*html.Node{avatar, sha, message}
+
+	var ns []*html.Node
+	ns = append(ns, avatar)
+	ns = append(ns, commitID.Render()...)
+	ns = append(ns, message)
+	return ns
 }
 
 func shortCommit(s string) string {
@@ -701,32 +690,32 @@ func (d pages) Render() []*html.Node {
 				{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 6px;"},
 			},
 		}
-		action := &html.Node{
+		commitID := belt.CommitID{SHA: p.SHA, HTMLURL: p.CompareHTMLURL}
+		message := &html.Node{
 			Type: html.ElementNode, Data: atom.Span.String(),
-			FirstChild: htmlg.Text(p.Action),
+			Attr: []html.Attribute{{Key: atom.Style.String(), Val: "margin-left: 4px;"}},
 		}
 		switch p.Action {
+		case "created":
+			message.AppendChild(htmlg.Text("Create"))
 		case "edited":
-			action = &html.Node{
-				Type: html.ElementNode, Data: atom.A.String(),
-				Attr: []html.Attribute{
-					{Key: atom.Href.String(), Val: p.CompareHTMLURL},
-				},
-				FirstChild: action,
-			}
+			message.AppendChild(htmlg.Text("Edit"))
 		}
-		title := &html.Node{
+		message.AppendChild(htmlg.Text(" page "))
+		message.AppendChild(&html.Node{
 			Type: html.ElementNode, Data: atom.A.String(),
 			Attr: []html.Attribute{
-				{Key: atom.Href.String(), Val: p.PageHTMLURL},
+				{Key: atom.Href.String(), Val: p.HTMLURL},
 			},
-			FirstChild: &html.Node{
-				Type: html.ElementNode, Data: atom.Span.String(),
-				FirstChild: htmlg.Text(p.Title),
-			},
-		}
+			FirstChild: htmlg.Text(p.Title),
+		})
+		message.AppendChild(htmlg.Text("."))
 
-		div := htmlg.Div(avatar, action, htmlg.Text(" page "), title)
+		var ns []*html.Node
+		ns = append(ns, avatar)
+		ns = append(ns, commitID.Render()...)
+		ns = append(ns, message)
+		div := htmlg.Div(ns...)
 		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
 		nodes = append(nodes, div)
 	}
