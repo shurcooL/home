@@ -366,7 +366,7 @@ func listCommits(repo repoInfo, base, head string, gitUsers map[string]users.Use
 
 		commits = append(commits, event.Commit{
 			SHA:             string(c.ID),
-			CommitMessage:   c.Message,
+			Message:         c.Message,
 			AuthorAvatarURL: user.AvatarURL,
 			HTMLURL:         route.RepoCommit(repo.Path) + "/" + string(c.ID),
 		})

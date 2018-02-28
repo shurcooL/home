@@ -9,7 +9,6 @@ import (
 	"math"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"dmitri.shuralyov.com/html/belt"
@@ -386,54 +385,33 @@ func (a activity) Render() []*html.Node {
 }
 
 func issueName(p event.IssueComment) htmlg.Component {
-	n := iconLink{
-		Text:    shortTitle(p.IssueTitle),
-		Tooltip: p.IssueTitle,
-		URL:     p.CommentHTMLURL,
+	return belt.Issue{
+		State:   p.IssueState,
+		Title:   p.IssueTitle,
+		HTMLURL: p.CommentHTMLURL,
+		Short:   true,
 	}
-	switch p.IssueState {
-	case "open":
-		n.Icon = octiconssvg.IssueOpened
-		n.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-	case "closed":
-		n.Icon = octiconssvg.IssueClosed
-		n.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-
-		//default:
-		//log.Println("issueName: unsupported event.IssueComment State:", p.State)
-		//n.Icon = octiconssvg.IssueOpened
-	}
-	return n
 }
 func changeName(p event.ChangeComment) htmlg.Component {
-	n := iconLink{
-		Text:    shortTitle(p.ChangeTitle),
-		Tooltip: p.ChangeTitle,
-		URL:     p.CommentHTMLURL,
+	return belt.Change{
+		State:   p.ChangeState,
+		Title:   p.ChangeTitle,
+		HTMLURL: p.CommentHTMLURL,
+		Short:   true,
 	}
-	switch p.ChangeState {
-	case "open":
-		n.Icon = octiconssvg.GitPullRequest
-		n.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-	case "closed":
-		n.Icon = octiconssvg.GitPullRequest
-		n.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-	case "merged":
-		n.Icon = octiconssvg.GitMerge
-		n.IconColor = &RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
-
-		//default:
-		//log.Println("changeName: unsupported event.ChangeComment State:", p.State)
-		//n.Icon = octiconssvg.GitPullRequest
-	}
-	return n
 }
 func commitName(p event.CommitComment) htmlg.Component {
 	c := p.Commit
-	if c.CommitMessage == "" {
+	if c.Message == "" {
 		return component.Text("a commit")
 	}
-	return commit{Commit: c, Short: true}
+	return belt.Commit{
+		SHA:             c.SHA,
+		Message:         c.Message,
+		AuthorAvatarURL: c.AuthorAvatarURL,
+		HTMLURL:         c.HTMLURL,
+		Short:           true,
+	}
 }
 
 type basicEvent struct {
@@ -599,13 +577,6 @@ func shortBody(s string) string {
 	return s[:199] + "…"
 }
 
-func shortTitle(s string) string {
-	if len(s) <= 36 {
-		return s
-	}
-	return s[:35] + "…"
-}
-
 type commits struct {
 	Commits []event.Commit // Ordered from earliest to most recent (head).
 }
@@ -615,63 +586,19 @@ func (d commits) Render() []*html.Node {
 
 	// Display latest commits on top.
 	for i := len(d.Commits) - 1; i >= 0; i-- {
-		div := htmlg.Div(commit{Commit: d.Commits[i]}.Render()...)
+		c := d.Commits[i]
+		commit := belt.Commit{
+			SHA:             c.SHA,
+			Message:         c.Message,
+			AuthorAvatarURL: c.AuthorAvatarURL,
+			HTMLURL:         c.HTMLURL,
+		}
+		div := htmlg.Div(commit.Render()...)
 		div.Attr = append(div.Attr, html.Attribute{Key: atom.Style.String(), Val: "margin-top: 4px;"})
 		nodes = append(nodes, div)
 	}
 
 	return nodes
-}
-
-type commit struct {
-	event.Commit
-	Short bool
-}
-
-func (c commit) Render() []*html.Node {
-	avatar := &html.Node{
-		Type: html.ElementNode, Data: atom.Img.String(),
-		Attr: []html.Attribute{
-			{Key: atom.Src.String(), Val: c.AuthorAvatarURL},
-			{Key: atom.Style.String(), Val: "width: 16px; height: 16px; vertical-align: top; margin-right: 4px;"},
-		},
-	}
-	commitID := belt.CommitID{SHA: c.SHA, HTMLURL: c.HTMLURL}
-	message := &html.Node{
-		Type: html.ElementNode, Data: atom.Span.String(),
-		Attr: []html.Attribute{
-			{Key: atom.Style.String(), Val: "margin-left: 4px;"},
-			{Key: atom.Title.String(), Val: c.CommitMessage},
-		},
-	}
-	switch c.Short {
-	case false:
-		message.AppendChild(htmlg.Text(firstParagraph(c.CommitMessage)))
-	case true:
-		message.AppendChild(htmlg.Text(shortCommit(firstParagraph(c.CommitMessage))))
-	}
-
-	var ns []*html.Node
-	ns = append(ns, avatar)
-	ns = append(ns, commitID.Render()...)
-	ns = append(ns, message)
-	return ns
-}
-
-func shortCommit(s string) string {
-	if len(s) <= 24 {
-		return s
-	}
-	return s[:23] + "…"
-}
-
-// firstParagraph returns the first paragraph of text s.
-func firstParagraph(s string) string {
-	i := strings.Index(s, "\n\n")
-	if i == -1 {
-		return s
-	}
-	return s[:i]
 }
 
 type pages struct {
