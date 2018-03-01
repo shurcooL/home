@@ -5,33 +5,33 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/google/go-github/github"
+	githubV3 "github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
+	"github.com/shurcooL/githubql"
 	"github.com/shurcooL/users"
 	"github.com/shurcooL/users/fs"
 	"golang.org/x/net/webdav"
+	"golang.org/x/oauth2"
 )
 
 var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
 
-// unauthenticatedGitHubClient makes unauthenticated calls
-// with the OAuth application credentials.
-var unauthenticatedGitHubClient = func() *github.Client {
-	var transport http.RoundTripper
-	if githubConfig.ClientID != "" {
-		transport = &github.UnauthenticatedRateLimitedTransport{
-			ClientID:     githubConfig.ClientID,
-			ClientSecret: githubConfig.ClientSecret,
-		}
+// Authenticated GitHub API clients with public repo scope.
+// (Since GraphQL API doesn't support unauthenticated clients at this time.)
+var shurcoolPublicRepoGHV3, shurcoolPublicRepoGHV4 = func() (*githubV3.Client, *githubql.Client) {
+	authTransport := &oauth2.Transport{
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_PUBLIC_REPO")}),
 	}
-	transport = &httpcache.Transport{
-		Transport:           transport,
+	cacheTransport := &httpcache.Transport{
+		Transport:           authTransport,
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
-	return github.NewClient(&http.Client{Transport: transport, Timeout: 5 * time.Second})
+	return githubV3.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
+		githubql.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second})
 }()
 
 func newUsersService(root webdav.FileSystem) (users.Service, users.Store, error) {

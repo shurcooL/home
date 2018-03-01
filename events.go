@@ -22,7 +22,7 @@ func newEventsService(root webdav.FileSystem, router github.Router, users users.
 	if err != nil {
 		return nil, err
 	}
-	github, err := githubapi.NewService(unauthenticatedGitHubClient, shurcool, router)
+	github, err := githubapi.NewService(shurcoolPublicRepoGHV3, shurcoolPublicRepoGHV4, shurcool, router)
 	if err != nil {
 		return nil, err
 	}

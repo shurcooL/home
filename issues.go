@@ -9,12 +9,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/google/go-github/github"
-	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/events"
-	"github.com/shurcooL/githubql"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/route"
@@ -33,7 +29,6 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/net/webdav"
-	"golang.org/x/oauth2"
 )
 
 func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (issues.Service, error) {
@@ -41,25 +36,14 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 	if err != nil {
 		return nil, err
 	}
-
-	authTransport := &oauth2.Transport{
-		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_ISSUES")}),
-	}
-	cacheTransport := &httpcache.Transport{
-		Transport:           authTransport,
-		Cache:               httpcache.NewMemoryCache(),
-		MarkCachedResponses: true,
-	}
-	httpClient := &http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}
 	shurcoolGitHubIssues, err := ghissues.NewService(
-		github.NewClient(httpClient),
-		githubql.NewClient(httpClient),
+		shurcoolPublicRepoGHV3,
+		shurcoolPublicRepoGHV4,
 		notifications,
 	)
 	if err != nil {
 		return nil, err
 	}
-
 	return shurcoolSeesGitHubIssues{
 		service:              local,
 		shurcoolGitHubIssues: shurcoolGitHubIssues,

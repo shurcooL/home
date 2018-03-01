@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"dmitri.shuralyov.com/app/changes"
 	"dmitri.shuralyov.com/app/changes/common"
@@ -18,9 +17,6 @@ import (
 	"dmitri.shuralyov.com/service/change/githubapi"
 	"dmitri.shuralyov.com/service/change/httphandler"
 	"dmitri.shuralyov.com/service/change/httproute"
-	"github.com/google/go-github/github"
-	"github.com/gregjones/httpcache"
-	"github.com/shurcooL/githubql"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/route"
@@ -32,30 +28,18 @@ import (
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	"golang.org/x/oauth2"
 )
 
 func newChangeService(reactions reactions.Service, notifications notifications.Service, users users.Service) (change.Service, error) {
 	local := &fs.Service{Reactions: reactions}
-
-	authTransport := &oauth2.Transport{
-		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_ISSUES")}),
-	}
-	cacheTransport := &httpcache.Transport{
-		Transport:           authTransport,
-		Cache:               httpcache.NewMemoryCache(),
-		MarkCachedResponses: true,
-	}
-	httpClient := &http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}
 	shurcoolGitHubChange, err := githubapi.NewService(
-		github.NewClient(httpClient),
-		githubql.NewClient(httpClient),
+		shurcoolPublicRepoGHV3,
+		shurcoolPublicRepoGHV4,
 		notifications,
 	)
 	if err != nil {
 		return nil, err
 	}
-
 	return shurcoolSeesGitHubChanges{
 		service:              local,
 		shurcoolGitHubChange: shurcoolGitHubChange,
