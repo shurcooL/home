@@ -371,7 +371,7 @@ func (a activity) Render() []*html.Node {
 			}
 
 		default:
-			log.Printf("unexpected event type: %T\n", p)
+			log.Printf("activity.Render: unexpected event type: %T\n", p)
 			continue
 		}
 		if basicEvent.WIP && !a.ShowWIP {
