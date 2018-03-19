@@ -124,6 +124,7 @@ div.rm-reaction {
 	display: inline-block;
 	padding: 4px;
 	border-radius: 4px;
+	cursor: pointer;
 }
 div.rm-reaction:hover {
 	background-color: #92def9;
@@ -157,7 +158,6 @@ input.rm-reactions-filter {
 div.rm-reactions-results {
 	overflow-y: scroll;
 	height: 300px;
-	cursor: pointer;
 }
 div.rm-reactions-preview {
 	height: 44px;
