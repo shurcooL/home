@@ -43,7 +43,7 @@ func run() error {
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
 		return err
 	}
-	if err := mime.AddExtensionType(".woff2", "application/font-woff"); err != nil {
+	if err := mime.AddExtensionType(".woff2", "font/woff2"); err != nil {
 		return err
 	}
 
