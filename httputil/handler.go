@@ -1,6 +1,7 @@
 package httputil
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -18,7 +19,9 @@ func ErrorHandler(users users.Service, handler func(w http.ResponseWriter, req *
 
 type errorHandler struct {
 	handler func(w http.ResponseWriter, req *http.Request) error
-	users   users.Service
+	users   interface {
+		GetAuthenticated(context.Context) (users.User, error)
+	}
 }
 
 func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
