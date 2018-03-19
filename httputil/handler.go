@@ -39,9 +39,6 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if err, ok := httperror.IsRedirect(err); ok {
-		if req.Method == http.MethodGet { // Workaround for https://groups.google.com/forum/#!topic/golang-nuts/9AVyMP9C8Ac.
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		}
 		http.Redirect(w, req, err.URL, http.StatusSeeOther)
 		return
 	}

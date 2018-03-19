@@ -66,9 +66,6 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		if d.Package == nil {
 			u := *req.URL
 			u.Path += "/..."
-			if req.Method == http.MethodGet { // Workaround for https://groups.google.com/forum/#!topic/golang-nuts/9AVyMP9C8Ac.
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			}
 			http.Redirect(w, req, u.String(), http.StatusSeeOther)
 			return true
 		}
