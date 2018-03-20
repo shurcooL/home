@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -33,13 +34,21 @@ var (
 func main() {
 	flag.Parse()
 
-	err := run()
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt)
+		<-sigint
+		cancel()
+	}()
+
+	err := run(ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
 		return err
 	}
@@ -211,22 +220,22 @@ func run() error {
 
 	server := &http.Server{Addr: *httpFlag, Handler: topMux{}}
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
 	go func() {
-		<-interrupt
+		<-ctx.Done()
 		err := server.Close()
 		if err != nil {
 			log.Println("server.Close:", err)
 		}
 	}()
 
-	log.Println("Started.")
+	log.Println("Starting HTTP server.")
 
 	err = server.ListenAndServe()
-	if err != nil {
+	if err != http.ErrServerClosed {
 		log.Println("server.ListenAndServe:", err)
 	}
+
+	log.Println("Ended HTTP server.")
 
 	if *statefileFlag != "" {
 		err := global.Save(*statefileFlag)
