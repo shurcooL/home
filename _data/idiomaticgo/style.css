@@ -121,7 +121,6 @@ div.rm-reaction:hover {
 
 div#rm-reactions-menu {
 	position: absolute;
-	display: none;
 	z-index: 1000;
 
 	background-color: white;
