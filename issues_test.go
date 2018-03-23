@@ -17,18 +17,12 @@ func TestNewIssueRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	notifications, err := initNotifications(mux, webdav.NewMemFS(), nil, users)
-	if err != nil {
-		t.Fatal(err)
-	}
+	notifications := initNotifications(mux, webdav.NewMemFS(), nil, users)
 	issues, err := newIssuesService(webdav.NewMemFS(), notifications, nil, users)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = initIssues(mux, issues, notifications, users)
-	if err != nil {
-		t.Fatal(err)
-	}
+	initIssues(mux, issues, notifications, users)
 
 	req := httptest.NewRequest(http.MethodGet, "/issues/github.com/shurcooL/issuesapp/new", nil)
 	rr := httptest.NewRecorder()

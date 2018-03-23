@@ -69,19 +69,18 @@ func run(ctx context.Context) error {
 	}
 	reactions, err := newReactionsService(
 		webdav.Dir(filepath.Join(storeDir, "reactions")),
-		users)
+		users,
+	)
 	if err != nil {
 		return err
 	}
 	githubRouter := shurcoolSeesHomeRouter{users: users}
-	notifications, err := initNotifications(
+	notifications := initNotifications(
 		http.DefaultServeMux,
 		webdav.Dir(filepath.Join(storeDir, "notifications")),
 		githubRouter,
-		users)
-	if err != nil {
-		return err
-	}
+		users,
+	)
 	events, err := newEventsService(
 		webdav.Dir(filepath.Join(storeDir, "events")),
 		githubRouter,
@@ -92,7 +91,8 @@ func run(ctx context.Context) error {
 	}
 	issuesService, err := newIssuesService(
 		webdav.Dir(filepath.Join(storeDir, "issues")),
-		notifications, events, users)
+		notifications, events, users,
+	)
 	if err != nil {
 		return err
 	}
@@ -132,15 +132,8 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	issuesApp, err := initIssues(http.DefaultServeMux, issuesService, notifications, users)
-	if err != nil {
-		return err
-	}
-
-	changesApp, err := initChanges(http.DefaultServeMux, reactions, notifications, users)
-	if err != nil {
-		return err
-	}
+	issuesApp := initIssues(http.DefaultServeMux, issuesService, notifications, users)
+	changesApp := initChanges(http.DefaultServeMux, reactions, notifications, users)
 
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))

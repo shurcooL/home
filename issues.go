@@ -36,14 +36,11 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 	if err != nil {
 		return nil, err
 	}
-	shurcoolGitHubIssues, err := ghissues.NewService(
+	shurcoolGitHubIssues := ghissues.NewService(
 		shurcoolPublicRepoGHV3,
 		shurcoolPublicRepoGHV4,
 		notifications,
 	)
-	if err != nil {
-		return nil, err
-	}
 	return shurcoolSeesGitHubIssues{
 		service:              local,
 		shurcoolGitHubIssues: shurcoolGitHubIssues,
@@ -53,7 +50,7 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 
 // initIssues registers handlers for the issues service HTTP API,
 // and handlers for the issues app.
-func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications notifications.Service, users users.Service) (issuesApp http.Handler, _ error) {
+func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications notifications.Service, users users.Service) (issuesApp http.Handler) {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	mux.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.List)})
@@ -279,7 +276,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 	})}
 	mux.Handle("/issues/github.com/", githubIssuesHandler)
 
-	return issuesApp, nil
+	return issuesApp
 }
 
 type issuesHandler struct {

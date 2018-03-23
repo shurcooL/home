@@ -17,10 +17,7 @@ func TestBlogNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	notifications, err := initNotifications(mux, webdav.NewMemFS(), nil, users)
-	if err != nil {
-		t.Fatal(err)
-	}
+	notifications := initNotifications(mux, webdav.NewMemFS(), nil, users)
 	issuesService, err := newIssuesService(webdav.NewMemFS(), notifications, nil, users)
 	if err != nil {
 		t.Fatal(err)

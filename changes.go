@@ -30,30 +30,24 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-func newChangeService(reactions reactions.Service, notifications notifications.Service, users users.Service) (change.Service, error) {
+func newChangeService(reactions reactions.Service, notifications notifications.Service, users users.Service) change.Service {
 	local := &fs.Service{Reactions: reactions}
-	shurcoolGitHubChange, err := githubapi.NewService(
+	shurcoolGitHubChange := githubapi.NewService(
 		shurcoolPublicRepoGHV3,
 		shurcoolPublicRepoGHV4,
 		notifications,
 	)
-	if err != nil {
-		return nil, err
-	}
 	return shurcoolSeesGitHubChanges{
 		service:              local,
 		shurcoolGitHubChange: shurcoolGitHubChange,
 		users:                users,
-	}, nil
+	}
 }
 
 // initChanges registers handlers for the change service HTTP API,
 // and handlers for the changes app.
-func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications notifications.Service, users users.Service) (changesApp http.Handler, _ error) {
-	change, err := newChangeService(reactions, notifications, users)
-	if err != nil {
-		return nil, err
-	}
+func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications notifications.Service, users users.Service) (changesApp http.Handler) {
+	change := newChangeService(reactions, notifications, users)
 
 	// Register HTTP API endpoints.
 	changeAPIHandler := httphandler.Change{Change: change}
@@ -259,7 +253,7 @@ func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications 
 	})}
 	mux.Handle("/changes/github.com/", githubChangesHandler)
 
-	return changesApp, nil
+	return changesApp
 }
 
 type changesHandler struct {
