@@ -9,7 +9,7 @@ import (
 )
 
 func TestDiscover(t *testing.T) {
-	want := []code.Directory{
+	want := []*code.Directory{
 		{
 			ImportPath: "dmitri.shuralyov.com/emptyrepo",
 			RepoRoot:   "dmitri.shuralyov.com/emptyrepo",

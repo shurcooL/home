@@ -125,7 +125,7 @@ func initPackages(code code.Code, notifications notifications.Service, usersServ
 	return servePackagesMaybe
 }
 
-func renderPackages(w io.Writer, packages []code.Directory) error {
+func renderPackages(w io.Writer, packages []*code.Directory) error {
 	if len(packages) == 0 {
 		_, err := io.WriteString(w, `<div>No packages.</div>`)
 		return err
@@ -171,7 +171,7 @@ func packageHomeURL(importPath string) string {
 // githubPackages is a hardcoded list Go packages on github.com,
 // specifically, a subset of packages made by shurcooL, excluding less noteworthy ones.
 // It's sorted by import path.
-var githubPackages = []code.Directory{
+var githubPackages = []*code.Directory{
 	//{
 	//	ImportPath: "github.com/goxjs/example/motionblur",
 	//	Command:    true,
@@ -1388,10 +1388,10 @@ var githubPackages = []code.Directory{
 // 	...                            # the entire workspace
 //
 // A trailing slash in a pattern is ignored.
-func expandPattern(part1, part2 []code.Directory, pattern string) []code.Directory {
-	var dirs []code.Directory
+func expandPattern(part1, part2 []*code.Directory, pattern string) []*code.Directory {
+	var dirs []*code.Directory
 	match := matchPattern(pattern)
-	for _, part := range [][]code.Directory{part1, part2} {
+	for _, part := range [...][]*code.Directory{part1, part2} {
 		for _, dir := range part {
 			if dir.Package == nil {
 				continue

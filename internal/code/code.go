@@ -19,8 +19,8 @@ import (
 
 // Code includes code that was discovered in a repository store.
 type Code struct {
-	Sorted       []Directory
-	ByImportPath map[string]Directory // Key is import path.
+	Sorted       []*Directory
+	ByImportPath map[string]*Directory // Key is import path.
 }
 
 // Directory represents a directory inside a repository store.
@@ -51,7 +51,7 @@ func Discover(reposDir string) (Code, error) {
 	if err != nil {
 		return Code{}, err
 	}
-	var byImportPath = make(map[string]Directory)
+	var byImportPath = make(map[string]*Directory)
 	for _, d := range dirs {
 		byImportPath[d.ImportPath] = d
 	}
@@ -63,8 +63,8 @@ func Discover(reposDir string) (Code, error) {
 
 // walkRepositoryStore walks the repository store at reposDir,
 // and returns all Go packages discovered inside, sorted by import path.
-func walkRepositoryStore(reposDir string) ([]Directory, error) {
-	var dirs []Directory
+func walkRepositoryStore(reposDir string) ([]*Directory, error) {
+	var dirs []*Directory
 	err := filepath.Walk(reposDir, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -105,7 +105,7 @@ func isBareGitRepository(dir string) (bool, error) {
 	return !head.IsDir(), nil
 }
 
-func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
+func walkRepository(gitDir, repoRoot string) ([]*Directory, error) {
 	r, err := git.Open(gitDir)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 	master, err := r.ResolveBranch("master")
 	if err == vcs.ErrBranchNotFound {
 		// Empty repository.
-		return []Directory{{
+		return []*Directory{{
 			ImportPath: repoRoot,
 			RepoRoot:   repoRoot,
 		}}, nil
@@ -124,7 +124,7 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dirs []Directory
+	var dirs []*Directory
 	err = vfsutil.Walk(fs, "/", func(dir string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -140,7 +140,7 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 		if err != nil {
 			return err
 		}
-		dirs = append(dirs, Directory{
+		dirs = append(dirs, &Directory{
 			ImportPath: path.Join(repoRoot, dir),
 			RepoRoot:   repoRoot,
 			Package:    pkg,
