@@ -27,14 +27,20 @@ type Code struct {
 type Directory struct {
 	ImportPath string
 	RepoRoot   string // Empty string if directory is not in a repository.
-	Package    *Package
+	// LicenseRoot is the import path corresponding to this or nearest parent directory
+	// that contains a LICENSE file, or empty string if there isn't such a directory.
+	LicenseRoot string
+	Package     *Package
 }
 
 // WithinRepo reports whether directory d is contained by a repository.
 func (d Directory) WithinRepo() bool { return d.RepoRoot != "" }
 
-// IsRepoRoot reports whether directory corresponds to a repository root.
+// IsRepoRoot reports whether directory d corresponds to a repository root.
 func (d Directory) IsRepoRoot() bool { return d.RepoRoot == d.ImportPath }
+
+// HasLicenseFile reports whether directory d contains a LICENSE file.
+func (d Directory) HasLicenseFile() bool { return d.LicenseRoot == d.ImportPath }
 
 // Package represents a Go package inside a repository store.
 type Package struct {
@@ -55,6 +61,23 @@ func Discover(reposDir string) (Code, error) {
 	for _, d := range dirs {
 		byImportPath[d.ImportPath] = d
 	}
+
+	// Populate LicenseRoot values for all remaining directories
+	// that don't directly contain a LICENSE file.
+	for _, dir := range dirs {
+		if dir.HasLicenseFile() {
+			continue
+		}
+		elems := strings.Split(dir.ImportPath, "/")
+		for i := len(elems) - 1; i >= 1; i-- { // Start from parent directory and traverse up.
+			p, ok := byImportPath[path.Join(elems[:i]...)]
+			if ok && p.HasLicenseFile() {
+				dir.LicenseRoot = p.ImportPath
+				break
+			}
+		}
+	}
+
 	return Code{
 		Sorted:       dirs,
 		ByImportPath: byImportPath,
@@ -136,14 +159,22 @@ func walkRepository(gitDir, repoRoot string) ([]*Directory, error) {
 		if strings.HasPrefix(fi.Name(), ".") || strings.HasPrefix(fi.Name(), "_") || fi.Name() == "testdata" {
 			return filepath.SkipDir
 		}
-		pkg, err := loadPackage(fs, dir, path.Join(repoRoot, dir))
+		importPath := path.Join(repoRoot, dir)
+		var licenseRoot string
+		if ok, err := hasLicenseFile(fs, dir); err == nil && ok {
+			licenseRoot = importPath
+		} else if err != nil {
+			return err
+		}
+		pkg, err := loadPackage(fs, dir, importPath)
 		if err != nil {
 			return err
 		}
 		dirs = append(dirs, &Directory{
-			ImportPath: path.Join(repoRoot, dir),
-			RepoRoot:   repoRoot,
-			Package:    pkg,
+			ImportPath:  importPath,
+			RepoRoot:    repoRoot,
+			LicenseRoot: licenseRoot,
+			Package:     pkg,
 		})
 		return nil
 	})
@@ -214,4 +245,14 @@ func docHTML(text string) string {
 	var buf bytes.Buffer
 	doc.ToHTML(&buf, text, nil)
 	return buf.String()
+}
+
+func hasLicenseFile(fs vfs.FileSystem, dir string) (bool, error) {
+	fi, err := fs.Stat(path.Join(dir, "LICENSE"))
+	if os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	return !fi.IsDir(), nil
 }
