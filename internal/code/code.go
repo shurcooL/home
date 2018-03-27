@@ -110,8 +110,8 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 	if err != nil {
 		return nil, err
 	}
-	head, err := r.ResolveRevision("HEAD")
-	if err == vcs.ErrRevisionNotFound {
+	master, err := r.ResolveBranch("master")
+	if err == vcs.ErrBranchNotFound {
 		// Empty repository.
 		return []Directory{{
 			ImportPath: repoRoot,
@@ -120,7 +120,7 @@ func walkRepository(gitDir, repoRoot string) ([]Directory, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	fs, err := r.FileSystem(head)
+	fs, err := r.FileSystem(master)
 	if err != nil {
 		return nil, err
 	}
