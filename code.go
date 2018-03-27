@@ -1,16 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/route"
+	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
+	"golang.org/x/tools/godoc/vfs"
+	"sourcegraph.com/sourcegraph/go-vcs/vcs/git"
 )
 
 type codeHandler struct {
@@ -52,6 +59,10 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		Dir:  filepath.Join(h.reposDir, filepath.FromSlash(d.RepoRoot)),
 	}
 	pkgPath := d.ImportPath[len("dmitri.shuralyov.com"):]
+	var licensePkgPath string
+	if d.LicenseRoot != "" {
+		licensePkgPath = d.LicenseRoot[len("dmitri.shuralyov.com"):]
+	}
 	switch {
 	case req.URL.Path == route.PkgIndex(pkgPath):
 		// Handle ?go-get=1 requests, serve a go-import meta tag page.
@@ -71,17 +82,37 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		}
 
 		// Serve Go package index page.
+		licenseURL := "/LICENSE" // Default license URL.
+		if licensePkgPath != "" {
+			// A more specific license override.
+			licenseURL = route.PkgLicense(licensePkgPath)
+		}
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&packageHandler{
 			Repo: repo,
 			Pkg: pkgInfo{
-				Spec:    d.ImportPath,
-				Name:    d.Package.Name,
-				DocHTML: d.Package.DocHTML,
+				Spec:       d.ImportPath,
+				Name:       d.Package.Name,
+				DocHTML:    d.Package.DocHTML,
+				LicenseURL: licenseURL,
 			},
 			notifications: h.notifications,
 			users:         h.users,
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
+		return true
+	case req.URL.Path == route.PkgLicense(pkgPath):
+		if !d.HasLicenseFile() {
+			http.Error(w, "404 Not Found", http.StatusNotFound)
+			return true
+		}
+		license, err := readLicenseFile(repo.Dir, d)
+		if err != nil {
+			log.Println("readLicenseFile:", err)
+			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError) // TODO: Display full error to site admins.
+			return true
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		httpgzip.ServeContent(w, req, "", time.Time{}, bytes.NewReader(license))
 		return true
 	case req.URL.Path == route.RepoIndex(repo.Path):
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&repositoryHandler{
@@ -144,7 +175,25 @@ type repoInfo struct {
 }
 
 type pkgInfo struct {
-	Spec    string // Package import path. E.g., "example.com/repo/package".
-	Name    string // Package name. E.g., "pkg".
-	DocHTML string // Package documentation HTML. E.g., "<p>Package pkg provides some functionality.</p><p>More information about pkg.</p>".
+	Spec       string // Package import path. E.g., "example.com/repo/package".
+	Name       string // Package name. E.g., "pkg".
+	DocHTML    string // Package documentation HTML. E.g., "<p>Package pkg provides some functionality.</p><p>More information about pkg.</p>".
+	LicenseURL string // URL of license. E.g., "/repo/package$file/LICENSE".
+}
+
+func readLicenseFile(gitDir string, d *code.Directory) ([]byte, error) {
+	r, err := git.Open(gitDir)
+	if err != nil {
+		return nil, err
+	}
+	master, err := r.ResolveBranch("master")
+	if err != nil {
+		return nil, err
+	}
+	fs, err := r.FileSystem(master)
+	if err != nil {
+		return nil, err
+	}
+	license, err := vfs.ReadFile(fs, path.Join("/", strings.TrimPrefix(d.ImportPath, d.RepoRoot), "LICENSE"))
+	return license, err
 }

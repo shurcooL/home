@@ -21,6 +21,7 @@ func HasImportPathSeparator(path string) bool {
 }
 
 func PkgIndex(pkgPath string) string     { return pkgPath }
+func PkgLicense(pkgPath string) string   { return pkgPath + "$file/LICENSE" }
 func RepoIndex(repoPath string) string   { return repoPath + "/..." }
 func RepoHistory(repoPath string) string { return repoPath + "/...$history" }
 func RepoCommit(repoPath string) string  { return repoPath + "/...$commit" }

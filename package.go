@@ -141,6 +141,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		elem.P(elem.Pre("go get -u "+h.Pkg.Spec)),
 		elem.H3(elem.A("Documentation", attr.Href("https://godoc.org/"+h.Pkg.Spec))),
 		elem.H3(elem.A("Code", attr.Href("https://gotools.org/"+h.Pkg.Spec))),
+		elem.H3(elem.A("License", attr.Href(h.Pkg.LicenseURL))),
 	)
 	if err != nil {
 		return err
