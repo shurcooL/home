@@ -357,11 +357,14 @@ func (f fileDiff) Diff() (template.HTML, error) {
 	if err != nil {
 		return "", err
 	}
-	diff, err := highlightDiff(hunks)
+	html, err := highlightDiff(hunks)
 	if err != nil {
-		return "", err
+		log.Println("fileDiff.Diff: highlightDiff:", err)
+		var buf bytes.Buffer
+		template.HTMLEscape(&buf, hunks)
+		html = buf.Bytes()
 	}
-	return template.HTML(diff), nil
+	return template.HTML(html), nil
 }
 
 // highlightDiff highlights the src diff, returning the annotated HTML.
