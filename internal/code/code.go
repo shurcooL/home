@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"go/doc"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -133,6 +134,12 @@ func walkRepository(gitDir, repoRoot string) ([]*Directory, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err := r.Close()
+		if err != nil {
+			log.Println("walkRepository: r.Close:", err)
+		}
+	}()
 	master, err := r.ResolveBranch("master")
 	if err == vcs.ErrBranchNotFound {
 		// Empty repository.

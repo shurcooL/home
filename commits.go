@@ -65,6 +65,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 
 	// TODO: Pagination support.
 	r := &gitcmd.Repository{Dir: h.Repo.Dir}
+	defer r.Close()
 	cs, _, err := r.Commits(vcs.CommitsOptions{
 		Head:    vcs.CommitID("master"),
 		NoTotal: true,

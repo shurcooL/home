@@ -343,6 +343,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 // listCommits returns a list of commits in repo from base to head.
 func listCommits(repo repoInfo, base, head string, gitUsers map[string]users.User) ([]event.Commit, error) {
 	r := &gitcmd.Repository{Dir: repo.Dir}
+	defer r.Close()
 	cs, _, err := r.Commits(vcs.CommitsOptions{
 		Head:    vcs.CommitID(head),
 		Base:    vcs.CommitID(base),

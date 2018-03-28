@@ -186,6 +186,12 @@ func readLicenseFile(gitDir string, d *code.Directory) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err := r.Close()
+		if err != nil {
+			log.Println("readLicenseFile: r.Close:", err)
+		}
+	}()
 	master, err := r.ResolveBranch("master")
 	if err != nil {
 		return nil, err
