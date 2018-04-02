@@ -17,7 +17,7 @@ func TestNotificationsRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	initNotifications(mux, webdav.NewMemFS(), nil, users)
+	initNotifications(mux, webdav.NewMemFS(), users, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
 	rr := httptest.NewRecorder()

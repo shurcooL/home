@@ -13,7 +13,7 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-func newEventsService(root webdav.FileSystem, router github.Router, users users.Service) (events.Service, error) {
+func newEventsService(root webdav.FileSystem, users users.Service, router github.Router) (events.Service, error) {
 	shurcool, err := users.Get(context.Background(), shurcool)
 	if err != nil {
 		return nil, err

@@ -12,6 +12,7 @@ import (
 
 	"dmitri.shuralyov.com/app/changes"
 	"dmitri.shuralyov.com/app/changes/common"
+	"dmitri.shuralyov.com/route/github"
 	"dmitri.shuralyov.com/service/change"
 	"dmitri.shuralyov.com/service/change/fs"
 	"dmitri.shuralyov.com/service/change/githubapi"
@@ -30,12 +31,13 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-func newChangeService(reactions reactions.Service, notifications notifications.Service, users users.Service) change.Service {
+func newChangeService(reactions reactions.Service, notifications notifications.Service, users users.Service, router github.Router) change.Service {
 	local := &fs.Service{Reactions: reactions}
 	shurcoolGitHubChange := githubapi.NewService(
 		shurcoolPublicRepoGHV3,
 		shurcoolPublicRepoGHV4,
 		notifications,
+		router,
 	)
 	return shurcoolSeesGitHubChanges{
 		service:              local,
@@ -46,8 +48,8 @@ func newChangeService(reactions reactions.Service, notifications notifications.S
 
 // initChanges registers handlers for the change service HTTP API,
 // and handlers for the changes app.
-func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications notifications.Service, users users.Service) (changesApp http.Handler) {
-	change := newChangeService(reactions, notifications, users)
+func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications notifications.Service, users users.Service, router github.Router) (changesApp http.Handler) {
+	change := newChangeService(reactions, notifications, users, router)
 
 	// Register HTTP API endpoints.
 	changeAPIHandler := httphandler.Change{Change: change}

@@ -32,7 +32,7 @@ import (
 // initNotifications creates and returns a notification service,
 // registers handlers for its HTTP API,
 // and handlers for the notifications app.
-func initNotifications(mux *http.ServeMux, root webdav.FileSystem, router github.Router, users users.Service) notifications.Service {
+func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.Service, router github.Router) notifications.Service {
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_NOTIFICATIONS")}),
 	}

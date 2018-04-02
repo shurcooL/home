@@ -78,20 +78,20 @@ func run(ctx context.Context) error {
 	notifications := initNotifications(
 		http.DefaultServeMux,
 		webdav.Dir(filepath.Join(storeDir, "notifications")),
-		githubRouter,
 		users,
+		githubRouter,
 	)
 	events, err := newEventsService(
 		webdav.Dir(filepath.Join(storeDir, "events")),
-		githubRouter,
 		users,
+		githubRouter,
 	)
 	if err != nil {
 		return err
 	}
 	issuesService, err := newIssuesService(
 		webdav.Dir(filepath.Join(storeDir, "issues")),
-		notifications, events, users,
+		notifications, events, users, githubRouter,
 	)
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func run(ctx context.Context) error {
 	}
 
 	issuesApp := initIssues(http.DefaultServeMux, issuesService, notifications, users)
-	changesApp := initChanges(http.DefaultServeMux, reactions, notifications, users)
+	changesApp := initChanges(http.DefaultServeMux, reactions, notifications, users, githubRouter)
 
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))

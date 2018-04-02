@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"dmitri.shuralyov.com/route/github"
 	"github.com/shurcooL/events"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
@@ -31,7 +32,7 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (issues.Service, error) {
+func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service, router github.Router) (issues.Service, error) {
 	local, err := fs.NewService(root, notifications, events, users)
 	if err != nil {
 		return nil, err
@@ -40,6 +41,7 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 		shurcoolPublicRepoGHV3,
 		shurcoolPublicRepoGHV4,
 		notifications,
+		router,
 	)
 	return shurcoolSeesGitHubIssues{
 		service:              local,
