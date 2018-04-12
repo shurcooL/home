@@ -26,12 +26,15 @@ type Code struct {
 
 // Directory represents a directory inside a repository store.
 type Directory struct {
-	ImportPath string
-	RepoRoot   string // Empty string if directory is not in a repository.
+	ImportPath   string
+	RepoRoot     string // Empty string if directory is not in a repository.
+	RepoPackages int    // Number of packages contained by repository (if any, otherwise 0).
+
 	// LicenseRoot is the import path corresponding to this or nearest parent directory
 	// that contains a LICENSE file, or empty string if there isn't such a directory.
 	LicenseRoot string
-	Package     *Package
+
+	Package *Package
 }
 
 // WithinRepo reports whether directory d is contained by a repository.
@@ -154,7 +157,10 @@ func walkRepository(gitDir, repoRoot string) ([]*Directory, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dirs []*Directory
+	var (
+		dirs         []*Directory
+		repoPackages int
+	)
 	err = vfsutil.Walk(fs, "/", func(dir string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -177,6 +183,9 @@ func walkRepository(gitDir, repoRoot string) ([]*Directory, error) {
 		if err != nil {
 			return err
 		}
+		if pkg != nil {
+			repoPackages++
+		}
 		dirs = append(dirs, &Directory{
 			ImportPath:  importPath,
 			RepoRoot:    repoRoot,
@@ -185,9 +194,18 @@ func walkRepository(gitDir, repoRoot string) ([]*Directory, error) {
 		})
 		return nil
 	})
-	return dirs, err
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range dirs {
+		d.RepoPackages = repoPackages
+	}
+	return dirs, nil
 }
 
+// loadPackage loads a Go package with import path importPath
+// from filesystem fs in directory dir.
+// It returns a nil Package if the directory doesn't contain a Go package.
 func loadPackage(fs vfs.FileSystem, dir, importPath string) (*Package, error) {
 	bctx := build.Context{
 		GOOS:        "linux",
