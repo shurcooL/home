@@ -302,9 +302,9 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		const zero = "0000000000000000000000000000000000000000"
 		switch {
 		case e.Type == githttp.PUSH && e.Last != zero && e.Commit != zero:
-			commits, err := listCommits(repo, e.Last, e.Commit, h.gitUsers)
+			commits, err := listCommitsBetween(repo, vcs.CommitID(e.Last), vcs.CommitID(e.Commit), h.gitUsers)
 			if err != nil {
-				log.Println("listCommits:", err)
+				log.Println("listCommitsBetween:", err)
 				commits = nil
 			}
 			evt.Payload = event.Push{
@@ -340,13 +340,13 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 	}
 }
 
-// listCommits returns a list of commits in repo from base to head.
-func listCommits(repo repoInfo, base, head string, gitUsers map[string]users.User) ([]event.Commit, error) {
+// listCommitsBetween returns a list of commits in git repo from base to head.
+func listCommitsBetween(repo repoInfo, base, head vcs.CommitID, gitUsers map[string]users.User) ([]event.Commit, error) {
 	r := &gitcmd.Repository{Dir: repo.Dir}
 	defer r.Close()
 	cs, _, err := r.Commits(vcs.CommitsOptions{
-		Head:    vcs.CommitID(head),
-		Base:    vcs.CommitID(base),
+		Head:    head,
+		Base:    base,
 		NoTotal: true,
 	})
 	if err != nil {

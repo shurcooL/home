@@ -64,15 +64,8 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	// TODO: Pagination support.
-	r := &gitcmd.Repository{Dir: h.Repo.Dir}
-	defer r.Close()
-	cs, _, err := r.Commits(vcs.CommitsOptions{
-		Head:    vcs.CommitID("master"),
-		NoTotal: true,
-	})
-	if err == vcs.ErrCommitNotFound {
-		cs = nil
-	} else if err != nil {
+	cs, err := listMasterCommits(h.Repo)
+	if err != nil {
 		return err
 	}
 
@@ -162,6 +155,25 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	</body>
 </html>`)
 	return err
+}
+
+// listMasterCommits returns a list of commits in git repo on master branch.
+// If master branch doesn't exist, an empty list is returned.
+func listMasterCommits(repo repoInfo) ([]*vcs.Commit, error) {
+	r := &gitcmd.Repository{Dir: repo.Dir}
+	defer r.Close()
+	master, err := r.ResolveBranch("master")
+	if err == vcs.ErrBranchNotFound {
+		// No master branch means there are no commits on it (e.g., an empty repository).
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	cs, _, err := r.Commits(vcs.CommitsOptions{
+		Head:    master,
+		NoTotal: true,
+	})
+	return cs, err
 }
 
 type Commits struct {
