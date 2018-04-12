@@ -9,12 +9,13 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"dmitri.shuralyov.com/route/github"
+	"dmitri.shuralyov.com/service/change"
 	"github.com/shurcooL/events"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
-	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
@@ -50,9 +51,14 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 	}, nil
 }
 
+type issueCounter interface {
+	// Count issues.
+	Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error)
+}
+
 // initIssues registers handlers for the issues service HTTP API,
 // and handlers for the issues app.
-func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications notifications.Service, users users.Service) (issuesApp http.Handler) {
+func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter changeCounter, notifications notifications.Service, users users.Service) (issuesApp http.Handler) {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	mux.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.List)})
@@ -136,36 +142,40 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			return []htmlg.Component{header}, nil
 
 		case strings.HasPrefix(repo.URI, "dmitri.shuralyov.com/") && repo.URI != "dmitri.shuralyov.com/idiomatic-go":
+			// TODO: Maybe try to avoid fetching openIssues twice...
+			t0 := time.Now()
+			openIssues, err := issuesService.Count(req.Context(), repo, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+			if err != nil {
+				return nil, err
+			}
+			openChanges, err := changeCounter.Count(req.Context(), repo.URI, change.ListOptions{Filter: change.FilterOpen})
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repo.URI)
+
 			heading := htmlg.NodeComponent{
 				Type: html.ElementNode, Data: atom.H2.String(),
 				FirstChild: htmlg.Text(repo.URI + "/..."),
 			}
-			repoPath := repo.URI[len("dmitri.shuralyov.com"):]
-			tabnav := tabnav{
-				Tabs: []tab{
-					{
-						Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
-						URL:     route.RepoIndex(repoPath),
-					},
-					{
-						Content: iconText{Icon: octiconssvg.History, Text: "History"},
-						URL:     route.RepoHistory(repoPath),
-					},
-					{
-						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-						URL:      route.RepoIssues(repoPath),
-						Selected: true,
-					},
-					{
-						Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
-						URL:     route.RepoChanges(repoPath),
-					},
-				},
-			}
+			repo := req.Context().Value(repoInfoContextKey).(repoInfo) // From issuesHandler.ServeHTTP.
+			tabnav := repositoryTabnav(issuesTab, repo, openIssues, openChanges)
 			return []htmlg.Component{header, heading, tabnav}, nil
 
 		// TODO: Dedup with changes (maybe; mind the githubURL difference).
 		case strings.HasPrefix(repo.URI, "github.com/"):
+			// TODO: Maybe try to avoid fetching openIssues twice...
+			t0 := time.Now()
+			openIssues, err := issuesService.Count(req.Context(), repo, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+			if err != nil {
+				return nil, err
+			}
+			openChanges, err := changeCounter.Count(req.Context(), repo.URI, change.ListOptions{Filter: change.FilterOpen})
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repo.URI)
+
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),
 			}
@@ -193,13 +203,19 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 			tabnav := tabnav{
 				Tabs: []tab{
 					{
-						Content:  iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+						Content: contentCounter{
+							Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+							Count:   int(openIssues),
+						},
 						URL:      "/issues/" + repo.URI,
 						Selected: true,
 					},
 					{
-						Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
-						URL:     "/changes/" + repo.URI,
+						Content: contentCounter{
+							Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+							Count:   int(openChanges),
+						},
+						URL: "/changes/" + repo.URI,
 					},
 				},
 			}
@@ -284,6 +300,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, notifications 
 type issuesHandler struct {
 	SpecURL   string
 	BaseURL   string
+	Repo      repoInfo // Set for self-hosted Go package issue trackers only.
 	issuesApp http.Handler
 }
 
@@ -304,6 +321,7 @@ func (h issuesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	}
 	rr := httptest.NewRecorder()
 	rr.HeaderMap = w.Header()
+	req = req.WithContext(context.WithValue(req.Context(), repoInfoContextKey, h.Repo)) // For BodyTop.
 	req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: h.SpecURL}))
 	req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, h.BaseURL))
 	h.issuesApp.ServeHTTP(rr, req)

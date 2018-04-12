@@ -7,16 +7,17 @@ import (
 	"log"
 	"net/http"
 	"path"
+	"time"
 
+	"dmitri.shuralyov.com/service/change"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/exp/vec"
 	"github.com/shurcooL/home/exp/vec/attr"
 	"github.com/shurcooL/home/exp/vec/elem"
-	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
+	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -26,6 +27,8 @@ type packageHandler struct {
 	Repo repoInfo
 	Pkg  pkgInfo
 
+	issues        issueCounter
+	change        changeCounter
 	notifications notifications.Service
 	users         users.Service
 }
@@ -46,6 +49,17 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
 
+	t0 := time.Now()
+	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+	if err != nil {
+		return err
+	}
+	openChanges, err := h.change.Count(req.Context(), h.Repo.Spec, change.ListOptions{Filter: change.FilterOpen})
+	if err != nil {
+		return err
+	}
+	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	var title string
 	if h.Pkg.Name == "main" {
@@ -53,7 +67,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	} else {
 		title = "Package " + h.Pkg.Name
 	}
-	err := packageHTML.Execute(w, struct {
+	err = packageHTML.Execute(w, struct {
 		Production bool
 		Title      string
 	}{
@@ -99,26 +113,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, tabnav{
-		Tabs: []tab{
-			{
-				Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
-				URL:     route.RepoIndex(h.Repo.Path),
-			},
-			{
-				Content: iconText{Icon: octiconssvg.History, Text: "History"},
-				URL:     route.RepoHistory(h.Repo.Path),
-			},
-			{
-				Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-				URL:     route.RepoIssues(h.Repo.Path),
-			},
-			{
-				Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
-				URL:     route.RepoChanges(h.Repo.Path),
-			},
-		},
-	})
+	err = htmlg.RenderComponents(w, repositoryTabnav(noTab, h.Repo, openIssues, openChanges))
 	if err != nil {
 		return err
 	}

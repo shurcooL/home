@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"dmitri.shuralyov.com/app/changes"
 	"dmitri.shuralyov.com/app/changes/common"
@@ -20,9 +21,9 @@ import (
 	"dmitri.shuralyov.com/service/change/httproute"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
-	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
+	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octiconssvg"
 	"github.com/shurcooL/reactions"
@@ -46,13 +47,16 @@ func newChangeService(reactions reactions.Service, notifications notifications.S
 	}
 }
 
+type changeCounter interface {
+	// Count changes.
+	Count(ctx context.Context, repo string, opt change.ListOptions) (uint64, error)
+}
+
 // initChanges registers handlers for the change service HTTP API,
 // and handlers for the changes app.
-func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications notifications.Service, users users.Service, router github.Router) (changesApp http.Handler) {
-	change := newChangeService(reactions, notifications, users, router)
-
+func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter issueCounter, notifications notifications.Service, users users.Service) (changesApp http.Handler) {
 	// Register HTTP API endpoints.
-	changeAPIHandler := httphandler.Change{Change: change}
+	changeAPIHandler := httphandler.Change{Change: changeService}
 	mux.Handle(httproute.EditComment, headerAuth{httputil.ErrorHandler(users, changeAPIHandler.EditComment)})
 
 	opt := changes.Options{
@@ -131,36 +135,40 @@ func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications 
 			return []htmlg.Component{header}, nil
 
 		case strings.HasPrefix(repoSpec, "dmitri.shuralyov.com/"):
+			// TODO: Maybe try to avoid fetching openChanges twice...
+			t0 := time.Now()
+			openIssues, err := issueCounter.Count(req.Context(), issues.RepoSpec{URI: repoSpec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+			if err != nil {
+				return nil, err
+			}
+			openChanges, err := changeService.Count(req.Context(), repoSpec, change.ListOptions{Filter: change.FilterOpen})
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec)
+
 			heading := htmlg.NodeComponent{
 				Type: html.ElementNode, Data: atom.H2.String(),
 				FirstChild: htmlg.Text(repoSpec + "/..."),
 			}
-			repoPath := repoSpec[len("dmitri.shuralyov.com"):]
-			tabnav := tabnav{
-				Tabs: []tab{
-					{
-						Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
-						URL:     route.RepoIndex(repoPath),
-					},
-					{
-						Content: iconText{Icon: octiconssvg.History, Text: "History"},
-						URL:     route.RepoHistory(repoPath),
-					},
-					{
-						Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-						URL:     route.RepoIssues(repoPath),
-					},
-					{
-						Content:  iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
-						URL:      route.RepoChanges(repoPath),
-						Selected: true,
-					},
-				},
-			}
+			repo := req.Context().Value(repoInfoContextKey).(repoInfo) // From changesHandler.ServeHTTP.
+			tabnav := repositoryTabnav(changesTab, repo, openIssues, openChanges)
 			return []htmlg.Component{header, heading, tabnav}, nil
 
 		// TODO: Dedup with issues (maybe; mind the githubURL difference).
 		case strings.HasPrefix(repoSpec, "github.com/"):
+			// TODO: Maybe try to avoid fetching openChanges twice...
+			t0 := time.Now()
+			openIssues, err := issueCounter.Count(req.Context(), issues.RepoSpec{URI: repoSpec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+			if err != nil {
+				return nil, err
+			}
+			openChanges, err := changeService.Count(req.Context(), repoSpec, change.ListOptions{Filter: change.FilterOpen})
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec)
+
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),
 			}
@@ -184,11 +192,17 @@ func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications 
 			tabnav := tabnav{
 				Tabs: []tab{
 					{
-						Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
-						URL:     "/issues/" + repoSpec,
+						Content: contentCounter{
+							Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+							Count:   int(openIssues),
+						},
+						URL: "/issues/" + repoSpec,
 					},
 					{
-						Content:  iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+						Content: contentCounter{
+							Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+							Count:   int(openChanges),
+						},
 						URL:      "/changes/" + repoSpec,
 						Selected: true,
 					},
@@ -197,7 +211,7 @@ func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications 
 			return []htmlg.Component{header, htmlg.NodeComponent(*heading), tabnav}, nil
 		}
 	}
-	changesApp = changes.New(change, users, opt)
+	changesApp = changes.New(changeService, users, opt)
 
 	githubChangesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		// Parse "/changes/github.com/..." request.
@@ -261,6 +275,7 @@ func initChanges(mux *http.ServeMux, reactions reactions.Service, notifications 
 type changesHandler struct {
 	SpecURL    string
 	BaseURL    string
+	Repo       repoInfo
 	changesApp http.Handler
 }
 
@@ -281,6 +296,7 @@ func (h changesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	}
 	rr := httptest.NewRecorder()
 	rr.HeaderMap = w.Header()
+	req = req.WithContext(context.WithValue(req.Context(), repoInfoContextKey, h.Repo)) // For BodyTop.
 	req = req.WithContext(context.WithValue(req.Context(), changes.RepoSpecContextKey, h.SpecURL))
 	req = req.WithContext(context.WithValue(req.Context(), changes.BaseURIContextKey, h.BaseURL))
 	h.changesApp.ServeHTTP(rr, req)
@@ -323,12 +339,21 @@ func (s shurcoolSeesGitHubChanges) List(ctx context.Context, repo string, opt ch
 
 func (s shurcoolSeesGitHubChanges) Count(ctx context.Context, repo string, opt change.ListOptions) (uint64, error) {
 	if strings.HasPrefix(repo, "github.com/") {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return 0, err
+		shurcoolRequired := true
+		if repo == "github.com/shurcooL/issuesapp" || repo == "github.com/shurcooL/notificationsapp" {
+			// Let everyone count changes in the gh+ds hybrid packages
+			// using the shurcooL-authenticated GitHub change service.
+			// This is needed to show the number of open changes in the tabnav.
+			shurcoolRequired = false
 		}
-		if currentUser != shurcool {
-			return 0, os.ErrPermission
+		if shurcoolRequired {
+			currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+			if err != nil {
+				return 0, err
+			}
+			if currentUser != shurcool {
+				return 0, os.ErrPermission
+			}
 		}
 		return s.shurcoolGitHubChange.Count(ctx, repo, opt)
 	}

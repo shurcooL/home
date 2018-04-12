@@ -25,6 +25,8 @@ type codeHandler struct {
 	reposDir      string
 	issuesApp     http.Handler
 	changesApp    http.Handler
+	issues        issueCounter
+	change        changeCounter
 	notifications notifications.Service
 	users         users.Service
 	gitUsers      map[string]users.User // Key is lower git author email.
@@ -54,9 +56,10 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 	}
 
 	repo := repoInfo{
-		Spec: d.RepoRoot,
-		Path: d.RepoRoot[len("dmitri.shuralyov.com"):],
-		Dir:  filepath.Join(h.reposDir, filepath.FromSlash(d.RepoRoot)),
+		Spec:     d.RepoRoot,
+		Path:     d.RepoRoot[len("dmitri.shuralyov.com"):],
+		Dir:      filepath.Join(h.reposDir, filepath.FromSlash(d.RepoRoot)),
+		Packages: d.RepoPackages,
 	}
 	pkgPath := d.ImportPath[len("dmitri.shuralyov.com"):]
 	var licensePkgPath string
@@ -95,6 +98,8 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 				DocHTML:    d.Package.DocHTML,
 				LicenseURL: licenseURL,
 			},
+			issues:        h.issues,
+			change:        h.change,
 			notifications: h.notifications,
 			users:         h.users,
 		}).ServeHTTP)}
@@ -118,6 +123,8 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&repositoryHandler{
 			Repo:          repo,
 			code:          h.code,
+			issues:        h.issues,
+			change:        h.change,
 			notifications: h.notifications,
 			users:         h.users,
 		}).ServeHTTP)}
@@ -126,6 +133,8 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 	case req.URL.Path == route.RepoHistory(repo.Path):
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitsHandler{
 			Repo:          repo,
+			issues:        h.issues,
+			change:        h.change,
 			notifications: h.notifications,
 			users:         h.users,
 			gitUsers:      h.gitUsers,
@@ -136,6 +145,8 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		req = stripPrefix(req, len(route.RepoCommit(repo.Path)))
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitHandler{
 			Repo:          repo,
+			issues:        h.issues,
+			change:        h.change,
 			notifications: h.notifications,
 			users:         h.users,
 			gitUsers:      h.gitUsers,
@@ -148,6 +159,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		h := cookieAuth{httputil.ErrorHandler(h.users, issuesHandler{
 			SpecURL:   repo.Spec, // Issues trackers are mapped to repo roots at this time.
 			BaseURL:   route.RepoIssues(repo.Path),
+			Repo:      repo,
 			issuesApp: h.issuesApp,
 		}.ServeHTTP)}
 		h.ServeHTTP(w, req)
@@ -158,6 +170,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		h := cookieAuth{httputil.ErrorHandler(h.users, changesHandler{
 			SpecURL:    repo.Spec, // Change trackers are mapped to repo roots at this time.
 			BaseURL:    route.RepoChanges(repo.Path),
+			Repo:       repo,
 			changesApp: h.changesApp,
 		}.ServeHTTP)}
 		h.ServeHTTP(w, req)
@@ -169,10 +182,16 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 }
 
 type repoInfo struct {
-	Spec string // Repository spec. E.g., "example.com/repo".
-	Path string // Path corresponding to repository root, without domain. E.g., "/repo".
-	Dir  string // Path to repository directory on disk.
+	Spec     string // Repository spec. E.g., "example.com/repo".
+	Path     string // Path corresponding to repository root, without domain. E.g., "/repo".
+	Dir      string // Path to repository directory on disk.
+	Packages int    // Number of packages contained by repository.
 }
+
+// repoInfoContextKey is a context key for the request's repo info.
+// That value specifies which repo is being displayed.
+// The associated value will be of type repoInfo.
+var repoInfoContextKey = &contextKey{"RepoInfo"}
 
 type pkgInfo struct {
 	Spec       string // Package import path. E.g., "example.com/repo/package".

@@ -96,6 +96,7 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	changeService := newChangeService(reactions, notifications, users, githubRouter)
 
 	sessionsHandler := &sessionsHandler{users, userStore}
 	http.Handle("/login/github", sessionsHandler)
@@ -132,8 +133,8 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	issuesApp := initIssues(http.DefaultServeMux, issuesService, notifications, users)
-	changesApp := initChanges(http.DefaultServeMux, reactions, notifications, users, githubRouter)
+	issuesApp := initIssues(http.DefaultServeMux, issuesService, changeService, notifications, users)
+	changesApp := initChanges(http.DefaultServeMux, changeService, issuesService, notifications, users)
 
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))
@@ -162,7 +163,7 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, notifications, users, gitUsers}
+	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifications, users, gitUsers}
 	servePackagesMaybe := initPackages(code, notifications, users)
 
 	initTalks(
