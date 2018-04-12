@@ -119,8 +119,7 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		return err
 	}
 
-	// We know that "dmitri.shuralyov.com/..." comes before "github.com/...".
-	err = renderPackages(w, expandPattern(h.code.Sorted, githubPackages, h.Repo.Spec+"/..."))
+	err = renderPackages(w, expandPattern(h.code.Sorted, nil, h.Repo.Spec+"/...")) // repositoryHandler is used only for self-hosted packages, so it's okay to leave out githubPackages when expanding pattern.
 	if err != nil {
 		return err
 	}

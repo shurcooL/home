@@ -100,7 +100,8 @@ func initPackages(code code.Code, notifications notifications.Service, usersServ
 			return err
 		}
 
-		// We know that "dmitri.shuralyov.com/..." comes before "github.com/...".
+		// We know that "dmitri.shuralyov.com/..." comes before "github.com/...",
+		// that's why code.Sorted, githubPackages are guaranteed to be in alphabetical order.
 		err = renderPackages(w, expandPattern(code.Sorted, githubPackages, importPathPattern))
 		if err != nil {
 			return err
