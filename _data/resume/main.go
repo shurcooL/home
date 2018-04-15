@@ -39,7 +39,8 @@ func main() {
 
 func setup(ctx context.Context) {
 	reactionsService := homehttp.Reactions{}
-	authenticatedUser, err := homehttp.Users{}.GetAuthenticated(ctx)
+	usersService := homehttp.Users{}
+	authenticatedUser, err := usersService.GetAuthenticated(ctx)
 	if err != nil {
 		log.Println(err)
 		authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
@@ -50,16 +51,10 @@ func setup(ctx context.Context) {
 	if !prerender {
 		httpClient := httpClient()
 
-		shurcool, err := homehttp.Users{}.Get(ctx, shurcool)
-		if err != nil {
-			log.Println(err)
-			return
-		}
 		notificationsService := httpclient.NewNotifications(httpClient, "", "")
 		returnURL := dom.GetWindow().Location().Pathname + dom.GetWindow().Location().Search
-
 		var buf bytes.Buffer
-		err = resume.RenderBodyInnerHTML(ctx, &buf, shurcool, reactionsService, notificationsService, authenticatedUser, returnURL)
+		err = resume.RenderBodyInnerHTML(ctx, &buf, reactionsService, notificationsService, usersService, authenticatedUser, returnURL)
 		if err != nil {
 			log.Println(err)
 			return
@@ -69,8 +64,6 @@ func setup(ctx context.Context) {
 
 	reactionsmenu.Setup(resume.ReactableURL, reactionsService, authenticatedUser)
 }
-
-var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
 
 // httpClient gives an *http.Client for making API requests.
 func httpClient() *http.Client {

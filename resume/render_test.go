@@ -23,7 +23,7 @@ var updateFlag = flag.Bool("update", false, "Update golden files.")
 // TestBodyInnerHTML validates that resume.RenderBodyInnerHTML renders the body inner HTML as expected.
 func TestBodyInnerHTML(t *testing.T) {
 	var buf bytes.Buffer
-	err := resume.RenderBodyInnerHTML(context.TODO(), &buf, shurcool, mockReactions{}, mockNotifications{}, alice, "/")
+	err := resume.RenderBodyInnerHTML(context.TODO(), &buf, mockReactions{}, mockNotifications{}, mockUsers{}, alice, "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := resume.RenderBodyInnerHTML(context.Background(), ioutil.Discard, shurcool, reactions, notifications, authenticatedUser, returnURL)
+		err := resume.RenderBodyInnerHTML(context.Background(), ioutil.Discard, reactions, notifications, users, authenticatedUser, returnURL)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -105,15 +105,23 @@ func (mockNotifications) Count(_ context.Context, opt interface{}) (uint64, erro
 type mockUsers struct{ users.Service }
 
 func (mockUsers) Get(_ context.Context, user users.UserSpec) (users.User, error) {
-	if user.ID == 0 {
+	switch {
+	case user == shurcool.UserSpec:
+		return shurcool, nil
+	case user == alice.UserSpec:
+		return alice, nil
+	case user == bob.UserSpec:
+		return bob, nil
+	case user.ID != 0:
+		return users.User{
+			UserSpec:  user,
+			Login:     fmt.Sprintf("%d@%s", user.ID, user.Domain),
+			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
+			HTMLURL:   "",
+		}, nil
+	default:
 		return users.User{}, fmt.Errorf("user %v not found", user)
 	}
-	return users.User{
-		UserSpec:  user,
-		Login:     fmt.Sprintf("%d@%s", user.ID, user.Domain),
-		AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
-		HTMLURL:   "",
-	}, nil
 }
 
 func (mockUsers) GetAuthenticatedSpec(_ context.Context) (users.UserSpec, error) {

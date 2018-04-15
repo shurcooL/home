@@ -57,17 +57,13 @@ func initResume(reactions reactions.Service, notifications notifications.Service
 		// Optional (still experimental) server-side rendering.
 		prerender, _ := strconv.ParseBool(req.URL.Query().Get("prerender"))
 		if prerender {
-			shurcool, err := usersService.Get(req.Context(), shurcool)
-			if err != nil {
-				return err
-			}
 			authenticatedUser, err := usersService.GetAuthenticated(req.Context())
 			if err != nil {
 				log.Println(err)
 				authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 			}
 			returnURL := req.RequestURI
-			err = resume.RenderBodyInnerHTML(req.Context(), w, shurcool, reactions, notifications, authenticatedUser, returnURL)
+			err = resume.RenderBodyInnerHTML(req.Context(), w, reactions, notifications, usersService, authenticatedUser, returnURL)
 			if err != nil {
 				return err
 			}
