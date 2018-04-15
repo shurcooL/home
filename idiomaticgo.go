@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/shurcooL/home/httputil"
-	"github.com/shurcooL/home/idiomaticgo"
+	"github.com/shurcooL/home/internal/page/idiomaticgo"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"

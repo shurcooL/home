@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/shurcooL/home/httputil"
-	"github.com/shurcooL/home/resume"
+	"github.com/shurcooL/home/internal/page/resume"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"

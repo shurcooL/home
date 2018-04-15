@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shurcooL/home/idiomaticgo"
+	"github.com/shurcooL/home/internal/page/idiomaticgo"
 	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shurcooL/home/resume"
+	"github.com/shurcooL/home/internal/page/resume"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/reactions/fs"

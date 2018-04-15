@@ -15,7 +15,7 @@ import (
 
 	"github.com/shurcooL/frontend/reactionsmenu"
 	homehttp "github.com/shurcooL/home/http"
-	"github.com/shurcooL/home/resume"
+	"github.com/shurcooL/home/internal/page/resume"
 	"github.com/shurcooL/notificationsapp/httpclient"
 	"github.com/shurcooL/users"
 	"golang.org/x/oauth2"

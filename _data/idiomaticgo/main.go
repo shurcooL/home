@@ -9,7 +9,7 @@ import (
 
 	"github.com/shurcooL/frontend/reactionsmenu"
 	homehttp "github.com/shurcooL/home/http"
-	"github.com/shurcooL/home/idiomaticgo"
+	"github.com/shurcooL/home/internal/page/idiomaticgo"
 	"github.com/shurcooL/issuesapp/httpclient"
 	"github.com/shurcooL/users"
 	"golang.org/x/oauth2"

@@ -9,9 +9,9 @@ import (
 	"os"
 	"strconv"
 
-	blogpkg "github.com/shurcooL/home/blog"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	blogpkg "github.com/shurcooL/home/internal/page/blog"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"

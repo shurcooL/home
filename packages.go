@@ -880,11 +880,6 @@ var githubPackages = []*code.Directory{
 	//	Synopsis:   "Package assets contains assets for home.",
 	//},
 	//{
-	//	ImportPath: "github.com/shurcooL/home/blog",
-	//	Command:    false,
-	//	Synopsis:   "Package blog contains functionality for rendering /blog page.",
-	//},
-	//{
 	//	ImportPath: "github.com/shurcooL/home/component",
 	//	Command:    false,
 	//	Synopsis:   "Package component contains individual components that can render themselves as HTML.",
@@ -924,11 +919,6 @@ var githubPackages = []*code.Directory{
 	//	ImportPath: "github.com/shurcooL/home/httputil",
 	//	Command:    false,
 	//	Synopsis:   "Package httputil is a custom HTTP framework created specifically for home.",
-	//},
-	//{
-	//	ImportPath: "github.com/shurcooL/home/idiomaticgo",
-	//	Command:    false,
-	//	Synopsis:   "Package idiomaticgo contains functionality for rendering /idiomatic-go page.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/home/presentdata",
