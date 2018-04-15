@@ -145,7 +145,7 @@ func run(ctx context.Context) error {
 	fontsHandler := cookieAuth{httpgzip.FileServer(assets.Fonts, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/fonts/", http۰StripPrefix("/assets/fonts", fontsHandler))
 
-	initResume(assetsHandler, reactions, notifications, users)
+	initResume(reactions, notifications, users)
 
 	initIdiomaticGo(issuesService, notifications, users)
 

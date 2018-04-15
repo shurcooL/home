@@ -1257,14 +1257,6 @@ var githubPackages = []*code.Directory{
 	//	Synopsis:   "Package component contains individual components that can render themselves as HTML.",
 	//},
 	{
-		ImportPath: "github.com/shurcooL/resume/frontend",
-		RepoRoot:   "github.com/shurcooL/resume",
-		Package: &code.Package{
-			Name:     "main",
-			Synopsis: "frontend renders the resume entirely on the frontend.",
-		},
-	},
-	{
 		ImportPath: "github.com/shurcooL/sanitized_anchor_name",
 		RepoRoot:   "github.com/shurcooL/sanitized_anchor_name",
 		Package: &code.Package{

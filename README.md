@@ -27,6 +27,7 @@ Directories
 | [internal/code](https://godoc.org/github.com/shurcooL/home/internal/code)   | Package code implements discovery of Go code within a repository store.              |
 | [internal/route](https://godoc.org/github.com/shurcooL/home/internal/route) | Package route specifies some route paths used by home.                               |
 | [presentdata](https://godoc.org/github.com/shurcooL/home/presentdata)       | Package presentdata contains static data for present format.                         |
+| [resume](https://godoc.org/github.com/shurcooL/home/resume)                 | Package resume contains functionality for rendering /resume page.                    |
 
 License
 -------

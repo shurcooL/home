@@ -8,10 +8,10 @@ import (
 	"strconv"
 
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/resume"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"
-	"github.com/shurcooL/resume"
 	"github.com/shurcooL/users"
 )
 
@@ -21,10 +21,10 @@ var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
-		<link href="/resume.css" rel="stylesheet" type="text/css">
+		<link href="/assets/resume/style.css" rel="stylesheet" type="text/css">
 
 		{{noescape "<!-- Unminified source is at https://github.com/shurcooL/resume. -->"}}
-		<script async src="/resume.js"></script>
+		<script async src="/assets/resume/resume.js"></script>
 
 		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
@@ -41,8 +41,7 @@ const googleAnalytics = `<script>
 
 		</script>`
 
-// resumeJSCSS contains /resume.{js,css}.
-func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notifications notifications.Service, usersService users.Service) {
+func initResume(reactions reactions.Service, notifications notifications.Service, usersService users.Service) {
 	http.Handle("/resume", cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
@@ -77,6 +76,4 @@ func initResume(resumeJSCSS http.Handler, reactions reactions.Service, notificat
 		_, err = io.WriteString(w, `</body></html>`)
 		return err
 	})})
-	http.Handle("/resume.js", resumeJSCSS)
-	http.Handle("/resume.css", resumeJSCSS)
 }
