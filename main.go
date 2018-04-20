@@ -122,7 +122,7 @@ func run(ctx context.Context) error {
 		users: users,
 	}
 	http.Handle("/api/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Upload)})
-	http.Handle("/usercontent/", http۰StripPrefix("/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Serve)}))
+	http.Handle("/usercontent/", http.StripPrefix("/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Serve)}))
 
 	indexHandler := initIndex(events, notifications, users)
 
@@ -137,13 +137,13 @@ func run(ctx context.Context) error {
 	changesApp := initChanges(http.DefaultServeMux, changeService, issuesService, notifications, users)
 
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
-	http.Handle("/emojis/", http۰StripPrefix("/emojis", emojisHandler))
+	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
 
 	assetsHandler := cookieAuth{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
 
 	fontsHandler := cookieAuth{httpgzip.FileServer(assets.Fonts, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
-	http.Handle("/assets/fonts/", http۰StripPrefix("/assets/fonts", fontsHandler))
+	http.Handle("/assets/fonts/", http.StripPrefix("/assets/fonts", fontsHandler))
 
 	initResume(reactions, notifications, users)
 

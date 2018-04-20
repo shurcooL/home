@@ -35,7 +35,7 @@ var projectsHTML = template.Must(template.New("").Parse(`<html>
 
 // initProjects registers a projects handler with root as projects content source.
 func initProjects(mux *http.ServeMux, root http.FileSystem, notifications notifications.Service, users users.Service) {
-	projectsHandler := http۰StripPrefix("/projects", cookieAuth{httputil.ErrorHandler(users, (&projectsHandler{
+	projectsHandler := http.StripPrefix("/projects", cookieAuth{httputil.ErrorHandler(users, (&projectsHandler{
 		fs: root,
 
 		notifications: notifications,
