@@ -243,29 +243,15 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 			}
 			return httperror.Redirect{URL: baseURL}
 		}
-		returnURL := req.RequestURI
 		req = copyRequestAndURL(req)
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
 			req.URL.Path = "/"
 		}
-		rr := httptest.NewRecorder()
-		rr.HeaderMap = w.Header()
 		req = req.WithContext(context.WithValue(req.Context(), changes.RepoSpecContextKey, specURL))
 		req = req.WithContext(context.WithValue(req.Context(), changes.BaseURIContextKey, baseURL))
-		changesApp.ServeHTTP(rr, req)
-		// TODO: Have changesApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
-		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
-		if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
-			loginURL := (&url.URL{
-				Path:     "/login",
-				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
-			}).String()
-			return httperror.Redirect{URL: loginURL}
-		}
-		w.WriteHeader(rr.Code)
-		_, err = io.Copy(w, rr.Body)
-		return err
+		changesApp.ServeHTTP(w, req)
+		return nil
 	})}
 	mux.Handle("/changes/github.com/", githubChangesHandler)
 

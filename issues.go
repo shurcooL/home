@@ -268,29 +268,15 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 			}
 			return httperror.Redirect{URL: baseURL}
 		}
-		returnURL := req.RequestURI
 		req = copyRequestAndURL(req)
 		req.URL.Path = req.URL.Path[prefixLen:]
 		if req.URL.Path == "" {
 			req.URL.Path = "/"
 		}
-		rr := httptest.NewRecorder()
-		rr.HeaderMap = w.Header()
 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: specURL}))
 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, baseURL))
-		issuesApp.ServeHTTP(rr, req)
-		// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
-		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
-		if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
-			loginURL := (&url.URL{
-				Path:     "/login",
-				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
-			}).String()
-			return httperror.Redirect{URL: loginURL}
-		}
-		w.WriteHeader(rr.Code)
-		_, err = io.Copy(w, rr.Body)
-		return err
+		issuesApp.ServeHTTP(w, req)
+		return nil
 	})}
 	mux.Handle("/issues/github.com/", githubIssuesHandler)
 
