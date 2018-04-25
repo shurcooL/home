@@ -166,7 +166,7 @@ func initAbout(notifications notifications.Service, users users.Service) {
 					elem.Ul(
 						elem.Li(iconText{
 							Icon: faIcon("laptop"),
-							Text: "Apple MacBook Pro (15-inch, Late 2011)",
+							Text: "Apple MacBook Pro (Retina, 15-inch, Mid 2015)",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("tv"),
