@@ -61,18 +61,53 @@ func run(ctx context.Context) error {
 		storeDir = filepath.Join(os.TempDir(), "home-store")
 	}
 
+	initStores := func(storeDir string) error {
+		// Make sure storeDir exists and is a directory.
+		fi, err := os.Stat(storeDir)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("store directory %q does not exist: %v", storeDir, err)
+		} else if err != nil {
+			return err
+		}
+		if !fi.IsDir() {
+			return fmt.Errorf("store directory %q is not a directory", storeDir)
+		}
+
+		// Create store directories if they're missing.
+		for _, storeName := range []string{
+			"users",
+			"reactions",
+			"notifications",
+			"events",
+			"issues",
+			"usercontent",
+			"repositories",
+		} {
+			err := os.MkdirAll(filepath.Join(storeDir, storeName), 0700)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+	err := initStores(storeDir)
+	if err != nil {
+		return err
+	}
+
 	users, userStore, err := newUsersService(
 		webdav.Dir(filepath.Join(storeDir, "users")),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("newUsersService: %v", err)
 	}
 	reactions, err := newReactionsService(
 		webdav.Dir(filepath.Join(storeDir, "reactions")),
 		users,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("newReactionsService: %v", err)
 	}
 	githubRouter := shurcoolSeesHomeRouter{users: users}
 	notifications := initNotifications(
@@ -87,14 +122,14 @@ func run(ctx context.Context) error {
 		githubRouter,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("newEventsService: %v", err)
 	}
 	issuesService, err := newIssuesService(
 		webdav.Dir(filepath.Join(storeDir, "issues")),
 		notifications, events, users, githubRouter,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("newIssuesService: %v", err)
 	}
 	changeService := newChangeService(reactions, notifications, users, githubRouter)
 
@@ -130,7 +165,7 @@ func run(ctx context.Context) error {
 
 	err = initBlog(http.DefaultServeMux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
 	if err != nil {
-		return err
+		return fmt.Errorf("initBlog: %v", err)
 	}
 
 	issuesApp := initIssues(http.DefaultServeMux, issuesService, changeService, notifications, users)
@@ -153,15 +188,15 @@ func run(ctx context.Context) error {
 	reposDir := filepath.Join(storeDir, "repositories")
 	code, err := code.Discover(reposDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("code.Discover: %v", err)
 	}
 	gitUsers, err := initGitUsers(users)
 	if err != nil {
-		return err
+		return fmt.Errorf("initGitUsers: %v", err)
 	}
 	gitHandler, err := initGitHandler(code, reposDir, events, users, gitUsers)
 	if err != nil {
-		return err
+		return fmt.Errorf("initGitHandler: %v", err)
 	}
 	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifications, users, gitUsers}
 	servePackagesMaybe := initPackages(code, notifications, users)

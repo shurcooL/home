@@ -29,7 +29,10 @@ func initGitUsers(usersService users.Service) (gitUsers map[string]users.User, e
 	// TODO: Add support for additional git users.
 	gitUsers = make(map[string]users.User) // Key is lower git author email.
 	shurcool, err := usersService.Get(context.Background(), shurcool)
-	if err != nil {
+	if os.IsNotExist(err) {
+		log.Printf("initGitUsers: shurcool user does not exist: %v", err)
+		return gitUsers, nil
+	} else if err != nil {
 		return nil, err
 	}
 	gitUsers[strings.ToLower(shurcool.Email)] = shurcool
