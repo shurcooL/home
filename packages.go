@@ -512,17 +512,17 @@ var githubPackages = []*code.Directory{
 	},
 	{
 		//New:        true,
-		ImportPath: "github.com/shurcooL/githubql",
-		RepoRoot:   "github.com/shurcooL/githubql",
+		ImportPath: "github.com/shurcooL/githubv4",
+		RepoRoot:   "github.com/shurcooL/githubv4",
 		Package: &code.Package{
-			Name:     "githubql",
-			Synopsis: "Package githubql is a client library for accessing GitHub GraphQL API v4 (https://developer.github.com/v4/).",
+			Name:     "githubv4",
+			Synopsis: "Package githubv4 is a client library for accessing GitHub GraphQL API v4 (https://developer.github.com/v4/).",
 		},
 	},
 	//{
-	//	ImportPath: "github.com/shurcooL/githubql/example/githubqldev",
+	//	ImportPath: "github.com/shurcooL/githubv4/example/githubv4dev",
 	//	Command:    true,
-	//	Synopsis:   "githubqldev is a test program currently being used for developing githubql package.",
+	//	Synopsis:   "githubv4dev is a test program currently being used for developing githubv4 package.",
 	//},
 	{
 		ImportPath: "github.com/shurcooL/go-goon",

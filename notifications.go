@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"dmitri.shuralyov.com/route/github"
-	githubV3 "github.com/google/go-github/github"
+	githubv3 "github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
-	"github.com/shurcooL/githubql"
+	"github.com/shurcooL/githubv4"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
@@ -42,8 +42,8 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		MarkCachedResponses: true,
 	}
 	shurcoolGitHubNotifications := githubapi.NewService(
-		githubV3.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
-		githubql.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second}),
+		githubv3.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
+		githubv4.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second}),
 		router,
 	)
 
