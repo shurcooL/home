@@ -247,7 +247,7 @@ func run(ctx context.Context) error {
 		log.Println("sessions.LoadAndRemove:", n, err)
 	}
 
-	server := &http.Server{Addr: *httpFlag, Handler: topMux{}}
+	server := &http.Server{Addr: *httpFlag, Handler: top{http.DefaultServeMux}}
 
 	go func() {
 		<-ctx.Done()
@@ -274,14 +274,14 @@ func run(ctx context.Context) error {
 	return nil
 }
 
-// topMux adds some instrumentation on top of http.DefaultServeMux.
-type topMux struct{}
+// top adds some instrumentation on top of Handler.
+type top struct{ Handler http.Handler }
 
-func (topMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (t top) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 	started := time.Now()
 	rw := &responseWriter{ResponseWriter: w}
-	http.DefaultServeMux.ServeHTTP(rw, req)
+	t.Handler.ServeHTTP(rw, req)
 	fmt.Printf("TIMING: %s: %v\n", path, time.Since(started))
 	if path != req.URL.Path {
 		log.Printf("warning: req.URL.Path was modified from %v to %v\n", path, req.URL.Path)
