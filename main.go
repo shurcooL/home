@@ -247,7 +247,7 @@ func run(ctx context.Context) error {
 		log.Println("sessions.LoadAndRemove:", n, err)
 	}
 
-	server := &http.Server{Addr: *httpFlag, Handler: top{http.DefaultServeMux}}
+	server := &http.Server{Addr: *httpFlag, Handler: top{httputil.GzipHandler(http.DefaultServeMux)}}
 
 	go func() {
 		<-ctx.Done()
