@@ -34,7 +34,13 @@ var shurcoolPublicRepoGHV3, shurcoolPublicRepoGHV4 = func() (*githubv3.Client, *
 		githubv4.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second})
 }()
 
-func newUsersService(root webdav.FileSystem) (users.Service, users.Store, error) {
+type userCreator interface {
+	// Create creates the specified user.
+	// It returns os.ErrExist if the user already exists.
+	Create(ctx context.Context, user users.User) error
+}
+
+func newUsersService(root webdav.FileSystem) (users.Service, userCreator, error) {
 	s, err := fs.NewStore(root)
 	if err != nil {
 		return nil, nil, err

@@ -278,7 +278,7 @@ func lookUpSessionUserViaBasicAuth(req *http.Request, usersService users.Service
 
 type sessionsHandler struct {
 	users     users.Service
-	userStore users.Store
+	userStore userCreator
 }
 
 func (h *sessionsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

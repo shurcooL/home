@@ -59,6 +59,6 @@ func (c *eventsClient) List(ctx context.Context) ([]event.Event, error) {
 	return v.Events, eventsError
 }
 
-func (c *eventsClient) Log(ctx context.Context, event event.Event) error {
+func (*eventsClient) Log(ctx context.Context, event event.Event) error {
 	return fmt.Errorf("eventsClient.Log: not implemented")
 }
