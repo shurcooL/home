@@ -54,7 +54,30 @@ type Users struct {
 }
 
 func (u Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
-	return u.store.Get(ctx, user)
+	// User shurcooL is hardcoded into users service, rather than provided via user store,
+	// because it's needed to render some pages. They should work even with an empty user store.
+	switch user {
+	case shurcool:
+		return users.User{
+			UserSpec: shurcool,
+			Elsewhere: []users.UserSpec{
+				{
+					ID:     21361484,
+					Domain: "twitter.com",
+				},
+			},
+
+			Login:     "shurcooL",
+			Name:      "Dmitri Shuralyov",
+			Email:     "dmitri@shuralyov.com",
+			AvatarURL: "https://dmitri.shuralyov.com/avatar.jpg",
+			HTMLURL:   "https://dmitri.shuralyov.com",
+
+			SiteAdmin: true,
+		}, nil
+	default:
+		return u.store.Get(ctx, user)
+	}
 }
 
 func (Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
