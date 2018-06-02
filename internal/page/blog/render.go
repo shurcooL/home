@@ -15,7 +15,7 @@ import (
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	reactionscomponent "github.com/shurcooL/reactions/component"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -85,14 +85,14 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		// Post meta information.
 		var lis = []*html.Node{
 			htmlg.LIClass("post-meta", iconText{
-				Icon:    octiconssvg.Calendar,
+				Icon:    octicon.Calendar,
 				Text:    comment.CreatedAt.Format("January 2, 2006"),
 				Tooltip: humanize.Time(comment.CreatedAt) + " – " + comment.CreatedAt.Local().Format("Jan 2, 2006, 3:04 PM MST"), // TODO: Use local time of page viewer, not server.
 			}.Render()...),
 			htmlg.LIClass("post-meta", imageText{ImageURL: comment.User.AvatarURL, Text: comment.User.Login}.Render()...),
 		}
 		if labels := labelNames(issue.Labels); len(labels) != 0 {
-			lis = append(lis, htmlg.LIClass("post-meta", iconText{Icon: octiconssvg.Tag, Text: strings.Join(labels, ", ")}.Render()...))
+			lis = append(lis, htmlg.LIClass("post-meta", iconText{Icon: octicon.Tag, Text: strings.Join(labels, ", ")}.Render()...))
 		}
 		html.Render(w, htmlg.ULClass("post-meta", lis...))
 
@@ -113,7 +113,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		}
 		// TODO: Use iconText or similar component here?
 		io.WriteString(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
-		fmt.Fprintf(w, `<a href="/blog/%d#comments" style="line-height: 30px;"><span style="margin-right: 6px; position: relative; top: 7px;">%s</span>%d comments</a>`, issue.ID, octiconsCommentDiscussion, issue.Replies)
+		fmt.Fprintf(w, `<a href="/blog/%d#comments" style="line-height: 30px;"><span style="margin-right: 6px; position: relative; top: 7px;">%s</span>%d comments</a>`, issue.ID, commentDiscussionOcticon, issue.Replies)
 		io.WriteString(w, `</span>`)
 		io.WriteString(w, `</div>`)
 	}
@@ -140,14 +140,14 @@ func (p Post) Render() []*html.Node {
 	// Post meta information.
 	var lis = []*html.Node{
 		htmlg.LIClass("post-meta", iconText{
-			Icon:    octiconssvg.Calendar,
+			Icon:    octicon.Calendar,
 			Text:    p.CreatedAt.Format("January 2, 2006"),
 			Tooltip: humanize.Time(p.CreatedAt) + " – " + p.CreatedAt.Local().Format("Jan 2, 2006, 3:04 PM MST"), // TODO: Use local time of page viewer, not server.
 		}.Render()...),
 		htmlg.LIClass("post-meta", imageText{ImageURL: p.User.AvatarURL, Text: p.User.Login}.Render()...),
 	}
 	if labels := labelNames(p.Labels); len(labels) != 0 {
-		lis = append(lis, htmlg.LIClass("post-meta", iconText{Icon: octiconssvg.Tag, Text: strings.Join(labels, ", ")}.Render()...))
+		lis = append(lis, htmlg.LIClass("post-meta", iconText{Icon: octicon.Tag, Text: strings.Join(labels, ", ")}.Render()...))
 	}
 	nodes = append(nodes, htmlg.ULClass("post-meta", lis...))
 
@@ -236,9 +236,9 @@ func divClassStyle(class, style string, nodes ...*html.Node) *html.Node {
 	return div
 }
 
-var octiconsCommentDiscussion = func() string {
+var commentDiscussionOcticon = func() string {
 	var buf bytes.Buffer
-	err := html.Render(&buf, octiconssvg.CommentDiscussion())
+	err := html.Render(&buf, octicon.CommentDiscussion())
 	if err != nil {
 		panic(err)
 	}

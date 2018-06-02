@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/shurcooL/htmlg"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -169,7 +169,7 @@ vertical-align: top;
 position: relative;`},
 		},
 	}
-	a.AppendChild(octiconssvg.Bell())
+	a.AppendChild(octicon.Bell())
 	switch n.Count {
 	case 0:
 		a.Attr = append(a.Attr, html.Attribute{Key: atom.Title.String(), Val: "You have no unread notifications."})

@@ -17,7 +17,7 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -135,20 +135,20 @@ func repositoryTabnav(selected repositoryTab, repo repoInfo, openIssues, openCha
 		Tabs: []tab{
 			{
 				Content: contentCounter{
-					Content: iconText{Icon: octiconssvg.Package, Text: "Packages"},
+					Content: iconText{Icon: octicon.Package, Text: "Packages"},
 					Count:   repo.Packages,
 				},
 				URL:      route.RepoIndex(repo.Path),
 				Selected: selected == packagesTab,
 			},
 			{
-				Content:  iconText{Icon: octiconssvg.History, Text: "History"},
+				Content:  iconText{Icon: octicon.History, Text: "History"},
 				URL:      route.RepoHistory(repo.Path),
 				Selected: selected == historyTab,
 			},
 			{
 				Content: contentCounter{
-					Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+					Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
 					Count:   int(openIssues),
 				},
 				URL:      route.RepoIssues(repo.Path),
@@ -156,7 +156,7 @@ func repositoryTabnav(selected repositoryTab, repo repoInfo, openIssues, openCha
 			},
 			{
 				Content: contentCounter{
-					Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+					Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
 					Count:   int(openChanges),
 				},
 				URL:      route.RepoChanges(repo.Path),

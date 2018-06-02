@@ -13,7 +13,7 @@ import (
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -73,12 +73,12 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		err = htmlg.RenderComponents(w, tabnav{
 			Tabs: []tab{
 				{
-					Content:  iconText{Icon: octiconssvg.Person, Text: "Overview"},
+					Content:  iconText{Icon: octicon.Person, Text: "Overview"},
 					URL:      "/about",
 					Selected: "/about" == req.URL.Path,
 				},
 				{
-					Content:  iconText{Icon: octiconssvg.DeviceDesktop, Text: "Setup"},
+					Content:  iconText{Icon: octicon.DeviceDesktop, Text: "Setup"},
 					URL:      "/about/setup",
 					Selected: "/about/setup" == req.URL.Path,
 				},

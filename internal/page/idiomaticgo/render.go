@@ -12,7 +12,7 @@ import (
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	reactionscomponent "github.com/shurcooL/reactions/component"
 	"github.com/shurcooL/sanitized_anchor_name"
 	"github.com/shurcooL/users"
@@ -134,7 +134,7 @@ It'll show up here when I add an "Accepted" label.`)))
 		}
 		// TODO: Use iconText or similar component here?
 		io.WriteString(w, `<span class="black-link markdown-body" style="display: inline-block; margin-top: 4px; min-width: 150px; text-align: right;">`)
-		fmt.Fprintf(w, `<a href="/idiomatic-go/entries/%d" style="line-height: 30px;"><span style="margin-right: 6px; position: relative; top: 7px;">%s</span>%d comments</a>`, issue.ID, octiconsCommentDiscussion, issue.Replies)
+		fmt.Fprintf(w, `<a href="/idiomatic-go/entries/%d" style="line-height: 30px;"><span style="margin-right: 6px; position: relative; top: 7px;">%s</span>%d comments</a>`, issue.ID, commentDiscussionOcticon, issue.Replies)
 		io.WriteString(w, `</span>`)
 		io.WriteString(w, `</div>`)
 	}
@@ -153,9 +153,9 @@ func accepted(issue issues.Issue) bool {
 	return false
 }
 
-var octiconsCommentDiscussion = func() string {
+var commentDiscussionOcticon = func() string {
 	var buf bytes.Buffer
-	err := html.Render(&buf, octiconssvg.CommentDiscussion())
+	err := html.Render(&buf, octicon.CommentDiscussion())
 	if err != nil {
 		panic(err)
 	}

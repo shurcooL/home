@@ -26,7 +26,7 @@ import (
 	"github.com/shurcooL/issuesapp/httphandler"
 	"github.com/shurcooL/issuesapp/httproute"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -198,13 +198,13 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 					{Key: atom.Class.String(), Val: "gray"},
 					{Key: atom.Style.String(), Val: "margin-left: 10px;"},
 				},
-				FirstChild: octiconssvg.SetSize(octiconssvg.MarkGitHub(), 24),
+				FirstChild: octicon.SetSize(octicon.MarkGitHub(), 24),
 			})
 			tabnav := tabnav{
 				Tabs: []tab{
 					{
 						Content: contentCounter{
-							Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+							Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
 							Count:   int(openIssues),
 						},
 						URL:      "/issues/" + repo.URI,
@@ -212,7 +212,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 					},
 					{
 						Content: contentCounter{
-							Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+							Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
 							Count:   int(openChanges),
 						},
 						URL: "/changes/" + repo.URI,

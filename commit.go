@@ -24,7 +24,7 @@ import (
 	"github.com/shurcooL/issues"
 	issuescomponent "github.com/shurcooL/issuesapp/component"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"github.com/sourcegraph/annotate"
 	"golang.org/x/net/html"
@@ -311,7 +311,7 @@ func (c commitMessage) ViewCode() template.HTML {
 			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.RepoRoot + "?rev=" + c.CommitHash},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
-		FirstChild: octiconssvg.Code(),
+		FirstChild: octicon.Code(),
 	}))
 }
 

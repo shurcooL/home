@@ -21,7 +21,7 @@ import (
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -199,7 +199,7 @@ func (a activity) Render() []*html.Node {
 		case event.Issue:
 			e := activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.IssueOpened,
+				Icon:       octicon.IssueOpened,
 				Action:     component.Text(fmt.Sprintf("%v an issue in", p.Action)),
 			}
 			details := iconLink{
@@ -209,25 +209,25 @@ func (a activity) Render() []*html.Node {
 			}
 			switch p.Action {
 			case "opened":
-				details.Icon = octiconssvg.IssueOpened
+				details.Icon = octicon.IssueOpened
 				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case "closed":
-				details.Icon = octiconssvg.IssueClosed
+				details.Icon = octicon.IssueClosed
 				details.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 			case "reopened":
-				details.Icon = octiconssvg.IssueReopened
+				details.Icon = octicon.IssueReopened
 				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 
 				//default:
 				//log.Println("activity.Render: unsupported event.Issue action:", p.Action)
-				//details.Icon = octiconssvg.IssueOpened
+				//details.Icon = octicon.IssueOpened
 			}
 			e.Details = details
 			displayEvent = e
 		case event.Change:
 			e := activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.GitPullRequest,
+				Icon:       octicon.GitPullRequest,
 				Action:     component.Text(fmt.Sprintf("%v a change in", p.Action)),
 			}
 			details := iconLink{
@@ -237,18 +237,18 @@ func (a activity) Render() []*html.Node {
 			}
 			switch p.Action {
 			case "opened", "reopened":
-				details.Icon = octiconssvg.GitPullRequest
+				details.Icon = octicon.GitPullRequest
 				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
 			case "closed":
-				details.Icon = octiconssvg.GitPullRequest
+				details.Icon = octicon.GitPullRequest
 				details.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
 			case "merged":
-				details.Icon = octiconssvg.GitMerge
+				details.Icon = octicon.GitMerge
 				details.IconColor = &RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
 
 				//default:
 				//log.Println("activity.Render: unsupported event.Change action:", p.Action)
-				//details.Icon = octiconssvg.GitPullRequest
+				//details.Icon = octicon.GitPullRequest
 			}
 			e.Details = details
 			displayEvent = e
@@ -256,7 +256,7 @@ func (a activity) Render() []*html.Node {
 		case event.IssueComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.CommentDiscussion,
+				Icon:       octicon.CommentDiscussion,
 				Action:     component.Join("commented on ", issueName(p), " in"),
 				Details: imageText{
 					ImageURL: e.Actor.AvatarURL,
@@ -266,7 +266,7 @@ func (a activity) Render() []*html.Node {
 		case event.ChangeComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.CommentDiscussion,
+				Icon:       octicon.CommentDiscussion,
 				Action:     component.Join("commented on ", changeName(p), " in"),
 				Details: imageText{
 					ImageURL: e.Actor.AvatarURL,
@@ -276,7 +276,7 @@ func (a activity) Render() []*html.Node {
 		case event.CommitComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.CommentDiscussion,
+				Icon:       octicon.CommentDiscussion,
 				Action:     component.Join("commented on ", commitName(p), " in"),
 				Details: imageText{
 					ImageURL: e.Actor.AvatarURL,
@@ -287,7 +287,7 @@ func (a activity) Render() []*html.Node {
 		case event.Push:
 			e := activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.GitCommit,
+				Icon:       octicon.GitCommit,
 				Action:     component.Join("pushed to ", belt.Reference{Name: p.Branch}, " in"),
 			}
 			switch len(p.Commits) {
@@ -305,7 +305,7 @@ func (a activity) Render() []*html.Node {
 		case event.Star:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.Star,
+				Icon:       octicon.Star,
 				Action:     component.Text("starred"),
 			}
 
@@ -315,15 +315,15 @@ func (a activity) Render() []*html.Node {
 			}
 			switch p.Type {
 			case "repository":
-				e.Icon = octiconssvg.Repo
+				e.Icon = octicon.Repo
 				e.Action = component.Text("created repository")
 				e.Details = plainText{Text: p.Description}
 			case "branch":
-				e.Icon = octiconssvg.GitBranch
+				e.Icon = octicon.GitBranch
 				e.Action = component.Text("created branch in")
 				e.Details = belt.Reference{Name: p.Name}
 			case "tag":
-				e.Icon = octiconssvg.Tag
+				e.Icon = octicon.Tag
 				e.Action = component.Text("created tag in")
 				e.Details = belt.Reference{Name: p.Name}
 
@@ -338,20 +338,20 @@ func (a activity) Render() []*html.Node {
 		case event.Fork:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.RepoForked,
+				Icon:       octicon.RepoForked,
 				Action:     component.Text("forked"),
 				Details: iconLink{
 					Text:      p.Container,
 					URL:       "https://" + p.Container,
 					Black:     true,
-					Icon:      octiconssvg.Repo,
+					Icon:      octicon.Repo,
 					IconColor: &RGB{R: 35, G: 35, B: 35}, // Black (not pure).
 				},
 			}
 		case event.Delete:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.Trashcan,
+				Icon:       octicon.Trashcan,
 				Action:     component.Text(fmt.Sprintf("deleted %v in", p.Type)),
 				Details: belt.Reference{
 					Name:          p.Name,
@@ -362,7 +362,7 @@ func (a activity) Render() []*html.Node {
 		case event.Wiki:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
-				Icon:       octiconssvg.Book,
+				Icon:       octicon.Book,
 				Action:     component.Text("edited the wiki in"),
 				Details: pages{
 					ActorAvatarURL: e.Actor.AvatarURL,

@@ -1183,17 +1183,12 @@ var githubPackages = []*code.Directory{
 	//	Command:    false,
 	//	Synopsis:   "Package httproute contains route paths for httpclient, httphandler.",
 	//},
-	//{
-	//	ImportPath: "github.com/shurcooL/octicons",
-	//	Command:    false,
-	//	Synopsis:   "Package octicons provides GitHub Octicons.",
-	//},
 	{
-		ImportPath: "github.com/shurcooL/octiconssvg",
-		RepoRoot:   "github.com/shurcooL/octiconssvg",
+		ImportPath: "github.com/shurcooL/octicon",
+		RepoRoot:   "github.com/shurcooL/octicon",
 		Package: &code.Package{
-			Name:     "octiconssvg",
-			Synopsis: "Package octiconssvg provides GitHub Octicons in SVG format.",
+			Name:     "octicon",
+			Synopsis: "Package octicon provides GitHub Octicons.",
 		},
 	},
 	{

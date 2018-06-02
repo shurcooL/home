@@ -28,7 +28,7 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octiconssvg"
+	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -199,20 +199,20 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 					{Key: atom.Class.String(), Val: "gray"},
 					{Key: atom.Style.String(), Val: "margin-left: 10px;"},
 				},
-				FirstChild: octiconssvg.SetSize(octiconssvg.MarkGitHub(), 24),
+				FirstChild: octicon.SetSize(octicon.MarkGitHub(), 24),
 			})
 			tabnav := tabnav{
 				Tabs: []tab{
 					{
 						Content: contentCounter{
-							Content: iconText{Icon: octiconssvg.IssueOpened, Text: "Issues"},
+							Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
 							Count:   int(openIssues),
 						},
 						URL: "/issues/" + repoSpec,
 					},
 					{
 						Content: contentCounter{
-							Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+							Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
 							Count:   int(openChanges),
 						},
 						URL:      "/changes/" + repoSpec,
@@ -251,13 +251,13 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 					{Key: atom.Class.String(), Val: "gray"},
 					{Key: atom.Style.String(), Val: "margin-left: 10px;"},
 				},
-				FirstChild: octiconssvg.SetSize(octiconssvg.Squirrel(), 24),
+				FirstChild: octicon.SetSize(octicon.Squirrel(), 24),
 			})
 			tabnav := tabnav{
 				Tabs: []tab{
 					{
 						Content: contentCounter{
-							Content: iconText{Icon: octiconssvg.GitPullRequest, Text: "Changes"},
+							Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
 							Count:   int(openChanges),
 						},
 						URL:      "/changes/" + repoSpec,
