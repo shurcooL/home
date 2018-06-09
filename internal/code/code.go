@@ -207,48 +207,76 @@ func walkRepository(gitDir, repoRoot string) ([]*Directory, error) {
 // from filesystem fs in directory dir.
 // It returns a nil Package if the directory doesn't contain a Go package.
 func loadPackage(fs vfs.FileSystem, dir, importPath string) (*Package, error) {
-	bctx := build.Context{
-		GOOS:        "linux",
-		GOARCH:      "amd64",
-		CgoEnabled:  true,
-		Compiler:    build.Default.Compiler,
-		ReleaseTags: build.Default.ReleaseTags,
+	for _, env := range [...]struct{ GOOS, GOARCH string }{
+		{"linux", "amd64"},
+		{"darwin", "amd64"},
+	} {
+		bctx := build.Context{
+			GOOS:        env.GOOS,
+			GOARCH:      env.GOARCH,
+			CgoEnabled:  true,
+			Compiler:    build.Default.Compiler,
+			ReleaseTags: build.Default.ReleaseTags,
 
-		JoinPath:      path.Join,
-		SplitPathList: splitPathList,
-		IsAbsPath:     path.IsAbs,
-		IsDir: func(path string) bool {
-			fi, err := fs.Stat(path)
-			return err == nil && fi.IsDir()
-		},
-		HasSubdir: hasSubdir,
-		ReadDir:   func(dir string) ([]os.FileInfo, error) { return fs.ReadDir(dir) },
-		OpenFile:  func(path string) (io.ReadCloser, error) { return fs.Open(path) },
+			JoinPath:      path.Join,
+			SplitPathList: splitPathList,
+			IsAbsPath:     path.IsAbs,
+			IsDir: func(path string) bool {
+				fi, err := fs.Stat(path)
+				return err == nil && fi.IsDir()
+			},
+			HasSubdir: hasSubdir,
+			ReadDir:   func(dir string) ([]os.FileInfo, error) { return fs.ReadDir(dir) },
+			OpenFile:  func(path string) (io.ReadCloser, error) { return fs.Open(path) },
+		}
+		p, err := bctx.ImportDir(dir, 0)
+		if _, ok := err.(*build.NoGoError); ok {
+			if buildConstraintsExcludeAll(p) {
+				// Try again with a different environment.
+				continue
+			}
+			// This directory doesn't contain a package.
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		// TODO: Automate this.
+		doc := p.Doc
+		switch importPath {
+		case "dmitri.shuralyov.com/text/kebabcase", "dmitri.shuralyov.com/kebabcase":
+			doc += "\n\nReference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers."
+		case "dmitri.shuralyov.com/scratch/image/jpeg":
+			doc += "\n\nJPEG is defined in ITU-T T.81: http://www.w3.org/Graphics/JPEG/itu-t81.pdf."
+		case "dmitri.shuralyov.com/scratch/image/png":
+			doc += "\n\nThe PNG specification is at http://www.w3.org/TR/PNG/."
+		case "dmitri.shuralyov.com/font/woff2":
+			doc += "\n\nThe WOFF2 font packaging format is specified at https://www.w3.org/TR/WOFF2/."
+		case "dmitri.shuralyov.com/gpu/mtl":
+			doc += "\n\nThis package is in very early stages of development. The API will change when opportunities for improvement are discovered; it is not yet frozen. Less than 20% of the Metal API surface is implemented. Current functionality is sufficient to render very basic geometry."
+		case "dmitri.shuralyov.com/gpu/mtl/example/hellotriangle":
+			doc += " It writes the frame to a triangle.png file in current working directory."
+		}
+		return &Package{
+			Name:     p.Name,
+			Synopsis: p.Doc,
+			DocHTML:  docHTML(doc),
+		}, nil
 	}
-	p, err := bctx.ImportDir(dir, 0)
-	if _, ok := err.(*build.NoGoError); ok {
-		// This directory doesn't contain a package.
-		return nil, nil
-	} else if err != nil {
-		return nil, err
+	// This directory doesn't contain a package.
+	return nil, nil
+}
+
+// buildConstraintsExcludeAll reports whether Go files exist in p,
+// but they were ignored due to build constraints.
+func buildConstraintsExcludeAll(p *build.Package) bool {
+	// Count files beginning with _ and ., which we will pretend don't exist at all.
+	dummy := 0
+	for _, name := range p.IgnoredGoFiles {
+		if strings.HasPrefix(name, "_") || strings.HasPrefix(name, ".") {
+			dummy++
+		}
 	}
-	// TODO: Automate this.
-	doc := p.Doc
-	switch importPath {
-	case "dmitri.shuralyov.com/text/kebabcase", "dmitri.shuralyov.com/kebabcase":
-		doc += "\n\nReference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers."
-	case "dmitri.shuralyov.com/scratch/image/jpeg":
-		doc += "\n\nJPEG is defined in ITU-T T.81: http://www.w3.org/Graphics/JPEG/itu-t81.pdf."
-	case "dmitri.shuralyov.com/scratch/image/png":
-		doc += "\n\nThe PNG specification is at http://www.w3.org/TR/PNG/."
-	case "dmitri.shuralyov.com/font/woff2":
-		doc += "\n\nThe WOFF2 font packaging format is specified at https://www.w3.org/TR/WOFF2/."
-	}
-	return &Package{
-		Name:     p.Name,
-		Synopsis: p.Doc,
-		DocHTML:  docHTML(doc),
-	}, nil
+	return len(p.IgnoredGoFiles) > dummy
 }
 
 func splitPathList(list string) []string { return strings.Split(list, ":") }
