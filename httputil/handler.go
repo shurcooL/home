@@ -155,19 +155,25 @@ func (rw *gzipResponseWriter) WriteHeader(code int) {
 	if rw.w != nil {
 		panic(fmt.Errorf("internal error: gzipResponseWriter: WriteHeader called twice or after Write"))
 	}
-	rw.setWriterAndCloser()
+	rw.setWriterAndCloser(code)
 	rw.ResponseWriter.WriteHeader(code)
 }
 func (rw *gzipResponseWriter) Write(p []byte) (n int, err error) {
 	if rw.w == nil {
-		rw.setWriterAndCloser()
+		rw.setWriterAndCloser(http.StatusOK)
 	}
 	return rw.w.Write(p)
 }
 
-func (rw *gzipResponseWriter) setWriterAndCloser() {
+func (rw *gzipResponseWriter) setWriterAndCloser(status int) {
 	if _, ok := rw.Header()["Content-Encoding"]; ok {
 		// Compression already handled by the handler.
+		rw.w = rw.ResponseWriter
+		return
+	}
+
+	if !bodyAllowedForStatus(status) {
+		// Body not allowed, don't use gzip.
 		rw.w = rw.ResponseWriter
 		return
 	}
@@ -187,5 +193,20 @@ func (rw *gzipResponseWriter) Close() {
 	err := rw.c.Close()
 	if err != nil {
 		log.Printf("gzipResponseWriter.Close: error closing *gzip.Writer: %v", err)
+	}
+}
+
+// bodyAllowedForStatus reports whether a given response status code
+// permits a body. See RFC 7230, section 3.3.
+func bodyAllowedForStatus(status int) bool {
+	switch {
+	case status >= 100 && status < 200:
+		return false
+	case status == http.StatusNoContent:
+		return false
+	case status == http.StatusNotModified:
+		return false
+	default:
+		return true
 	}
 }
