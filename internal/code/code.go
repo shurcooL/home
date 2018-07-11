@@ -3,8 +3,12 @@ package code
 
 import (
 	"bytes"
+	"fmt"
+	"go/ast"
 	"go/build"
 	"go/doc"
+	"go/parser"
+	"go/token"
 	"io"
 	"log"
 	"os"
@@ -13,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/shurcooL/go/vfs/godocfs/vfsutil"
+	"golang.org/x/tools/go/buildutil"
 	"golang.org/x/tools/godoc/vfs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/git"
@@ -211,7 +216,7 @@ func loadPackage(fs vfs.FileSystem, dir, importPath string) (*Package, error) {
 		{"linux", "amd64"},
 		{"darwin", "amd64"},
 	} {
-		bctx := build.Context{
+		bctx := &build.Context{
 			GOOS:        env.GOOS,
 			GOARCH:      env.GOARCH,
 			CgoEnabled:  true,
@@ -240,26 +245,14 @@ func loadPackage(fs vfs.FileSystem, dir, importPath string) (*Package, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		// TODO: Automate this.
-		doc := p.Doc
-		switch importPath {
-		case "dmitri.shuralyov.com/text/kebabcase", "dmitri.shuralyov.com/kebabcase":
-			doc += "\n\nReference: https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers."
-		case "dmitri.shuralyov.com/scratch/image/jpeg":
-			doc += "\n\nJPEG is defined in ITU-T T.81: http://www.w3.org/Graphics/JPEG/itu-t81.pdf."
-		case "dmitri.shuralyov.com/scratch/image/png":
-			doc += "\n\nThe PNG specification is at http://www.w3.org/TR/PNG/."
-		case "dmitri.shuralyov.com/font/woff2":
-			doc += "\n\nThe WOFF2 font packaging format is specified at https://www.w3.org/TR/WOFF2/."
-		case "dmitri.shuralyov.com/gpu/mtl":
-			doc += "\n\nThis package is in very early stages of development. The API will change when opportunities for improvement are discovered; it is not yet frozen. Less than 20% of the Metal API surface is implemented. Current functionality is sufficient to render very basic geometry."
-		case "dmitri.shuralyov.com/gpu/mtl/example/hellotriangle":
-			doc += " It writes the frame to a triangle.png file in current working directory."
+		dpkg, err := computeDoc(bctx, p)
+		if err != nil {
+			return nil, fmt.Errorf("can't get godoc of package %q: %v", importPath, err)
 		}
 		return &Package{
 			Name:     p.Name,
 			Synopsis: p.Doc,
-			DocHTML:  docHTML(doc),
+			DocHTML:  docHTML(dpkg.Doc),
 		}, nil
 	}
 	// This directory doesn't contain a package.
@@ -291,6 +284,25 @@ func hasSubdir(root, dir string) (rel string, ok bool) {
 		return "", false
 	}
 	return dir[len(root):], true
+}
+
+// computeDoc computes the package documentation for the given package,
+// using the specified build context.
+func computeDoc(bctx *build.Context, p *build.Package) (*doc.Package, error) {
+	fset := token.NewFileSet()
+	files := make(map[string]*ast.File)
+	for _, file := range append(p.GoFiles, p.CgoFiles...) {
+		f, err := buildutil.ParseFile(fset, bctx, nil, p.Dir, file, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		files[file] = f
+	}
+	apkg := &ast.Package{
+		Name:  p.Name,
+		Files: files,
+	}
+	return doc.New(apkg, p.ImportPath, 0), nil
 }
 
 // docHTML returns documentation comment text converted to formatted HTML.

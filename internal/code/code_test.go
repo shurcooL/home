@@ -23,10 +23,12 @@ func TestDiscover(t *testing.T) {
 				Name:     "kebabcase",
 				Synopsis: "Package kebabcase provides a parser for identifier names using kebab-case naming convention.",
 				DocHTML: `<p>
-Package kebabcase provides a parser for identifier names using kebab-case naming convention.
+Package kebabcase provides a parser for identifier names
+using kebab-case naming convention.
 </p>
 <p>
-Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers">https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers</a>.</p>
+Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers">https://en.wikipedia.org/wiki/Naming_convention_(programming)#Multiple-word_identifiers</a>.
+</p>
 `,
 			},
 		},
@@ -38,7 +40,10 @@ Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming
 			Package: &code.Package{
 				Name:     "scratch",
 				Synopsis: "Package scratch is used for testing.",
-				DocHTML:  "<p>\nPackage scratch is used for testing.</p>\n",
+				DocHTML: `<p>
+Package scratch is used for testing.
+</p>
+`,
 			},
 		},
 		{
@@ -68,7 +73,8 @@ Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming
 Package jpeg implements a tiny subset of a JPEG image decoder and encoder.
 </p>
 <p>
-JPEG is defined in ITU-T T.81: <a href="http://www.w3.org/Graphics/JPEG/itu-t81.pdf">http://www.w3.org/Graphics/JPEG/itu-t81.pdf</a>.</p>
+JPEG is defined in ITU-T T.81: <a href="http://www.w3.org/Graphics/JPEG/itu-t81.pdf">http://www.w3.org/Graphics/JPEG/itu-t81.pdf</a>.
+</p>
 `,
 			},
 		},
@@ -84,7 +90,8 @@ JPEG is defined in ITU-T T.81: <a href="http://www.w3.org/Graphics/JPEG/itu-t81.
 Package png implements a tiny subset of a PNG image decoder and encoder.
 </p>
 <p>
-The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.org/TR/PNG/</a>.</p>
+The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.org/TR/PNG/</a>.
+</p>
 `,
 			},
 		},
