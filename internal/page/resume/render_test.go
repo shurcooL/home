@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/shurcooL/home/internal/page/resume"
 	"github.com/shurcooL/notifications"
@@ -23,7 +24,7 @@ var updateFlag = flag.Bool("update", false, "Update golden files.")
 // TestBodyInnerHTML validates that resume.RenderBodyInnerHTML renders the body inner HTML as expected.
 func TestBodyInnerHTML(t *testing.T) {
 	var buf bytes.Buffer
-	err := resume.RenderBodyInnerHTML(context.TODO(), &buf, mockReactions{}, mockNotifications{}, mockUsers{}, alice, "/")
+	err := resume.RenderBodyInnerHTML(context.TODO(), &buf, mockReactions{}, mockNotifications{}, mockUsers{}, mockTime, alice, "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +64,7 @@ func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := resume.RenderBodyInnerHTML(context.Background(), ioutil.Discard, reactions, notifications, users, authenticatedUser, returnURL)
+		err := resume.RenderBodyInnerHTML(context.Background(), ioutil.Discard, reactions, notifications, users, mockTime, authenticatedUser, returnURL)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -76,6 +77,8 @@ var (
 		Name:     "Dmitri Shuralyov",
 		Email:    "dmitri@shuralyov.com",
 	}
+
+	mockTime = time.Date(2018, time.August, 26, 9, 41, 0, 0, time.UTC)
 
 	alice = users.User{UserSpec: users.UserSpec{ID: 1, Domain: "example.org"}, Login: "Alice"}
 	bob   = users.User{UserSpec: users.UserSpec{ID: 2, Domain: "example.org"}, Login: "Bob"}

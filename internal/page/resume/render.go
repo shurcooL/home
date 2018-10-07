@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"time"
 
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/htmlg"
@@ -21,7 +22,7 @@ const ReactableURL = "dmitri.shuralyov.com/resume"
 
 // RenderBodyInnerHTML renders the inner HTML of the <body> element of the page that displays the resume.
 // It's safe for concurrent use.
-func RenderBodyInnerHTML(ctx context.Context, w io.Writer, reactionsService reactions.Service, notifications notifications.Service, users users.Service, authenticatedUser users.User, returnURL string) error {
+func RenderBodyInnerHTML(ctx context.Context, w io.Writer, reactionsService reactions.Service, notifications notifications.Service, users users.Service, now time.Time, authenticatedUser users.User, returnURL string) error {
 	var nc uint64
 	if authenticatedUser.ID != 0 {
 		var err error
@@ -59,7 +60,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, reactionsService reac
 	}
 
 	// Render the resume contents.
-	resume := resume.DmitriShuralyov(shurcool, reactions, authenticatedUser)
+	resume := resume.DmitriShuralyov(shurcool, now, reactions, authenticatedUser)
 	err = htmlg.RenderComponents(w, resume)
 	if err != nil {
 		return err

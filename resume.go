@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/page/resume"
@@ -63,7 +64,7 @@ func initResume(reactions reactions.Service, notifications notifications.Service
 				authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 			}
 			returnURL := req.RequestURI
-			err = resume.RenderBodyInnerHTML(req.Context(), w, reactions, notifications, usersService, authenticatedUser, returnURL)
+			err = resume.RenderBodyInnerHTML(req.Context(), w, reactions, notifications, usersService, time.Now(), authenticatedUser, returnURL)
 			if err != nil {
 				return err
 			}
