@@ -50,7 +50,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 	notificationsService := shurcoolSeesGitHubNotifications{
 		service:                     fs.NewService(root, users),
 		shurcoolGitHubNotifications: shurcoolGitHubNotifications,
-		users: users,
+		users:                       users,
 	}
 
 	// Register HTTP API endpoints.
