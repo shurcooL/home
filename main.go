@@ -201,6 +201,13 @@ func run(ctx context.Context) error {
 	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifications, users, gitUsers}
 	servePackagesMaybe := initPackages(code, notifications, users)
 
+	initAction(&codeService{
+		reposDir:      reposDir,
+		notifications: notifications,
+		events:        events,
+		users:         users,
+	}, users)
+
 	initTalks(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))),
 		notifications, users)
