@@ -1,35 +1,124 @@
 // Package code implements a Go code service backed by a repository store.
 package code
 
+import (
+	"context"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sync"
+	"time"
+
+	"github.com/shurcooL/events"
+	"github.com/shurcooL/events/event"
+	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/users"
+)
+
 // Service is a Go code service implementation backed by a repository store.
 type Service struct {
+	reposDir string
+
+	mu           sync.RWMutex
 	dirs         []*Directory          // Sorted.
 	byImportPath map[string]*Directory // Key is import path.
+
+	notifications notifications.ExternalService
+	events        events.ExternalService
+	users         users.Service
 }
 
 // NewService discovers Go code inside the repository store at reposDir,
 // and returns a code service that uses said repository store.
-func NewService(reposDir string) (*Service, error) {
+func NewService(reposDir string, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (*Service, error) {
 	dirs, byImportPath, err := discover(reposDir)
 	if err != nil {
 		return nil, err
 	}
 	return &Service{
+		reposDir: reposDir,
+
 		dirs:         dirs,
 		byImportPath: byImportPath,
+
+		notifications: notifications,
+		events:        events,
+		users:         users,
 	}, nil
 }
 
 // List lists directories in sorted order.
 func (s *Service) List() []*Directory {
-	return s.dirs
+	s.mu.RLock()
+	dirs := s.dirs
+	s.mu.RUnlock()
+	return dirs
 }
 
 // Lookup looks up a directory by specified import path.
 // Returned directory is nil if and only if ok is false.
 func (s *Service) Lookup(importPath string) (_ *Directory, ok bool) {
+	s.mu.RLock()
 	dir, ok := s.byImportPath[importPath]
+	s.mu.RUnlock()
 	return dir, ok
+}
+
+// CreateRepo creates an empty repository with the specified repoSpec and description.
+// If the directory already exists, os.ErrExist is returned.
+func (s *Service) CreateRepo(ctx context.Context, repoSpec, description string) error {
+	currentUser, err := s.users.GetAuthenticated(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Authorization check.
+	if !currentUser.SiteAdmin {
+		return os.ErrPermission
+	}
+
+	s.mu.RLock()
+	_, ok := s.byImportPath[repoSpec]
+	s.mu.RUnlock()
+	if ok {
+		return os.ErrExist
+	}
+
+	// Create bare git repo.
+	cmd := exec.Command("git", "init", "--bare", filepath.Join(s.reposDir, filepath.FromSlash(repoSpec)))
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	// Rediscover code.
+	// TODO: Can optimize this by rediscovering selectively (only the affected repo and its parent dirs).
+	dirs, byImportPath, err := discover(s.reposDir)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.dirs = dirs
+	s.byImportPath = byImportPath
+	s.mu.Unlock()
+
+	// Watch the newly created repository.
+	err = s.notifications.Subscribe(ctx, notifications.RepoSpec{URI: repoSpec}, "", 0, []users.UserSpec{currentUser.UserSpec})
+	if err != nil {
+		return err
+	}
+
+	// Log a "created repository" event.
+	err = s.events.Log(ctx, event.Event{
+		Time:      time.Now().UTC(),
+		Actor:     currentUser,
+		Container: repoSpec,
+		Payload: event.Create{
+			Type:        "repository",
+			Description: description,
+		},
+	})
+	return err
 }
 
 // Directory represents a directory inside a repository store.

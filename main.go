@@ -186,7 +186,7 @@ func run(ctx context.Context) error {
 
 	// Code repositories.
 	reposDir := filepath.Join(storeDir, "repositories")
-	code, err := code.NewService(reposDir)
+	code, err := code.NewService(reposDir, notifications, events, users)
 	if err != nil {
 		return fmt.Errorf("code.NewService: %v", err)
 	}
@@ -201,12 +201,7 @@ func run(ctx context.Context) error {
 	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifications, users, gitUsers}
 	servePackagesMaybe := initPackages(code, notifications, users)
 
-	initAction(&codeService{
-		reposDir:      reposDir,
-		notifications: notifications,
-		events:        events,
-		users:         users,
-	}, users)
+	initAction(code, users)
 
 	initTalks(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))),

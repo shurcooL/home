@@ -1,27 +1,22 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/shurcooL/events"
-	"github.com/shurcooL/events/event"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/httpgzip"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 )
 
-func initAction(code *codeService, users users.Service) {
+func initAction(code *code.Service, users users.Service) {
 	// "Create a New Repo" action.
 	http.Handle("/action/new-repo", cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		if err := httputil.AllowMethods(req, http.MethodGet, http.MethodPost); err != nil {
@@ -88,50 +83,6 @@ body, input {
 	</body>
 </html>
 `
-
-type codeService struct {
-	reposDir      string
-	notifications notifications.ExternalService
-	events        events.ExternalService
-	users         users.Service
-}
-
-func (s *codeService) CreateRepo(ctx context.Context, repoSpec, repoDescription string) error {
-	currentUser, err := s.users.GetAuthenticated(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Authorization check.
-	if !currentUser.SiteAdmin {
-		return os.ErrPermission
-	}
-
-	// Create bare git repo.
-	cmd := exec.Command("git", "init", "--bare", filepath.Join(s.reposDir, filepath.FromSlash(repoSpec)))
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	// Watch the newly created repository.
-	err = s.notifications.Subscribe(ctx, notifications.RepoSpec{URI: repoSpec}, "", 0, []users.UserSpec{currentUser.UserSpec})
-	if err != nil {
-		return err
-	}
-
-	// Log a "created repository" event.
-	err = s.events.Log(ctx, event.Event{
-		Time:      time.Now().UTC(),
-		Actor:     currentUser,
-		Container: repoSpec,
-		Payload: event.Create{
-			Type:        "repository",
-			Description: repoDescription,
-		},
-	})
-	return err
-}
 
 // getSingleValue returns the single value for key in form,
 // or an error if there isn't exactly a single value.
