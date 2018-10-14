@@ -186,9 +186,9 @@ func run(ctx context.Context) error {
 
 	// Code repositories.
 	reposDir := filepath.Join(storeDir, "repositories")
-	code, err := code.Discover(reposDir)
+	code, err := code.NewService(reposDir)
 	if err != nil {
-		return fmt.Errorf("code.Discover: %v", err)
+		return fmt.Errorf("code.NewService: %v", err)
 	}
 	gitUsers, err := initGitUsers(users)
 	if err != nil {

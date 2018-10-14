@@ -32,7 +32,7 @@ var packagesHTML = template.Must(template.New("").Parse(`<html>
 	</head>
 	<body>`))
 
-func initPackages(code code.Code, notifications notifications.Service, usersService users.Service) func(w http.ResponseWriter, req *http.Request) bool {
+func initPackages(code *code.Service, notifications notifications.Service, usersService users.Service) func(w http.ResponseWriter, req *http.Request) bool {
 	packagesHandler := cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
@@ -101,8 +101,8 @@ func initPackages(code code.Code, notifications notifications.Service, usersServ
 		}
 
 		// We know that "dmitri.shuralyov.com/..." comes before "github.com/...",
-		// that's why code.Sorted, githubPackages are guaranteed to be in alphabetical order.
-		err = renderPackages(w, expandPattern(code.Sorted, githubPackages, importPathPattern))
+		// that's why code.List(), githubPackages are guaranteed to be in alphabetical order.
+		err = renderPackages(w, expandPattern(code.List(), githubPackages, importPathPattern))
 		if err != nil {
 			return err
 		}

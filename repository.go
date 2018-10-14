@@ -30,7 +30,7 @@ import (
 type repositoryHandler struct {
 	Repo repoInfo
 
-	code          code.Code
+	code          *code.Service
 	issues        issueCounter
 	change        changeCounter
 	notifications notifications.Service
@@ -116,7 +116,7 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		return err
 	}
 
-	err = renderPackages(w, expandPattern(h.code.Sorted, nil, h.Repo.Spec+"/...")) // repositoryHandler is used only for self-hosted packages, so it's okay to leave out githubPackages when expanding pattern.
+	err = renderPackages(w, expandPattern(h.code.List(), nil, h.Repo.Spec+"/...")) // repositoryHandler is used only for self-hosted packages, so it's okay to leave out githubPackages when expanding pattern.
 	if err != nil {
 		return err
 	}

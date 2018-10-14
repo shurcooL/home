@@ -1,15 +1,13 @@
-package code_test
+package code
 
 import (
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	"github.com/shurcooL/home/internal/code"
 )
 
 func TestDiscover(t *testing.T) {
-	want := []*code.Directory{
+	want := []*Directory{
 		{
 			ImportPath:   "dmitri.shuralyov.com/emptyrepo",
 			RepoRoot:     "dmitri.shuralyov.com/emptyrepo",
@@ -19,7 +17,7 @@ func TestDiscover(t *testing.T) {
 			ImportPath:   "dmitri.shuralyov.com/kebabcase",
 			RepoRoot:     "dmitri.shuralyov.com/kebabcase",
 			RepoPackages: 1,
-			Package: &code.Package{
+			Package: &Package{
 				Name:     "kebabcase",
 				Synopsis: "Package kebabcase provides a parser for identifier names using kebab-case naming convention.",
 				DocHTML: `<p>
@@ -37,7 +35,7 @@ Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming
 			RepoRoot:     "dmitri.shuralyov.com/scratch",
 			RepoPackages: 4,
 			LicenseRoot:  "dmitri.shuralyov.com/scratch",
-			Package: &code.Package{
+			Package: &Package{
 				Name:     "scratch",
 				Synopsis: "Package scratch is used for testing.",
 				DocHTML: `<p>
@@ -51,7 +49,7 @@ Package scratch is used for testing.
 			RepoRoot:     "dmitri.shuralyov.com/scratch",
 			RepoPackages: 4,
 			LicenseRoot:  "dmitri.shuralyov.com/scratch",
-			Package: &code.Package{
+			Package: &Package{
 				Name: "main",
 			},
 		},
@@ -66,7 +64,7 @@ Package scratch is used for testing.
 			RepoRoot:     "dmitri.shuralyov.com/scratch",
 			RepoPackages: 4,
 			LicenseRoot:  "dmitri.shuralyov.com/scratch/image",
-			Package: &code.Package{
+			Package: &Package{
 				Name:     "jpeg",
 				Synopsis: "Package jpeg implements a tiny subset of a JPEG image decoder and encoder.",
 				DocHTML: `<p>
@@ -83,7 +81,7 @@ JPEG is defined in ITU-T T.81: <a href="http://www.w3.org/Graphics/JPEG/itu-t81.
 			RepoRoot:     "dmitri.shuralyov.com/scratch",
 			RepoPackages: 4,
 			LicenseRoot:  "dmitri.shuralyov.com/scratch/image",
-			Package: &code.Package{
+			Package: &Package{
 				Name:     "png",
 				Synopsis: "Package png implements a tiny subset of a PNG image decoder and encoder.",
 				DocHTML: `<p>
@@ -96,11 +94,11 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 			},
 		},
 	}
-	got, err := code.Discover(filepath.Join("testdata", "repositories"))
+	got, _, err := discover(filepath.Join("testdata", "repositories"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(got.Sorted, want) {
+	if !reflect.DeepEqual(got, want) {
 		t.Error("not equal")
 	}
 }
