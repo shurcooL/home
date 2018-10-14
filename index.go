@@ -318,6 +318,10 @@ func (a activity) Render() []*html.Node {
 				e.Icon = octicon.Repo
 				e.Action = component.Text("created repository")
 				e.Details = plainText{Text: p.Description}
+			case "package":
+				e.Icon = octicon.Package
+				e.Action = component.Text("created package")
+				e.Details = plainText{Text: p.Description}
 			case "branch":
 				e.Icon = octicon.GitBranch
 				e.Action = component.Text("created branch in")
