@@ -115,7 +115,7 @@ func (s *codeService) CreateRepo(ctx context.Context, repoSpec, repoDescription 
 	}
 
 	// Watch the newly created repository.
-	err = s.notifications.Subscribe(ctx, notifications.RepoSpec{URI: repoSpec}, "", 0, []users.UserSpec{shurcool})
+	err = s.notifications.Subscribe(ctx, notifications.RepoSpec{URI: repoSpec}, "", 0, []users.UserSpec{currentUser.UserSpec})
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (s *codeService) CreateRepo(ctx context.Context, repoSpec, repoDescription 
 func getSingleValue(form url.Values, key string) (string, error) {
 	v, ok := form[key]
 	if !ok {
-		return "", fmt.Errorf("key %q not set", key)
+		return "", fmt.Errorf("key %q is not set", key)
 	}
 	if len(v) != 1 {
 		return "", fmt.Errorf("key %q has non-single value: %+v", key, v)
