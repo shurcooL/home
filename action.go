@@ -24,6 +24,11 @@ func initAction(code *code.Service, users users.Service) {
 		}
 		switch req.Method {
 		case http.MethodGet:
+			if user, err := users.GetAuthenticated(req.Context()); err != nil {
+				return err
+			} else if !user.SiteAdmin {
+				return os.ErrPermission
+			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			httpgzip.ServeContent(w, req, "", time.Time{}, strings.NewReader(newRepoHTML))
 			return nil
