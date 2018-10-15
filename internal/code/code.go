@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -91,15 +92,14 @@ func (s *Service) CreateRepo(ctx context.Context, repoSpec, description string) 
 		return err
 	}
 
-	// Rediscover code.
-	// TODO: Can optimize this by rediscovering selectively (only the affected repo and its parent dirs).
-	dirs, byImportPath, err := discover(s.reposDir)
-	if err != nil {
-		return err
+	// Empty repository.
+	dir := &Directory{
+		ImportPath: repoSpec,
+		RepoRoot:   repoSpec,
 	}
 	s.mu.Lock()
-	s.dirs = dirs
-	s.byImportPath = byImportPath
+	insertDir(&s.dirs, dir)
+	s.byImportPath[repoSpec] = dir
 	s.mu.Unlock()
 
 	// Watch the newly created repository.
@@ -119,6 +119,17 @@ func (s *Service) CreateRepo(ctx context.Context, repoSpec, description string) 
 		},
 	})
 	return err
+}
+
+// insertDir inserts directory dir into the sorted slice s,
+// keeping the slice sorted. s must not already contain dir.
+func insertDir(s *[]*Directory, dir *Directory) {
+	// Use binary search to find index where dir should be inserted,
+	// and insert it directly there.
+	i := sort.Search(len(*s), func(i int) bool { return (*s)[i].ImportPath >= dir.ImportPath })
+	*s = append(*s, nil)
+	copy((*s)[i+1:], (*s)[i:])
+	(*s)[i] = dir
 }
 
 // Directory represents a directory inside a repository store.
