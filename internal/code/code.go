@@ -132,6 +132,40 @@ func insertDir(s *[]*Directory, dir *Directory) {
 	(*s)[i] = dir
 }
 
+// Rediscover rediscovers all code in the repository store.
+// It returns packages that have been added and removed.
+func (s *Service) Rediscover() (added, removed []*Directory, err error) {
+	// TODO: Can optimize this by rediscovering selectively (only the affected repo and its parent dirs).
+	dirs, byImportPath, err := discover(s.reposDir)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	s.mu.Lock()
+	oldDirs := s.dirs
+	oldByImportPath := s.byImportPath
+	s.dirs = dirs
+	s.byImportPath = byImportPath
+	s.mu.Unlock()
+
+	// Compute added, removed packages.
+	for _, d := range dirs {
+		if d.Package != nil && !dirExistsAndHasPackage(oldByImportPath[d.ImportPath]) {
+			added = append(added, d)
+		}
+	}
+	for _, d := range oldDirs {
+		if d.Package != nil && !dirExistsAndHasPackage(byImportPath[d.ImportPath]) {
+			removed = append(removed, d)
+		}
+	}
+
+	return added, removed, nil
+}
+
+// dirExistsAndHasPackage reports whether dir exists and contains a Go package.
+func dirExistsAndHasPackage(dir *Directory) bool { return dir != nil && dir.Package != nil }
+
 // Directory represents a directory inside a repository store.
 type Directory struct {
 	ImportPath   string

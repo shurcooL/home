@@ -296,6 +296,11 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		log.Println(err)
 	}
 
+	_, _, err = h.code.Rediscover()
+	if err != nil {
+		log.Println("h.code.Rediscover:", err)
+	}
+
 	// Log events.
 	now := time.Now().UTC()
 	for _, e := range rpc.Events {

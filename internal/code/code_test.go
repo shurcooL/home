@@ -295,7 +295,65 @@ Reference: <a href="https://en.wikipedia.org/wiki/Naming_convention_(programming
 			{
 				ImportPath:   "dmitri.shuralyov.com/new/repo",
 				RepoRoot:     "dmitri.shuralyov.com/new/repo",
-				RepoPackages: 0,
+				RepoPackages: 4,
+				LicenseRoot:  "dmitri.shuralyov.com/new/repo",
+				Package: &code.Package{
+					Name:     "scratch",
+					Synopsis: "Package scratch is used for testing.",
+					DocHTML: `<p>
+Package scratch is used for testing.
+</p>
+`,
+				},
+			},
+			{
+				ImportPath:   "dmitri.shuralyov.com/new/repo/hello",
+				RepoRoot:     "dmitri.shuralyov.com/new/repo",
+				RepoPackages: 4,
+				LicenseRoot:  "dmitri.shuralyov.com/new/repo",
+				Package: &code.Package{
+					Name: "main",
+				},
+			},
+			{
+				ImportPath:   "dmitri.shuralyov.com/new/repo/image",
+				RepoRoot:     "dmitri.shuralyov.com/new/repo",
+				RepoPackages: 4,
+				LicenseRoot:  "dmitri.shuralyov.com/new/repo/image",
+			},
+			{
+				ImportPath:   "dmitri.shuralyov.com/new/repo/image/jpeg",
+				RepoRoot:     "dmitri.shuralyov.com/new/repo",
+				RepoPackages: 4,
+				LicenseRoot:  "dmitri.shuralyov.com/new/repo/image",
+				Package: &code.Package{
+					Name:     "jpeg",
+					Synopsis: "Package jpeg implements a tiny subset of a JPEG image decoder and encoder.",
+					DocHTML: `<p>
+Package jpeg implements a tiny subset of a JPEG image decoder and encoder.
+</p>
+<p>
+JPEG is defined in ITU-T T.81: <a href="http://www.w3.org/Graphics/JPEG/itu-t81.pdf">http://www.w3.org/Graphics/JPEG/itu-t81.pdf</a>.
+</p>
+`,
+				},
+			},
+			{
+				ImportPath:   "dmitri.shuralyov.com/new/repo/image/png",
+				RepoRoot:     "dmitri.shuralyov.com/new/repo",
+				RepoPackages: 4,
+				LicenseRoot:  "dmitri.shuralyov.com/new/repo/image",
+				Package: &code.Package{
+					Name:     "png",
+					Synopsis: "Package png implements a tiny subset of a PNG image decoder and encoder.",
+					DocHTML: `<p>
+Package png implements a tiny subset of a PNG image decoder and encoder.
+</p>
+<p>
+The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.org/TR/PNG/</a>.
+</p>
+`,
+				},
 			},
 			{
 				ImportPath:   "dmitri.shuralyov.com/scratch",
