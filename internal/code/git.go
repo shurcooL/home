@@ -1,8 +1,7 @@
-package main
+package code
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -17,7 +16,6 @@ import (
 	"github.com/AaronO/go-git-http"
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/events/event"
-	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
@@ -25,22 +23,9 @@ import (
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/gitcmd"
 )
 
-func initGitUsers(usersService users.Service) (gitUsers map[string]users.User, err error) {
-	// TODO: Add support for additional git users.
-	gitUsers = make(map[string]users.User) // Key is lower git author email.
-	shurcool, err := usersService.Get(context.Background(), shurcool)
-	if os.IsNotExist(err) {
-		log.Printf("initGitUsers: shurcool user does not exist: %v", err)
-		return gitUsers, nil
-	} else if err != nil {
-		return nil, err
-	}
-	gitUsers[strings.ToLower(shurcool.Email)] = shurcool
-	gitUsers[strings.ToLower("shurcooL@gmail.com")] = shurcool // Previous email.
-	return gitUsers, nil
-}
-
-func initGitHandler(code *code.Service, reposDir string, events events.ExternalService, users users.Service, gitUsers map[string]users.User, authenticate func(*http.Request) *http.Request) (*gitHandler, error) {
+// NewGitHandler creates a gitHandler.
+// TODO: Consider moving it into Service.
+func NewGitHandler(code *Service, reposDir string, events events.ExternalService, users users.Service, gitUsers map[string]users.User, authenticate func(*http.Request) *http.Request) (*gitHandler, error) {
 	gitUploadPack, err := exec.LookPath("git-upload-pack")
 	if err != nil {
 		return nil, err
@@ -61,9 +46,8 @@ func initGitHandler(code *code.Service, reposDir string, events events.ExternalS
 	}, nil
 }
 
-// TODO: Move gitHandler into code.Service.
 type gitHandler struct {
-	code     *code.Service
+	code     *Service
 	reposDir string
 	events   events.ExternalService
 	users    users.Service
@@ -75,6 +59,8 @@ type gitHandler struct {
 	gitReceivePack string // Path to git-receive-pack binary.
 }
 
+// ServeGitMaybe serves a git HTTP request, if it matches.
+// It reports whether the HTTP request was handled or not.
 func (h *gitHandler) ServeGitMaybe(w http.ResponseWriter, req *http.Request) (ok bool) {
 	switch url := req.URL.String(); {
 	case strings.HasSuffix(url, "/info/refs?service=git-upload-pack"):
@@ -392,4 +378,10 @@ func listCommitsBetween(repo repoInfo, base, head vcs.CommitID, gitUsers map[str
 		})
 	}
 	return commits, nil
+}
+
+type repoInfo struct {
+	Spec string // Repository spec. E.g., "example.com/repo".
+	Path string // Path corresponding to repository root, without domain. E.g., "/repo".
+	Dir  string // Path to repository directory on disk.
 }

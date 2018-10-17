@@ -17,7 +17,7 @@ import (
 	"github.com/shurcooL/home/assets"
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
-	"github.com/shurcooL/home/internal/code"
+	codepkg "github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
@@ -186,7 +186,7 @@ func run(ctx context.Context) error {
 
 	// Code repositories.
 	reposDir := filepath.Join(storeDir, "repositories")
-	code, err := code.NewService(reposDir, notifications, events, users)
+	code, err := codepkg.NewService(reposDir, notifications, events, users)
 	if err != nil {
 		return fmt.Errorf("code.NewService: %v", err)
 	}
@@ -194,12 +194,12 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("initGitUsers: %v", err)
 	}
-	gitHandler, err := initGitHandler(code, reposDir, events, users, gitUsers, func(req *http.Request) *http.Request {
+	gitHandler, err := codepkg.NewGitHandler(code, reposDir, events, users, gitUsers, func(req *http.Request) *http.Request {
 		session, _ := lookUpSessionViaBasicAuth(req, users)
 		return withSession(req, session)
 	})
 	if err != nil {
-		return fmt.Errorf("initGitHandler: %v", err)
+		return fmt.Errorf("code.NewGitHandler: %v", err)
 	}
 	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifications, users, gitUsers}
 	servePackagesMaybe := initPackages(code, notifications, users)
