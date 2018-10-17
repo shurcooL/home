@@ -235,20 +235,21 @@ func lookUpSessionViaHeader(req *http.Request) (*session, error) {
 	return s, nil // Existing session.
 }
 
-// lookUpSessionUserViaBasicAuth retrieves the session+user from req by looking up
-// the request's access token (via Basic Auth) in the sessions map,
-// and then getting the user via usersService.
-// It returns a valid session+user (possibly nil) and nil error,
-// or nil session+user and errBadAccessToken.
-func lookUpSessionUserViaBasicAuth(req *http.Request, usersService users.Service) (*session, *users.User, error) {
+// lookUpSessionViaBasicAuth retrieves the session from req by looking up
+// the request's access token (via Basic Auth password) in the sessions map,
+// getting the associated user via usersService, and verifying that the
+// provided Basic Auth username matches the user login.
+// It returns a valid session (possibly nil) and nil error,
+// or nil session and errBadAccessToken.
+func lookUpSessionViaBasicAuth(req *http.Request, usersService users.Service) (*session, error) {
 	username, password, ok := req.BasicAuth()
 	if !ok {
-		return nil, nil, nil // No session+user.
+		return nil, nil // No session.
 	}
 	encodedAccessToken := password
 	accessTokenBytes, err := base64.RawURLEncoding.DecodeString(encodedAccessToken)
 	if err != nil {
-		return nil, nil, errBadAccessToken
+		return nil, errBadAccessToken
 	}
 	accessToken := string(accessTokenBytes)
 	var s *session
@@ -262,18 +263,18 @@ func lookUpSessionUserViaBasicAuth(req *http.Request, usersService users.Service
 	}
 	global.mu.Unlock()
 	if s == nil {
-		return nil, nil, errBadAccessToken
+		return nil, errBadAccessToken
 	}
 	// Existing session, now get user and verify the username matches.
 	user, err := usersService.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"})
 	if err != nil {
 		log.Println("lookUpSessionUserViaBasicAuth: failed to get user:", err)
-		return nil, nil, errBadAccessToken
+		return nil, errBadAccessToken
 	}
 	if username != user.Login {
-		return nil, nil, errBadAccessToken
+		return nil, errBadAccessToken
 	}
-	return s, &user, nil // Existing session+user.
+	return s, nil // Existing session.
 }
 
 type sessionsHandler struct {

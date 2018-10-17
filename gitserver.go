@@ -40,7 +40,7 @@ func initGitUsers(usersService users.Service) (gitUsers map[string]users.User, e
 	return gitUsers, nil
 }
 
-func initGitHandler(code *code.Service, reposDir string, events events.Service, users users.Service, gitUsers map[string]users.User) (*gitHandler, error) {
+func initGitHandler(code *code.Service, reposDir string, events events.ExternalService, users users.Service, gitUsers map[string]users.User, authenticate func(*http.Request) *http.Request) (*gitHandler, error) {
 	gitUploadPack, err := exec.LookPath("git-upload-pack")
 	if err != nil {
 		return nil, err
@@ -55,6 +55,7 @@ func initGitHandler(code *code.Service, reposDir string, events events.Service, 
 		events:         events,
 		users:          users,
 		gitUsers:       gitUsers,
+		authenticate:   authenticate,
 		gitUploadPack:  gitUploadPack,
 		gitReceivePack: gitReceivePack,
 	}, nil
@@ -64,9 +65,11 @@ func initGitHandler(code *code.Service, reposDir string, events events.Service, 
 type gitHandler struct {
 	code     *code.Service
 	reposDir string
-	events   events.Service
+	events   events.ExternalService
 	users    users.Service
 	gitUsers map[string]users.User // Key is lower git author email.
+
+	authenticate func(*http.Request) *http.Request
 
 	gitUploadPack  string // Path to git-upload-pack binary.
 	gitReceivePack string // Path to git-receive-pack binary.
@@ -202,23 +205,29 @@ func (h *gitHandler) serveGitInfoRefsReceivePack(w http.ResponseWriter, req *htt
 		return
 	}
 
+	req = h.authenticate(req)
+
+	currentUser, err := h.users.GetAuthenticated(req.Context())
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	// Authorization check.
-	session, user, _ := lookUpSessionUserViaBasicAuth(req, h.users)
-	if user == nil {
+	if currentUser.ID == 0 {
 		w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
 		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
 		return
-	} else if !user.SiteAdmin {
+	} else if !currentUser.SiteAdmin {
 		http.Error(w, "403 Forbidden", http.StatusForbidden)
 		return
 	}
-	req = withSession(req, session)
 
 	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
-	err := cmd.Start()
+	err = cmd.Start()
 	if os.IsNotExist(err) {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
@@ -254,17 +263,23 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
+	req = h.authenticate(req)
+
+	currentUser, err := h.users.GetAuthenticated(req.Context())
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	// Authorization check.
-	session, user, _ := lookUpSessionUserViaBasicAuth(req, h.users)
-	if user == nil {
+	if currentUser.ID == 0 {
 		w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
 		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
 		return
-	} else if !user.SiteAdmin {
+	} else if !currentUser.SiteAdmin {
 		http.Error(w, "403 Forbidden", http.StatusForbidden)
 		return
 	}
-	req = withSession(req, session)
 
 	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
@@ -275,7 +290,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 	cmd.Stdin = rpc
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
-	err := cmd.Start()
+	err = cmd.Start()
 	if os.IsNotExist(err) {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
@@ -300,7 +315,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 	for _, e := range rpc.Events {
 		evt := event.Event{
 			Time:      now,
-			Actor:     *user,
+			Actor:     currentUser,
 			Container: repo.Spec,
 		}
 		const zero = "0000000000000000000000000000000000000000"

@@ -194,7 +194,10 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("initGitUsers: %v", err)
 	}
-	gitHandler, err := initGitHandler(code, reposDir, events, users, gitUsers)
+	gitHandler, err := initGitHandler(code, reposDir, events, users, gitUsers, func(req *http.Request) *http.Request {
+		session, _ := lookUpSessionViaBasicAuth(req, users)
+		return withSession(req, session)
+	})
 	if err != nil {
 		return fmt.Errorf("initGitHandler: %v", err)
 	}
