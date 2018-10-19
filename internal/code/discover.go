@@ -32,9 +32,13 @@ func discover(reposDir string) ([]*Directory, map[string]*Directory, error) {
 	for _, d := range dirs {
 		byImportPath[d.ImportPath] = d
 	}
+	populateLicenseRoot(dirs, byImportPath)
+	return dirs, byImportPath, nil
+}
 
-	// Populate LicenseRoot values for remaining directories
-	// that don't directly contain a LICENSE file.
+// populateLicenseRoot populates LicenseRoot values for
+// directories that don't directly contain a LICENSE file.
+func populateLicenseRoot(dirs []*Directory, byImportPath map[string]*Directory) {
 	for _, dir := range dirs {
 		if dir.HasLicenseFile() {
 			continue
@@ -48,8 +52,6 @@ func discover(reposDir string) ([]*Directory, map[string]*Directory, error) {
 			}
 		}
 	}
-
-	return dirs, byImportPath, nil
 }
 
 // walkRepositoryStore walks the repository store at reposDir,

@@ -296,7 +296,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		log.Println(err)
 	}
 
-	added, _, err := h.code.Rediscover()
+	added, _, err := h.code.Rediscover(repo.Spec)
 	if err != nil {
 		log.Println("h.code.Rediscover:", err)
 	}

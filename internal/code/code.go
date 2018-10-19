@@ -126,45 +126,97 @@ func (s *Service) CreateRepo(ctx context.Context, repoSpec, description string) 
 func insertDir(s *[]*Directory, dir *Directory) {
 	// Use binary search to find index where dir should be inserted,
 	// and insert it directly there.
-	i := sort.Search(len(*s), func(i int) bool { return (*s)[i].ImportPath >= dir.ImportPath })
+	i := sort.Search(len(*s), func(i int) bool { return (*s)[i].RepoRoot >= dir.RepoRoot })
 	*s = append(*s, nil)
 	copy((*s)[i+1:], (*s)[i:])
 	(*s)[i] = dir
 }
 
-// Rediscover rediscovers all code in the repository store.
+// Rediscover rediscovers code in repoRoot of the repository store.
 // It returns packages that have been added and removed.
-func (s *Service) Rediscover() (added, removed []*Directory, err error) {
-	// TODO: Can optimize this by rediscovering selectively (only the affected repo and its parent dirs).
-	dirs, byImportPath, err := discover(s.reposDir)
+func (s *Service) Rediscover(repoRoot string) (added, removed []*Directory, err error) {
+	gitDir := filepath.Join(s.reposDir, filepath.FromSlash(repoRoot))
+	newDirs, err := walkRepository(gitDir, repoRoot)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	s.mu.Lock()
-	oldDirs := s.dirs
-	oldByImportPath := s.byImportPath
-	s.dirs = dirs
-	s.byImportPath = byImportPath
+	oldDirs := replaceDirs(&s.dirs, repoRoot, newDirs)
+	replaceDirsMap(s.byImportPath, oldDirs, newDirs)
+	populateLicenseRoot(newDirs, s.byImportPath)
 	s.mu.Unlock()
 
 	// Compute added, removed packages.
-	for _, d := range dirs {
-		if d.Package != nil && !dirExistsAndHasPackage(oldByImportPath[d.ImportPath]) {
-			added = append(added, d)
+	for _, d := range newDirs {
+		if d.Package == nil || containsPackage(oldDirs, d.ImportPath) {
+			continue
 		}
+		added = append(added, d)
 	}
 	for _, d := range oldDirs {
-		if d.Package != nil && !dirExistsAndHasPackage(byImportPath[d.ImportPath]) {
-			removed = append(removed, d)
+		if d.Package == nil || containsPackage(newDirs, d.ImportPath) {
+			continue
 		}
+		removed = append(removed, d)
 	}
 
 	return added, removed, nil
 }
 
-// dirExistsAndHasPackage reports whether dir exists and contains a Go package.
-func dirExistsAndHasPackage(dir *Directory) bool { return dir != nil && dir.Package != nil }
+// replaceDirs replaces directories with repoRoot in the sorted slice s
+// with newDirs, keeping the slice sorted. It returns old directories that got replaced.
+func replaceDirs(s *[]*Directory, repoRoot string, newDirs []*Directory) (oldDirs []*Directory) {
+	// Use binary search to find index where directories should be replaced,
+	// and replace them directly there.
+	// i is the start index of old directories, and j is the end index.
+	i := sort.Search(len(*s), func(i int) bool { return (*s)[i].RepoRoot >= repoRoot })
+	old := 0 // Number of old directories to replace.
+	for i+old < len(*s) && (*s)[i+old].RepoRoot == repoRoot {
+		old++
+	}
+	j := i + old
+
+	// Make a copy of old directories before they're overwritten.
+	oldDirs = make([]*Directory, old)
+	copy(oldDirs, (*s)[i:j])
+
+	// Grow/shrink the slice by delta, and copy new directories into place.
+	switch delta := len(newDirs) - len(oldDirs); {
+	case delta > 0:
+		// Grow s by delta.
+		*s = append(*s, make([]*Directory, delta)...)
+		copy((*s)[j+delta:], (*s)[j:])
+	case delta < 0:
+		// Shrink s by delta.
+		copy((*s)[j+delta:], (*s)[j:])
+		copy((*s)[len(*s)+delta:], make([]*Directory, -delta))
+		*s = (*s)[:len(*s)+delta]
+	}
+	copy((*s)[i:], newDirs)
+
+	return oldDirs
+}
+
+func replaceDirsMap(m map[string]*Directory, oldDirs, newDirs []*Directory) {
+	for _, d := range oldDirs {
+		delete(m, d.ImportPath)
+	}
+	for _, d := range newDirs {
+		m[d.ImportPath] = d
+	}
+}
+
+// containsPackage reports whether dirs contains a Go package with matching importPath.
+func containsPackage(dirs []*Directory, importPath string) bool {
+	for _, d := range dirs {
+		if d.ImportPath != importPath {
+			continue
+		}
+		return d.Package != nil
+	}
+	return false
+}
 
 // Directory represents a directory inside a repository store.
 type Directory struct {
