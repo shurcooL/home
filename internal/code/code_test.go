@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/shurcooL/events/event"
@@ -34,7 +35,7 @@ func Test(t *testing.T) {
 	}
 
 	notifications := mockNotifications{}
-	events := mockEvents{}
+	events := &mockEvents{}
 	users := mockUsers{}
 	service, err := code.NewService(filepath.Join(tempDir, "repositories"), notifications, events, users)
 	if err != nil {
@@ -143,9 +144,14 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 				},
 			},
 		}
+		wantEvents := []event.Event(nil)
+
 		got := service.List()
 		if !reflect.DeepEqual(got, want) {
 			t.Error("initial state: not equal")
+		}
+		if got, want := events.listAndReset(), wantEvents; !reflect.DeepEqual(got, want) {
+			t.Errorf("initial state: events not equal:\n got: %+v\nwant: %+v", got, want)
 		}
 	}
 
@@ -251,9 +257,22 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 				},
 			},
 		}
+		wantEvents := []event.Event{
+			{
+				Container: "dmitri.shuralyov.com/new/repo",
+				Payload: event.Create{
+					Type:        "repository",
+					Description: "New repo is described here in some detail.",
+				},
+			},
+		}
+
 		got := service.List()
 		if !reflect.DeepEqual(got, want) {
 			t.Error("after empty repository created: not equal")
+		}
+		if got, want := events.listAndReset(), wantEvents; !reflect.DeepEqual(got, want) {
+			t.Errorf("after empty repository created: events not equal:\n got: %+v\nwant: %+v", got, want)
 		}
 	}
 
@@ -419,9 +438,49 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 				},
 			},
 		}
+		wantEvents := []event.Event{
+			{
+				Container: "dmitri.shuralyov.com/new/repo",
+				Payload: event.Create{
+					Type: "branch",
+					Name: "master",
+				},
+			},
+			{
+				Container: "dmitri.shuralyov.com/new/repo",
+				Payload: event.Create{
+					Type:        "package",
+					Description: "Package scratch is used for testing.",
+				},
+			},
+			{
+				Container: "dmitri.shuralyov.com/new/repo/hello",
+				Payload: event.Create{
+					Type: "package",
+				},
+			},
+			{
+				Container: "dmitri.shuralyov.com/new/repo/image/jpeg",
+				Payload: event.Create{
+					Type:        "package",
+					Description: "Package jpeg implements a tiny subset of a JPEG image decoder and encoder.",
+				},
+			},
+			{
+				Container: "dmitri.shuralyov.com/new/repo/image/png",
+				Payload: event.Create{
+					Type:        "package",
+					Description: "Package png implements a tiny subset of a PNG image decoder and encoder.",
+				},
+			},
+		}
+
 		got := service.List()
 		if !reflect.DeepEqual(got, want) {
 			t.Error("after new repository pushed to: not equal")
+		}
+		if got, want := events.listAndReset(), wantEvents; !reflect.DeepEqual(got, want) {
+			t.Errorf("after new repository pushed to: events not equal:\n got: %+v\nwant: %+v", got, want)
 		}
 	}
 }
@@ -432,9 +491,33 @@ func (mockNotifications) Subscribe(context.Context, notifications.RepoSpec, stri
 	return nil
 }
 
-type mockEvents struct{}
+type mockEvents struct {
+	mu     sync.Mutex
+	events []event.Event
+}
 
-func (mockEvents) Log(context.Context, event.Event) error { return nil }
+func (m *mockEvents) Log(ctx context.Context, event event.Event) error {
+	m.mu.Lock()
+	m.events = append(m.events, event)
+	m.mu.Unlock()
+	return nil
+}
+
+// listAndReset returns all events with Container and Payload fields populated,
+// and resets the service to be empty. It's meant for testing purposes.
+func (m *mockEvents) listAndReset() []event.Event {
+	var events []event.Event
+	m.mu.Lock()
+	for _, e := range m.events {
+		events = append(events, event.Event{
+			Container: e.Container,
+			Payload:   e.Payload,
+		})
+	}
+	m.events = nil
+	m.mu.Unlock()
+	return events
+}
 
 type mockUsers struct{ users.Service }
 
@@ -447,7 +530,7 @@ func (mockUsers) Get(_ context.Context, user users.UserSpec) (users.User, error)
 		Login:     fmt.Sprintf("%d@%s", user.ID, user.Domain),
 		AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96",
 		HTMLURL:   "",
-		SiteAdmin: true, // For CreateRepo.
+		SiteAdmin: user == users.UserSpec{ID: 1, Domain: "example.org"}, // For CreateRepo.
 	}, nil
 }
 

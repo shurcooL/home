@@ -296,7 +296,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		log.Println(err)
 	}
 
-	_, _, err = h.code.Rediscover()
+	added, _, err := h.code.Rediscover()
 	if err != nil {
 		log.Println("h.code.Rediscover:", err)
 	}
@@ -344,6 +344,20 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 			continue
 		}
 		err := h.events.Log(req.Context(), evt)
+		if err != nil {
+			log.Println("h.events.Log:", err)
+		}
+	}
+	for _, dir := range added {
+		err := h.events.Log(req.Context(), event.Event{
+			Time:      now,
+			Actor:     currentUser,
+			Container: dir.ImportPath,
+			Payload: event.Create{
+				Type:        "package",
+				Description: dir.Package.Synopsis,
+			},
+		})
 		if err != nil {
 			log.Println("h.events.Log:", err)
 		}
