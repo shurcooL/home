@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/shurcooL/go/ctxhttp"
 	"github.com/shurcooL/reactions"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 // Reactions implements reactions.Service remotely over HTTP.

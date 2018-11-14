@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/shurcooL/go/ctxhttp"
 	"github.com/shurcooL/users"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 // Users implements users.Service remotely over HTTP.

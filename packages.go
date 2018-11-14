@@ -549,14 +549,6 @@ var githubPackages = []*code.Directory{
 		},
 	},
 	{
-		ImportPath: "github.com/shurcooL/go/ctxhttp",
-		RepoRoot:   "github.com/shurcooL/go",
-		Package: &code.Package{
-			Name:     "ctxhttp",
-			Synopsis: "Package ctxhttp provides helper functions for performing context-aware HTTP requests.",
-		},
-	},
-	{
 		ImportPath: "github.com/shurcooL/go/gddo",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{

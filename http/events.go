@@ -11,7 +11,7 @@ import (
 
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/events/event"
-	"github.com/shurcooL/go/ctxhttp"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 // NewEvents creates a client that implements events.Service remotely over HTTP.
