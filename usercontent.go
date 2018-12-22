@@ -7,7 +7,7 @@ import (
 	"os"
 	pathpkg "path"
 
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
 	"github.com/shurcooL/webdavfs/vfsutil"
@@ -47,7 +47,7 @@ func (uc userContentHandler) Upload(w http.ResponseWriter, req *http.Request) er
 		return httperror.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
 
-	uuid, err := uuid.NewV4()
+	uuid, err := uuid.NewRandom()
 	if err != nil {
 		return httperror.JSONResponse{V: uploadResponse{Error: err.Error()}}
 	}
