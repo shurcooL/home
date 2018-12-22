@@ -47,7 +47,7 @@ func initAction(code *code.Service, users users.Service) {
 
 			createRepoError := code.CreateRepo(req.Context(), repoSpec, repoDescription)
 
-			w.Header().Set("Content-Type", "text/plain")
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			fmt.Fprintf(io.MultiWriter(os.Stdout, w), "creating new repo: spec=%q description=%q: err=%v\n", repoSpec, repoDescription, createRepoError)
 
 			return nil
