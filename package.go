@@ -35,7 +35,7 @@ type packageHandler struct {
 
 var packageHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>{{.Title}}</title>
+		<title>{{.FullName}}</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -61,18 +61,18 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	var title string
-	if h.Pkg.Name == "main" {
-		title = "Command " + path.Base(h.Pkg.Spec)
+	var fullName string
+	if h.Pkg.IsCommand() {
+		fullName = "Command " + path.Base(h.Pkg.Spec)
 	} else {
-		title = "Package " + h.Pkg.Name
+		fullName = "Package " + h.Pkg.Name
 	}
 	err = packageHTML.Execute(w, struct {
 		Production bool
-		Title      string
+		FullName   string
 	}{
 		Production: *productionFlag,
-		Title:      title,
+		FullName:   fullName,
 	})
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	err = vec.RenderHTML(w,
-		elem.H1(title),
+		elem.H1(fullName),
 		elem.P(elem.Code(fmt.Sprintf(`import "%s"`, h.Pkg.Spec))),
 	)
 	if err != nil {

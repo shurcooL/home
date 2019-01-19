@@ -119,6 +119,29 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		httpgzip.ServeContent(w, req, "", time.Time{}, bytes.NewReader(license))
 		return true
+	case req.URL.Path == route.PkgHistory(pkgPath):
+		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitsHandlerPkg{
+			Repo:          repo,
+			PkgPath:       pkgPath,
+			Dir:           d,
+			notifications: h.notifications,
+			users:         h.users,
+			gitUsers:      h.gitUsers,
+		}).ServeHTTP)}
+		h.ServeHTTP(w, req)
+		return true
+	case strings.HasPrefix(req.URL.Path, route.PkgCommit(pkgPath)+"/"):
+		req = stripPrefix(req, len(route.PkgCommit(pkgPath)))
+		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitHandlerPkg{
+			Repo:          repo,
+			PkgPath:       pkgPath,
+			Dir:           d,
+			notifications: h.notifications,
+			users:         h.users,
+			gitUsers:      h.gitUsers,
+		}).ServeHTTP)}
+		h.ServeHTTP(w, req)
+		return true
 	case req.URL.Path == route.RepoIndex(repo.Path):
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&repositoryHandler{
 			Repo:          repo,
@@ -199,6 +222,9 @@ type pkgInfo struct {
 	DocHTML    string // Package documentation HTML. E.g., "<p>Package pkg provides some functionality.</p><p>More information about pkg.</p>".
 	LicenseURL string // URL of license. E.g., "/repo/package$file/LICENSE".
 }
+
+// IsCommand reports whether the package is a command.
+func (p pkgInfo) IsCommand() bool { return p.Name == "main" }
 
 func readLicenseFile(gitDir string, d *code.Directory) ([]byte, error) {
 	r, err := git.Open(gitDir)

@@ -247,4 +247,5 @@ type Package struct {
 	DocHTML  string // Package documentation HTML.
 }
 
+// IsCommand reports whether the package is a command.
 func (p Package) IsCommand() bool { return p.Name == "main" }

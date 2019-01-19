@@ -13,6 +13,7 @@ import (
 	"dmitri.shuralyov.com/html/belt"
 	"dmitri.shuralyov.com/service/change"
 	homecomponent "github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
@@ -40,7 +41,7 @@ type commitsHandler struct {
 
 var commitsHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Repository {{.Name}} - History</title>
+		<title>{{.FullName}} - History</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -80,7 +81,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	// TODO: Pagination support.
-	cs, err := listMasterCommits(h.Repo)
+	cs, err := listMasterCommits(h.Repo, "")
 	if err != nil {
 		return err
 	}
@@ -88,10 +89,10 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = commitsHTML.Execute(w, struct {
 		Production bool
-		Name       string
+		FullName   string
 	}{
 		Production: *productionFlag,
-		Name:       path.Base(h.Repo.Spec),
+		FullName:   "Repository " + path.Base(h.Repo.Spec),
 	})
 	if err != nil {
 		return err
@@ -142,7 +143,11 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 			AuthorTime: c.Author.Date.Time(),
 		})
 	}
-	err = htmlg.RenderComponents(w, Commits{Commits: commits, Repo: h.Repo})
+	err = htmlg.RenderComponents(w, Commits{
+		Commits:    commits,
+		ImportPath: h.Repo.Spec,
+		CommitURL:  func(sha string) string { return route.RepoCommit(h.Repo.Path) + "/" + sha },
+	})
 	if err != nil {
 		return err
 	}
@@ -153,9 +158,125 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	return err
 }
 
-// listMasterCommits returns a list of commits in git repo on master branch.
+// commitsHandlerPkg is a handler for displaying a list of commits of a single package.
+type commitsHandlerPkg struct {
+	Repo    repoInfo
+	PkgPath string
+	Dir     *code.Directory
+
+	notifications notifications.Service
+	users         users.Service
+	gitUsers      map[string]users.User // Key is lower git author email.
+}
+
+func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return httperror.Method{Allowed: []string{"GET"}}
+	}
+
+	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
+	if err != nil {
+		log.Println(err)
+		authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
+	}
+	var nc uint64
+	if authenticatedUser.ID != 0 {
+		nc, err = h.notifications.Count(req.Context(), nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	// TODO: Pagination support.
+	cs, err := listMasterCommits(h.Repo, directoryGitPathspec(h.Dir))
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	var fullName string
+	if h.Dir.Package == nil {
+		fullName = "Directory " + path.Base(h.Dir.ImportPath)
+	} else if h.Dir.Package.IsCommand() {
+		fullName = "Command " + path.Base(h.Dir.ImportPath)
+	} else {
+		fullName = "Package " + h.Dir.Package.Name
+	}
+	err = commitsHTML.Execute(w, struct {
+		Production bool
+		FullName   string
+	}{
+		Production: *productionFlag,
+		FullName:   fullName,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
+	if err != nil {
+		return err
+	}
+
+	// Render the header.
+	header := homecomponent.Header{
+		CurrentUser:       authenticatedUser,
+		NotificationCount: nc,
+		ReturnURL:         req.RequestURI,
+	}
+	err = htmlg.RenderComponents(w, header)
+	if err != nil {
+		return err
+	}
+
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Dir.ImportPath)))
+	if err != nil {
+		return err
+	}
+
+	// Render the tabnav.
+	err = htmlg.RenderComponents(w, directoryTabnav(historyTab, h.PkgPath))
+	if err != nil {
+		return err
+	}
+
+	var commits []Commit
+	for _, c := range cs {
+		author, ok := h.gitUsers[strings.ToLower(c.Author.Email)]
+		if !ok {
+			author = users.User{
+				Name:      c.Author.Name,
+				Email:     c.Author.Email,
+				AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96", // TODO: Use email.
+			}
+		}
+
+		commits = append(commits, Commit{
+			SHA:        string(c.ID),
+			Message:    strings.TrimPrefix(c.Message, pathWithinRepo(h.Dir)+": "), // THINK: Trim package prefix from subject better?
+			Author:     author,
+			AuthorTime: c.Author.Date.Time(),
+		})
+	}
+	err = htmlg.RenderComponents(w, Commits{
+		Commits:    commits,
+		ImportPath: h.Dir.ImportPath,
+		CommitURL:  func(sha string) string { return route.PkgCommit(h.PkgPath) + "/" + sha },
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `</div>
+	</body>
+</html>`)
+	return err
+}
+
+// listMasterCommits returns a list of commits in git repo on master branch,
+// with an optionally specified pathspec.
 // If master branch doesn't exist, an empty list is returned.
-func listMasterCommits(repo repoInfo) ([]*vcs.Commit, error) {
+func listMasterCommits(repo repoInfo, pathspec string) ([]*vcs.Commit, error) {
 	r := &gitcmd.Repository{Dir: repo.Dir}
 	defer r.Close()
 	master, err := r.ResolveBranch("master")
@@ -167,14 +288,16 @@ func listMasterCommits(repo repoInfo) ([]*vcs.Commit, error) {
 	}
 	cs, _, err := r.Commits(vcs.CommitsOptions{
 		Head:    master,
+		Path:    pathspec,
 		NoTotal: true,
 	})
 	return cs, err
 }
 
 type Commits struct {
-	Commits []Commit
-	Repo    repoInfo
+	Commits    []Commit
+	ImportPath string
+	CommitURL  func(sha string) string
 }
 
 func (cs Commits) Render() []*html.Node {
@@ -187,7 +310,7 @@ func (cs Commits) Render() []*html.Node {
 
 	var nodes []*html.Node
 	for _, c := range cs.Commits {
-		nodes = append(nodes, c.Render(cs.Repo)...)
+		nodes = append(nodes, c.Render(cs.ImportPath, cs.CommitURL)...)
 	}
 	return []*html.Node{htmlg.DivClass("list-entry-border", nodes...)}
 }
@@ -199,7 +322,7 @@ type Commit struct {
 	AuthorTime time.Time
 }
 
-func (c Commit) Render(repo repoInfo) []*html.Node {
+func (c Commit) Render(importPath string, commitURL func(sha string) string) []*html.Node {
 	div := &html.Node{
 		Type: html.ElementNode, Data: atom.Div.String(),
 		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "display: flex;"}},
@@ -224,7 +347,7 @@ func (c Commit) Render(repo repoInfo) []*html.Node {
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Class.String(), Val: "black"},
-					{Key: atom.Href.String(), Val: route.RepoCommit(repo.Path) + "/" + c.SHA},
+					{Key: atom.Href.String(), Val: commitURL(c.SHA)},
 				},
 				FirstChild: htmlg.Strong(commitSubject),
 			},
@@ -267,7 +390,7 @@ display: none;`}},
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px; margin-left: 12px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/" + repo.Spec + "?rev=" + c.SHA},
+			{Key: atom.Href.String(), Val: "https://gotools.org/" + importPath + "?rev=" + c.SHA},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octicon.Code(),

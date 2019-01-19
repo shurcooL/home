@@ -19,6 +19,8 @@ import (
 	"dmitri.shuralyov.com/service/change"
 	"github.com/shurcooL/highlight_diff"
 	homecomponent "github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
@@ -45,7 +47,7 @@ type commitHandler struct {
 
 var commitHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Repository {{.Name}} - Commit {{.Hash}}</title>
+		<title>{{.FullName}} - Commit {{.Hash}}</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -117,7 +119,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	if err != nil {
 		return os.ErrNotExist
 	}
-	c, err := diffTree(req.Context(), h.Repo.Dir, commitHash, h.gitUsers)
+	c, err := diffTree(req.Context(), h.Repo.Dir, commitHash, ":", h.gitUsers)
 	if err != nil {
 		return err
 	}
@@ -128,11 +130,11 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = commitHTML.Execute(w, struct {
 		Production bool
-		Name       string
+		FullName   string
 		Hash       string
 	}{
 		Production: *productionFlag,
-		Name:       path.Base(h.Repo.Spec),
+		FullName:   "Repository " + path.Base(h.Repo.Spec),
 		Hash:       shortSHA(c.CommitHash),
 	})
 	if err != nil {
@@ -167,7 +169,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	err = commitHTML.ExecuteTemplate(w, "CommitMessage", commitMessage{
-		RepoRoot:   h.Repo.Spec,
+		ImportPath: h.Repo.Spec,
 		CommitHash: c.CommitHash,
 		Subject:    c.Subject,
 		Body:       c.Body,
@@ -205,6 +207,149 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	return err
 }
 
+// commitHandlerPkg is a handler for displaying a commit of a single package.
+type commitHandlerPkg struct {
+	Repo    repoInfo
+	PkgPath string
+	Dir     *code.Directory
+
+	notifications notifications.Service
+	users         users.Service
+	gitUsers      map[string]users.User // Key is lower git author email.
+}
+
+func (h *commitHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return httperror.Method{Allowed: []string{"GET"}}
+	}
+
+	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
+	if err != nil {
+		log.Println(err)
+		authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
+	}
+	var nc uint64
+	if authenticatedUser.ID != 0 {
+		nc, err = h.notifications.Count(req.Context(), nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	commitHash, err := verifyCommitHash(req.URL.Path[1:])
+	if err != nil {
+		return os.ErrNotExist
+	}
+	c, err := diffTree(req.Context(), h.Repo.Dir, commitHash, directoryGitPathspec(h.Dir), h.gitUsers)
+	if err != nil {
+		return err
+	}
+	if commitHash != c.CommitHash {
+		return os.ErrNotExist
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	var fullName string
+	if h.Dir.Package == nil {
+		fullName = "Directory " + path.Base(h.Dir.ImportPath)
+	} else if h.Dir.Package.IsCommand() {
+		fullName = "Command " + path.Base(h.Dir.ImportPath)
+	} else {
+		fullName = "Package " + h.Dir.Package.Name
+	}
+	err = commitHTML.Execute(w, struct {
+		Production bool
+		FullName   string
+		Hash       string
+	}{
+		Production: *productionFlag,
+		FullName:   fullName,
+		Hash:       shortSHA(c.CommitHash),
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
+	if err != nil {
+		return err
+	}
+
+	// Render the header.
+	header := homecomponent.Header{
+		CurrentUser:       authenticatedUser,
+		NotificationCount: nc,
+		ReturnURL:         req.RequestURI,
+	}
+	err = htmlg.RenderComponents(w, header)
+	if err != nil {
+		return err
+	}
+
+	err = html.Render(w, htmlg.H2(htmlg.Text(h.Dir.ImportPath)))
+	if err != nil {
+		return err
+	}
+
+	// Render the tabnav.
+	err = htmlg.RenderComponents(w, directoryTabnav(historyTab, h.PkgPath))
+	if err != nil {
+		return err
+	}
+
+	err = commitHTML.ExecuteTemplate(w, "CommitMessage", commitMessage{
+		ImportPath: h.Dir.ImportPath,
+		CommitHash: c.CommitHash,
+		Subject:    strings.TrimPrefix(c.Subject, pathWithinRepo(h.Dir)+": "), // THINK: Trim package prefix from subject better?
+		Body:       c.Body,
+		Author:     c.Author,
+		AuthorTime: c.AuthorTime,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Show warning we're displaying a part of the commit, link to entire commit.
+	err = htmlg.RenderComponents(w, homecomponent.Flash{
+		Content: htmlg.Nodes{
+			htmlg.Text("Showing partial commit. "),
+			htmlg.A("Full Commit", route.RepoCommit(h.Repo.Path)+"/"+c.CommitHash),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(c.Patch) == 0 {
+		// Empty commit. Let the user know via a blank slate.
+		err := htmlg.RenderComponents(w, homecomponent.BlankSlate{
+			Content: htmlg.Nodes{htmlg.Text("There are no affected files.")},
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		fileDiffs, err := diff.ParseMultiFileDiff(c.Patch)
+		if err != nil {
+			return err
+		}
+		for _, f := range fileDiffs {
+			// THINK: Trim package prefix from file paths better?
+			f.OrigName = strings.TrimPrefix(f.OrigName, pathWithinRepo(h.Dir)+"/")
+			f.NewName = strings.TrimPrefix(f.NewName, pathWithinRepo(h.Dir)+"/")
+			err := commitHTML.ExecuteTemplate(w, "FileDiff", fileDiff{FileDiff: f})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, err = io.WriteString(w, `</div>
+	</body>
+</html>`)
+	return err
+}
+
 func verifyCommitHash(commitHash string) (string, error) {
 	if len(commitHash) != 40 {
 		return "", fmt.Errorf("length is %v instead of 40", len(commitHash))
@@ -222,7 +367,7 @@ func shortSHA(sha string) string {
 	return sha[:8]
 }
 
-func diffTree(ctx context.Context, repoDir, treeish string, gitUsers map[string]users.User) (diffTreeResponse, error) {
+func diffTree(ctx context.Context, repoDir, treeish, pathspec string, gitUsers map[string]users.User) (diffTreeResponse, error) {
 	cmd := exec.CommandContext(ctx, "git", "diff-tree",
 		"--unified=5",
 		"--format=tformat:%H%x00%s%x00%b%x00%an%x00%ae%x00%aI",
@@ -232,7 +377,7 @@ func diffTree(ctx context.Context, repoDir, treeish string, gitUsers map[string]
 		"--root",
 		"--find-renames",
 		//"--break-rewrites",
-		treeish)
+		treeish, "--", pathspec)
 	cmd.Dir = repoDir
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -304,7 +449,7 @@ func readLine(b *[]byte) string {
 }
 
 type commitMessage struct {
-	RepoRoot   string // Import path corresponding to repository root.
+	ImportPath string // Import path corresponding to directory used for linking to source code view.
 	CommitHash string
 	Subject    string
 	Body       string
@@ -318,7 +463,7 @@ func (c commitMessage) ViewCode() template.HTML {
 		Attr: []html.Attribute{
 			{Key: atom.Class.String(), Val: "lightgray"},
 			{Key: atom.Style.String(), Val: "height: 16px;"},
-			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.RepoRoot + "?rev=" + c.CommitHash},
+			{Key: atom.Href.String(), Val: "https://gotools.org/" + c.ImportPath + "?rev=" + c.CommitHash},
 			{Key: atom.Title.String(), Val: "View code at this revision."},
 		},
 		FirstChild: octicon.Code(),
