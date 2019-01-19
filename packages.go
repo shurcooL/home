@@ -18,7 +18,6 @@ import (
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
 )
 
 var packagesHTML = template.Must(template.New("").Parse(`<html>
@@ -130,16 +129,9 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 func renderPackages(w io.Writer, packages []*code.Directory) error {
 	if len(packages) == 0 {
 		// No packages. Let the user know via a blank slate.
-		div := &html.Node{
-			Type: html.ElementNode, Data: atom.Div.String(),
-			Attr: []html.Attribute{{Key: atom.Style.String(), Val: "border: 1px solid #ddd; border-radius: 4px;"}},
-			FirstChild: &html.Node{
-				Type: html.ElementNode, Data: atom.Div.String(),
-				Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "text-align: center; margin-top: 80px; margin-bottom: 80px;"}},
-				FirstChild: htmlg.Text("There are no packages."),
-			},
-		}
-		err := html.Render(w, div)
+		err := htmlg.RenderComponents(w, component.BlankSlate{
+			Content: htmlg.Nodes{htmlg.Text("There are no packages.")},
+		})
 		return err
 	}
 

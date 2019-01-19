@@ -178,14 +178,24 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	fileDiffs, err := diff.ParseMultiFileDiff(c.Patch)
-	if err != nil {
-		return err
-	}
-	for _, f := range fileDiffs {
-		err = commitHTML.ExecuteTemplate(w, "FileDiff", fileDiff{FileDiff: f})
+	if len(c.Patch) == 0 {
+		// Empty commit. Let the user know via a blank slate.
+		err := htmlg.RenderComponents(w, homecomponent.BlankSlate{
+			Content: htmlg.Nodes{htmlg.Text("There are no affected files.")},
+		})
 		if err != nil {
 			return err
+		}
+	} else {
+		fileDiffs, err := diff.ParseMultiFileDiff(c.Patch)
+		if err != nil {
+			return err
+		}
+		for _, f := range fileDiffs {
+			err := commitHTML.ExecuteTemplate(w, "FileDiff", fileDiff{FileDiff: f})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -247,7 +257,7 @@ func diffTree(ctx context.Context, repoDir, treeish string, gitUsers map[string]
 		authorName  = readLine(&b)
 		authorEmail = readLine(&b)
 		authorDate  = readLine(&b)
-		patch       = b[1:]
+		patch       = b // There may be a leading '\n', but diff.ParseMultiFileDiff ignores it anyway, so leave it. It's not there when commit is empty.
 	)
 
 	c := diffTreeResponse{

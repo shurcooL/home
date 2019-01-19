@@ -180,12 +180,9 @@ type Commits struct {
 func (cs Commits) Render() []*html.Node {
 	if len(cs.Commits) == 0 {
 		// No commits. Let the user know via a blank slate.
-		div := &html.Node{
-			Type: html.ElementNode, Data: atom.Div.String(),
-			Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "text-align: center; margin-top: 80px; margin-bottom: 80px;"}},
-			FirstChild: htmlg.Text("There are no commits."),
-		}
-		return []*html.Node{htmlg.DivClass("list-entry-border", div)}
+		return homecomponent.BlankSlate{
+			Content: htmlg.Nodes{htmlg.Text("There are no commits.")},
+		}.Render()
 	}
 
 	var nodes []*html.Node
