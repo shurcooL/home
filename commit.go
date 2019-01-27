@@ -367,7 +367,7 @@ func shortSHA(sha string) string {
 	return sha[:8]
 }
 
-func diffTree(ctx context.Context, repoDir, treeish, pathspec string, gitUsers map[string]users.User) (diffTreeResponse, error) {
+func diffTree(ctx context.Context, gitDir, treeish, pathspec string, gitUsers map[string]users.User) (diffTreeResponse, error) {
 	cmd := exec.CommandContext(ctx, "git", "diff-tree",
 		"--unified=5",
 		"--format=tformat:%H%x00%s%x00%b%x00%an%x00%ae%x00%aI",
@@ -378,11 +378,12 @@ func diffTree(ctx context.Context, repoDir, treeish, pathspec string, gitUsers m
 		"--find-renames",
 		//"--break-rewrites",
 		treeish, "--", pathspec)
-	cmd.Dir = repoDir
+	cmd.Dir = gitDir
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	err := cmd.Start()
 	if os.IsNotExist(err) {
+		// TODO: Document when this happens. Is it when gitDir doesn't exist, or git doesn't exist, or?
 		return diffTreeResponse{}, err
 	} else if err != nil {
 		return diffTreeResponse{}, fmt.Errorf("could not start command: %v", err)
@@ -391,8 +392,9 @@ func diffTree(ctx context.Context, repoDir, treeish, pathspec string, gitUsers m
 	if ee, _ := err.(*exec.ExitError); ee != nil && ee.Sys().(syscall.WaitStatus).ExitStatus() == 128 {
 		return diffTreeResponse{}, os.ErrNotExist // Commit doesn't exist.
 	} else if err != nil {
-		return diffTreeResponse{}, err
+		return diffTreeResponse{}, fmt.Errorf("%v: %v", cmd.Args, err)
 	}
+
 	b := buf.Bytes()
 	var (
 		// Calls to readLine match exactly what is specified in --format.
@@ -404,30 +406,26 @@ func diffTree(ctx context.Context, repoDir, treeish, pathspec string, gitUsers m
 		authorDate  = readLine(&b)
 		patch       = b // There may be a leading '\n', but diff.ParseMultiFileDiff ignores it anyway, so leave it. It's not there when commit is empty.
 	)
-
-	c := diffTreeResponse{
-		CommitHash: commitHash,
-		Subject:    subject,
-		Body:       body,
-	}
-
-	var ok bool
-	c.Author, ok = gitUsers[strings.ToLower(authorEmail)]
+	author, ok := gitUsers[strings.ToLower(authorEmail)]
 	if !ok {
-		c.Author = users.User{
+		author = users.User{
 			Name:      authorName,
 			Email:     authorEmail,
 			AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96", // TODO: Use email.
 		}
 	}
-
-	c.AuthorTime, err = time.Parse(time.RFC3339, authorDate)
+	authorTime, err := time.Parse(time.RFC3339, authorDate)
 	if err != nil {
 		return diffTreeResponse{}, err
 	}
-
-	c.Patch = patch
-	return c, nil
+	return diffTreeResponse{
+		CommitHash: commitHash,
+		Subject:    subject,
+		Body:       body,
+		Author:     author,
+		AuthorTime: authorTime,
+		Patch:      patch,
+	}, nil
 }
 
 type diffTreeResponse struct {

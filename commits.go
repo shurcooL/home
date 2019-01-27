@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	"dmitri.shuralyov.com/html/belt"
@@ -24,8 +28,6 @@ import (
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	"sourcegraph.com/sourcegraph/go-vcs/vcs"
-	"sourcegraph.com/sourcegraph/go-vcs/vcs/gitcmd"
 )
 
 // commitsHandler is a handler for displaying a list of commits of a git repository.
@@ -81,7 +83,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	// TODO: Pagination support.
-	cs, err := listMasterCommits(h.Repo, "")
+	commits, err := listMasterCommits(req.Context(), h.Repo.Dir, ":", h.gitUsers)
 	if err != nil {
 		return err
 	}
@@ -125,24 +127,6 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	var commits []Commit
-	for _, c := range cs {
-		author, ok := h.gitUsers[strings.ToLower(c.Author.Email)]
-		if !ok {
-			author = users.User{
-				Name:      c.Author.Name,
-				Email:     c.Author.Email,
-				AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96", // TODO: Use email.
-			}
-		}
-
-		commits = append(commits, Commit{
-			SHA:        string(c.ID),
-			Message:    c.Message,
-			Author:     author,
-			AuthorTime: c.Author.Date.Time(),
-		})
-	}
 	err = htmlg.RenderComponents(w, Commits{
 		Commits:    commits,
 		ImportPath: h.Repo.Spec,
@@ -188,7 +172,7 @@ func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 
 	// TODO: Pagination support.
-	cs, err := listMasterCommits(h.Repo, directoryGitPathspec(h.Dir))
+	commits, err := listMasterCommits(req.Context(), h.Repo.Dir, directoryGitPathspec(h.Dir), h.gitUsers)
 	if err != nil {
 		return err
 	}
@@ -240,23 +224,9 @@ func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		return err
 	}
 
-	var commits []Commit
-	for _, c := range cs {
-		author, ok := h.gitUsers[strings.ToLower(c.Author.Email)]
-		if !ok {
-			author = users.User{
-				Name:      c.Author.Name,
-				Email:     c.Author.Email,
-				AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96", // TODO: Use email.
-			}
-		}
-
-		commits = append(commits, Commit{
-			SHA:        string(c.ID),
-			Message:    strings.TrimPrefix(c.Message, pathWithinRepo(h.Dir)+": "), // THINK: Trim package prefix from subject better?
-			Author:     author,
-			AuthorTime: c.Author.Date.Time(),
-		})
+	for i, c := range commits {
+		c.Subject = strings.TrimPrefix(c.Subject, pathWithinRepo(h.Dir)+": ") // THINK: Trim package prefix from subject better?
+		commits[i] = c
 	}
 	err = htmlg.RenderComponents(w, Commits{
 		Commits:    commits,
@@ -276,22 +246,57 @@ func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 // listMasterCommits returns a list of commits in git repo on master branch,
 // with an optionally specified pathspec.
 // If master branch doesn't exist, an empty list is returned.
-func listMasterCommits(repo repoInfo, pathspec string) ([]*vcs.Commit, error) {
-	r := &gitcmd.Repository{Dir: repo.Dir}
-	defer r.Close()
-	master, err := r.ResolveBranch("master")
-	if err == vcs.ErrBranchNotFound {
-		// No master branch means there are no commits on it (e.g., an empty repository).
-		return nil, nil
-	} else if err != nil {
-		return nil, err
+func listMasterCommits(ctx context.Context, gitDir, pathspec string, gitUsers map[string]users.User) ([]Commit, error) {
+	cmd := exec.CommandContext(ctx, "git", "log",
+		"--format=tformat:%H%x00%s%x00%b%x00%an%x00%ae%x00%aI",
+		"-z",
+		"master", "--", pathspec)
+	cmd.Dir = gitDir
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	err := cmd.Start()
+	if err != nil {
+		return nil, fmt.Errorf("could not start command: %v", err)
 	}
-	cs, _, err := r.Commits(vcs.CommitsOptions{
-		Head:    master,
-		Path:    pathspec,
-		NoTotal: true,
-	})
-	return cs, err
+	err = cmd.Wait()
+	if ee, _ := err.(*exec.ExitError); ee != nil && ee.Sys().(syscall.WaitStatus).ExitStatus() == 128 {
+		return nil, nil // Master branch doesn't exist.
+	} else if err != nil {
+		return nil, fmt.Errorf("%v: %v", cmd.Args, err)
+	}
+
+	var commits []Commit
+	for b := buf.Bytes(); len(b) != 0; {
+		var (
+			// Calls to readLine match exactly what is specified in --format.
+			commitHash  = readLine(&b)
+			subject     = readLine(&b)
+			body        = readLine(&b)
+			authorName  = readLine(&b)
+			authorEmail = readLine(&b)
+			authorDate  = readLine(&b)
+		)
+		author, ok := gitUsers[strings.ToLower(authorEmail)]
+		if !ok {
+			author = users.User{
+				Name:      authorName,
+				Email:     authorEmail,
+				AvatarURL: "https://secure.gravatar.com/avatar?d=mm&f=y&s=96", // TODO: Use email.
+			}
+		}
+		authorTime, err := time.Parse(time.RFC3339, authorDate)
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, Commit{
+			SHA:        commitHash,
+			Subject:    subject,
+			Body:       body,
+			Author:     author,
+			AuthorTime: authorTime,
+		})
+	}
+	return commits, nil
 }
 
 type Commits struct {
@@ -317,7 +322,8 @@ func (cs Commits) Render() []*html.Node {
 
 type Commit struct {
 	SHA        string
-	Message    string
+	Subject    string
+	Body       string
 	Author     users.User
 	AuthorTime time.Time
 }
@@ -340,8 +346,6 @@ func (c Commit) Render(importPath string, commitURL func(sha string) string) []*
 		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "flex-grow: 1;"}},
 	}
 	{
-		commitSubject, commitBody := splitCommitMessage(c.Message)
-
 		title := htmlg.Div(
 			&html.Node{
 				Type: html.ElementNode, Data: atom.A.String(),
@@ -349,10 +353,10 @@ func (c Commit) Render(importPath string, commitURL func(sha string) string) []*
 					{Key: atom.Class.String(), Val: "black"},
 					{Key: atom.Href.String(), Val: commitURL(c.SHA)},
 				},
-				FirstChild: htmlg.Strong(commitSubject),
+				FirstChild: htmlg.Strong(c.Subject),
 			},
 		)
-		if commitBody != "" {
+		if c.Body != "" {
 			htmlg.AppendChildren(title, homecomponent.EllipsisButton{OnClick: "ToggleDetails(this);"}.Render()...)
 		}
 		titleAndByline.AppendChild(title)
@@ -364,7 +368,7 @@ func (c Commit) Render(importPath string, commitURL func(sha string) string) []*
 		htmlg.AppendChildren(byline, issuescomponent.Time{Time: c.AuthorTime}.Render()...)
 		titleAndByline.AppendChild(byline)
 
-		if commitBody != "" {
+		if c.Body != "" {
 			pre := &html.Node{
 				Type: html.ElementNode, Data: atom.Pre.String(),
 				Attr: []html.Attribute{
@@ -375,7 +379,7 @@ color: #444;
 margin-top: 10px;
 margin-bottom: 0;
 display: none;`}},
-				FirstChild: htmlg.Text(commitBody),
+				FirstChild: htmlg.Text(c.Body),
 			}
 			titleAndByline.AppendChild(pre)
 		}
@@ -399,13 +403,4 @@ display: none;`}},
 
 	listEntryDiv := htmlg.DivClass("list-entry-body multilist-entry commit-container", div)
 	return []*html.Node{listEntryDiv}
-}
-
-// splitCommitMessage splits commit message s into subject and body, if any.
-func splitCommitMessage(s string) (subject, body string) {
-	i := strings.Index(s, "\n\n")
-	if i == -1 {
-		return s, ""
-	}
-	return s[:i], s[i+2:]
 }
