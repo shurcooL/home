@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/shurcooL/frontend/reactionsmenu"
 	homehttp "github.com/shurcooL/home/http"
@@ -54,7 +55,7 @@ func setup(ctx context.Context) {
 		notificationsService := httpclient.NewNotifications(httpClient, "", "")
 		returnURL := dom.GetWindow().Location().Pathname + dom.GetWindow().Location().Search
 		var buf bytes.Buffer
-		err = resume.RenderBodyInnerHTML(ctx, &buf, reactionsService, notificationsService, usersService, authenticatedUser, returnURL)
+		err = resume.RenderBodyInnerHTML(ctx, &buf, reactionsService, notificationsService, usersService, time.Now(), authenticatedUser, returnURL)
 		if err != nil {
 			log.Println(err)
 			return
