@@ -16,7 +16,7 @@ import (
 
 var idiomaticGoHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Idiomatic Go</title>
+{{.AnalyticsHTML}}		<title>Idiomatic Go</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -27,7 +27,6 @@ var idiomaticGoHTML = template.Must(template.New("").Parse(`<html>
 		</style>
 		<link href="/assets/idiomaticgo/style.css" rel="stylesheet" type="text/css">
 		<script async src="/assets/idiomaticgo/idiomaticgo.js"></script>
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>`))
 
@@ -38,7 +37,7 @@ func initIdiomaticGo(issues issues.Service, notifications notifications.Service,
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct{ Production bool }{*productionFlag}
+		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
 		err := idiomaticGoHTML.Execute(w, data)
 		if err != nil {
 			return err

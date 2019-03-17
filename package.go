@@ -35,12 +35,11 @@ type packageHandler struct {
 
 var packageHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>{{.FullName}}</title>
+{{.AnalyticsHTML}}		<title>{{.FullName}}</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/package/style.css" rel="stylesheet" type="text/css">
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>`))
 
@@ -68,11 +67,11 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		fullName = "Package " + h.Pkg.Name
 	}
 	err = packageHTML.Execute(w, struct {
-		Production bool
-		FullName   string
+		AnalyticsHTML template.HTML
+		FullName      string
 	}{
-		Production: *productionFlag,
-		FullName:   fullName,
+		AnalyticsHTML: analyticsHTML,
+		FullName:      fullName,
 	})
 	if err != nil {
 		return err

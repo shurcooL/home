@@ -43,13 +43,12 @@ type commitsHandler struct {
 
 var commitsHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>{{.FullName}} - History</title>
+{{.AnalyticsHTML}}		<title>{{.FullName}} - History</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/commits/style.css" rel="stylesheet" type="text/css">
 		<script async src="/assets/commits/commits.js"></script>
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>`))
 
@@ -90,11 +89,11 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = commitsHTML.Execute(w, struct {
-		Production bool
-		FullName   string
+		AnalyticsHTML template.HTML
+		FullName      string
 	}{
-		Production: *productionFlag,
-		FullName:   "Repository " + path.Base(h.Repo.Spec),
+		AnalyticsHTML: analyticsHTML,
+		FullName:      "Repository " + path.Base(h.Repo.Spec),
 	})
 	if err != nil {
 		return err
@@ -187,11 +186,11 @@ func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		fullName = "Package " + h.Dir.Package.Name
 	}
 	err = commitsHTML.Execute(w, struct {
-		Production bool
-		FullName   string
+		AnalyticsHTML template.HTML
+		FullName      string
 	}{
-		Production: *productionFlag,
-		FullName:   fullName,
+		AnalyticsHTML: analyticsHTML,
+		FullName:      fullName,
 	})
 	if err != nil {
 		return err

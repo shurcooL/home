@@ -74,7 +74,7 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 	opt := changes.Options{
 		Notifications: notifications,
 
-		HeadPre: `<link href="/icon.png" rel="icon" type="image/png">
+		HeadPre: analyticsHTML + `<link href="/icon.png" rel="icon" type="image/png">
 <meta name="viewport" content="width=device-width">
 <link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 <style type="text/css">
@@ -118,9 +118,6 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 	tt, code, pre  { font-family: "Go Mono"; }
 </style>`,
 		BodyPre: `<div style="max-width: 800px; margin: 0 auto 100px auto;">`,
-	}
-	if *productionFlag {
-		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
 	opt.BodyTop = func(req *http.Request, st common.State) ([]htmlg.Component, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())

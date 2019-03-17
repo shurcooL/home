@@ -62,7 +62,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
-		HeadPre: `<title>Notifications</title>
+		HeadPre: analyticsHTML + `<title>Notifications</title>
 <link href="/icon.png" rel="icon" type="image/png">
 <meta name="viewport" content="width=device-width">
 <link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -77,9 +77,6 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		color: rgb(35, 35, 35);
 	}
 </style>`,
-	}
-	if *productionFlag {
-		opt.HeadPre += "\n\t\t" + googleAnalytics
 	}
 	opt.BodyPre = `<div style="max-width: 800px; margin: 0 auto 100px auto;">`
 	opt.BodyTop = func(req *http.Request) ([]htmlg.Component, error) {

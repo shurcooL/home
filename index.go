@@ -29,13 +29,12 @@ import (
 
 var indexHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Dmitri Shuralyov</title>
+{{.AnalyticsHTML}}		<title>Dmitri Shuralyov</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/index/style.css" rel="stylesheet" type="text/css">
 		<link href="https://github.com/dmitshur" rel="me">
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
@@ -65,7 +64,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return nil
 	}
 
-	data := struct{ Production bool }{*productionFlag}
+	data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
 	err := indexHTML.Execute(w, data)
 	if err != nil {
 		return err

@@ -39,12 +39,11 @@ type repositoryHandler struct {
 
 var repositoryHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Repository {{.Name}} - Packages</title>
+{{.AnalyticsHTML}}		<title>Repository {{.Name}} - Packages</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/repository/style.css" rel="stylesheet" type="text/css">
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>`))
 
@@ -66,11 +65,11 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = repositoryHTML.Execute(w, struct {
-		Production bool
-		Name       string
+		AnalyticsHTML template.HTML
+		Name          string
 	}{
-		Production: *productionFlag,
-		Name:       path.Base(h.Repo.Spec),
+		AnalyticsHTML: analyticsHTML,
+		Name:          path.Base(h.Repo.Spec),
 	})
 	if err != nil {
 		return err

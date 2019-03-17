@@ -22,7 +22,7 @@ import (
 
 var blogHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Dmitri Shuralyov - Blog</title>
+{{.AnalyticsHTML}}		<title>Dmitri Shuralyov - Blog</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -33,7 +33,6 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 		</style>
 		<link href="/assets/blog/style.css" rel="stylesheet" type="text/css">
 		<script async src="/assets/blog/blog.js"></script>
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>`))
 
@@ -47,7 +46,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 	opt := issuesapp.Options{
 		Notifications: notifications,
 
-		HeadPre: `<title>Dmitri Shuralyov - Blog</title>
+		HeadPre: analyticsHTML + `<title>Dmitri Shuralyov - Blog</title>
 <link href="/icon.png" rel="icon" type="image/png">
 <meta name="viewport" content="width=device-width">
 <link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -137,9 +136,6 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 
 <div style="max-width: 800px; margin: 0 auto 100px auto;">`,
 	}
-	if *productionFlag {
-		opt.HeadPre += "\n\t\t" + googleAnalytics
-	}
 	opt.BodyTop = func(req *http.Request) ([]htmlg.Component, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())
 		if err != nil {
@@ -208,7 +204,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 			}
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			data := struct{ Production bool }{*productionFlag}
+			data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
 			err := blogHTML.Execute(w, data)
 			if err != nil {
 				return err

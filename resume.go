@@ -18,7 +18,7 @@ import (
 
 var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape": func(s string) template.HTML { return template.HTML(s) }}).Parse(`<html>
 	<head>
-		<title>Dmitri Shuralyov - Resume</title>
+{{.AnalyticsHTML}}		<title>Dmitri Shuralyov - Resume</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
@@ -26,21 +26,8 @@ var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape
 
 		{{noescape "<!-- Unminified source is at https://github.com/shurcooL/resume. -->"}}
 		<script async src="/assets/resume/resume.js"></script>
-
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>`))
-
-const googleAnalytics = `<script>
-		  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-		  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-		  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-		  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-		  ga('create', 'UA-56541369-3', 'auto');
-		  ga('send', 'pageview');
-
-		</script>`
 
 func initResume(reactions reactions.Service, notifications notifications.Service, usersService users.Service) {
 	http.Handle("/resume", cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
@@ -49,7 +36,7 @@ func initResume(reactions reactions.Service, notifications notifications.Service
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct{ Production bool }{*productionFlag}
+		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
 		err := resumeHTML.Execute(w, data)
 		if err != nil {
 			return err

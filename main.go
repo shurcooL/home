@@ -5,6 +5,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"html/template"
+	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
@@ -26,9 +28,15 @@ import (
 )
 
 var (
-	httpFlag       = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
-	productionFlag = flag.Bool("production", false, "Production mode.")
-	statefileFlag  = flag.String("statefile", "", "File to save/load state (file is deleted after loading).")
+	httpFlag          = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
+	secureCookieFlag  = flag.Bool("secure-cookie", false, "Value of cookie attribute Secure.")
+	storeDirFlag      = flag.String("store-dir", filepath.Join(os.TempDir(), "home-store"), "Directory of home store (required).")
+	stateFileFlag     = flag.String("state-file", "", "Optional path to file to save/load state (file is deleted after loading).")
+	analyticsFileFlag = flag.String("analytics-file", "", "Optional path to file containing analytics HTML to insert at the beginning of <head>.")
+)
+
+var (
+	analyticsHTML template.HTML // Set early in run.
 )
 
 func main() {
@@ -42,13 +50,13 @@ func main() {
 		cancel()
 	}()
 
-	err := run(ctx)
+	err := run(ctx, *storeDirFlag, *stateFileFlag, *analyticsFileFlag)
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func run(ctx context.Context) error {
+func run(ctx context.Context, storeDir, stateFile, analyticsFile string) error {
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
 		return err
 	}
@@ -56,9 +64,12 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	storeDir := filepath.Join(os.Getenv("HOME"), "Dropbox", "Store")
-	if !*productionFlag {
-		storeDir = filepath.Join(os.TempDir(), "home-store")
+	if analyticsFile != "" {
+		b, err := ioutil.ReadFile(analyticsFile)
+		if err != nil {
+			return err
+		}
+		analyticsHTML = template.HTML(b)
 	}
 
 	initStores := func(storeDir string) error {
@@ -244,8 +255,8 @@ func run(ctx context.Context) error {
 		staticFiles.ServeHTTP(w, req)
 	})
 
-	if *statefileFlag != "" {
-		err := global.LoadAndRemove(*statefileFlag)
+	if stateFile != "" {
+		err := global.LoadAndRemove(stateFile)
 		global.mu.Lock()
 		n := len(global.sessions)
 		global.mu.Unlock()
@@ -271,8 +282,8 @@ func run(ctx context.Context) error {
 
 	log.Println("Ended HTTP server.")
 
-	if *statefileFlag != "" {
-		err := global.Save(*statefileFlag)
+	if stateFile != "" {
+		err := global.Save(stateFile)
 		log.Println("sessions.Save:", err)
 	}
 

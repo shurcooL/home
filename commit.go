@@ -47,12 +47,11 @@ type commitHandler struct {
 
 var commitHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>{{.FullName}} - Commit {{.Hash}}</title>
+{{.AnalyticsHTML}}		<title>{{.FullName}} - Commit {{.Hash}}</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/commit/style.css" rel="stylesheet" type="text/css">
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>
 
@@ -129,13 +128,13 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = commitHTML.Execute(w, struct {
-		Production bool
-		FullName   string
-		Hash       string
+		AnalyticsHTML template.HTML
+		FullName      string
+		Hash          string
 	}{
-		Production: *productionFlag,
-		FullName:   "Repository " + path.Base(h.Repo.Spec),
-		Hash:       shortSHA(c.CommitHash),
+		AnalyticsHTML: analyticsHTML,
+		FullName:      "Repository " + path.Base(h.Repo.Spec),
+		Hash:          shortSHA(c.CommitHash),
 	})
 	if err != nil {
 		return err
@@ -258,13 +257,13 @@ func (h *commitHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) e
 		fullName = "Package " + h.Dir.Package.Name
 	}
 	err = commitHTML.Execute(w, struct {
-		Production bool
-		FullName   string
-		Hash       string
+		AnalyticsHTML template.HTML
+		FullName      string
+		Hash          string
 	}{
-		Production: *productionFlag,
-		FullName:   fullName,
-		Hash:       shortSHA(c.CommitHash),
+		AnalyticsHTML: analyticsHTML,
+		FullName:      fullName,
+		Hash:          shortSHA(c.CommitHash),
 	})
 	if err != nil {
 		return err

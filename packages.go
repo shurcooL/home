@@ -22,12 +22,11 @@ import (
 
 var packagesHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Packages</title>
+{{.AnalyticsHTML}}		<title>Packages</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/packages/style.css" rel="stylesheet" type="text/css">
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>`))
 
@@ -51,7 +50,7 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct{ Production bool }{*productionFlag}
+		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
 		err := packagesHTML.Execute(w, data)
 		if err != nil {
 			return err

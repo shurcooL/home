@@ -23,12 +23,11 @@ import (
 
 var projectsHTML = template.Must(template.New("").Parse(`<html>
 	<head>
-		<title>Dmitri Shuralyov - Projects</title>
+{{.AnalyticsHTML}}		<title>Dmitri Shuralyov - Projects</title>
 		<link href="/icon.png" rel="icon" type="image/png">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/projects/style.css" rel="stylesheet" type="text/css">
-		{{if .Production}}` + googleAnalytics + `{{end}}
 	</head>
 	<body>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
@@ -110,7 +109,7 @@ func (h *projectsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) er
 	// Serve a directory listing.
 	case true:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct{ Production bool }{*productionFlag}
+		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
 		err := projectsHTML.Execute(w, data)
 		if err != nil {
 			return err
