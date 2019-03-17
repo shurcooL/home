@@ -3,8 +3,10 @@ package code
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -76,6 +78,10 @@ func (s *Service) CreateRepo(ctx context.Context, repoSpec, description string) 
 	// Authorization check.
 	if !currentUser.SiteAdmin {
 		return os.ErrPermission
+	}
+
+	if repoSpec != path.Clean(repoSpec) {
+		return fmt.Errorf("repo spec %q is not in its canonical form %q", repoSpec, path.Clean(repoSpec))
 	}
 
 	s.mu.RLock()
