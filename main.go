@@ -42,13 +42,10 @@ var (
 func main() {
 	flag.Parse()
 
+	int := make(chan os.Signal, 1)
+	signal.Notify(int, os.Interrupt)
 	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt)
-		<-sigint
-		cancel()
-	}()
+	go func() { <-int; cancel() }()
 
 	err := run(ctx, *storeDirFlag, *stateFileFlag, *analyticsFileFlag)
 	if err != nil {

@@ -50,11 +50,11 @@ func newChangeService(reactions reactions.Service, notifications notifications.S
 	if err != nil {
 		panic(fmt.Errorf("internal error: gerrit.NewClient returned non-nil error: %v", err))
 	}
-	shurcoolGerritChange := gerritapi.NewService(gerritClient)
+	gerritChange := gerritapi.NewService(gerritClient)
 	return shurcoolSeesOwnChanges{
 		service:              local,
 		shurcoolGitHubChange: shurcoolGitHubChange,
-		shurcoolGerritChange: shurcoolGerritChange,
+		shurcoolGerritChange: gerritChange,
 		users:                users,
 	}
 }
