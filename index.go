@@ -264,14 +264,25 @@ func (a activity) Render() []*html.Node {
 				},
 			}
 		case event.ChangeComment:
+			var verb string
+			switch p.CommentReview {
+			case 0:
+				verb = "commented"
+			default:
+				verb = fmt.Sprintf("reviewed %+d", p.CommentReview)
+			}
+			var details htmlg.Component
+			if p.CommentBody != "" {
+				details = imageText{
+					ImageURL: e.Actor.AvatarURL,
+					Text:     shortBody(p.CommentBody),
+				}
+			}
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.CommentDiscussion,
-				Action:     component.Join("commented on ", changeName(p), " in"),
-				Details: imageText{
-					ImageURL: e.Actor.AvatarURL,
-					Text:     shortBody(p.CommentBody),
-				},
+				Action:     component.Join(verb, " on ", changeName(p), " in"),
+				Details:    details,
 			}
 		case event.CommitComment:
 			displayEvent = activityEvent{
