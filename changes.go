@@ -35,12 +35,11 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-func newChangeService(reactions reactions.Service, notifications notifications.Service, users users.Service, router github.Router) change.Service {
+func newChangeService(reactions reactions.Service, users users.Service, router github.Router) change.Service {
 	local := &fs.Service{Reactions: reactions}
 	dmitshurGitHubChange := githubapi.NewService(
 		dmitshurPublicRepoGHV3,
 		dmitshurPublicRepoGHV4,
-		notifications,
 		router,
 	)
 	gerritClient, err := gerrit.NewClient( // TODO: Auth.

@@ -139,7 +139,7 @@ func run(ctx context.Context, storeDir, stateFile, analyticsFile string) error {
 	if err != nil {
 		return fmt.Errorf("newIssuesService: %v", err)
 	}
-	changeService := newChangeService(reactions, notifications, users, githubRouter)
+	changeService := newChangeService(reactions, users, githubRouter)
 
 	sessionsHandler := &sessionsHandler{users, userStore}
 	http.Handle("/login/github", sessionsHandler)
