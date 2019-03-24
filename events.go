@@ -14,15 +14,15 @@ import (
 )
 
 func newEventsService(root webdav.FileSystem, users users.Service, router github.Router) (events.Service, error) {
-	shurcool, err := users.Get(context.Background(), shurcool)
+	dmitshur, err := users.Get(context.Background(), dmitshur)
 	if err != nil {
 		return nil, err
 	}
-	local, err := fs.NewService(root, shurcool, users)
+	local, err := fs.NewService(root, dmitshur, users)
 	if err != nil {
 		return nil, err
 	}
-	github, err := githubapi.NewService(shurcoolPublicRepoGHV3, shurcoolPublicRepoGHV4, shurcool, router)
+	github, err := githubapi.NewService(dmitshurPublicRepoGHV3, dmitshurPublicRepoGHV4, dmitshur, router)
 	if err != nil {
 		return nil, err
 	}

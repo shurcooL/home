@@ -15,7 +15,7 @@ import (
 	"github.com/shurcooL/users"
 )
 
-var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
+var dmitshur = users.UserSpec{ID: 1924134, Domain: "github.com"}
 
 // ReactableURL is the URL for reactionable items on this resume.
 const ReactableURL = "dmitri.shuralyov.com/resume"
@@ -34,7 +34,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, reactionsService reac
 		}
 	}
 
-	shurcool, err := users.Get(ctx, shurcool)
+	dmitshur, err := users.Get(ctx, dmitshur)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, reactionsService reac
 	}
 
 	// Render the resume contents.
-	resume := resume.DmitriShuralyov(shurcool, now, reactions, authenticatedUser)
+	resume := resume.DmitriShuralyov(dmitshur, now, reactions, authenticatedUser)
 	err = htmlg.RenderComponents(w, resume)
 	if err != nil {
 		return err

@@ -72,7 +72,7 @@ func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 }
 
 var (
-	shurcool = users.User{
+	dmitshur = users.User{
 		UserSpec: users.UserSpec{ID: 1924134, Domain: "github.com"},
 		Name:     "Dmitri Shuralyov",
 		Email:    "dmitri@shuralyov.com",
@@ -109,8 +109,8 @@ type mockUsers struct{ users.Service }
 
 func (mockUsers) Get(_ context.Context, user users.UserSpec) (users.User, error) {
 	switch {
-	case user == shurcool.UserSpec:
-		return shurcool, nil
+	case user == dmitshur.UserSpec:
+		return dmitshur, nil
 	case user == alice.UserSpec:
 		return alice, nil
 	case user == bob.UserSpec:

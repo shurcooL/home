@@ -105,7 +105,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	activity := activity{
 		Events:  events,
 		Error:   error,
-		ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == shurcool,
+		ShowWIP: req.URL.Query().Get("events") == "all" || authenticatedUser.UserSpec == dmitshur,
 	}
 	activity.ShowRaw, _ = strconv.ParseBool(req.URL.Query().Get("raw"))
 	err = htmlg.RenderComponents(w, activity)

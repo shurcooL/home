@@ -34,22 +34,22 @@ import (
 // and handlers for the notifications app.
 func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.Service, router github.Router) notifications.Service {
 	authTransport := &oauth2.Transport{
-		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_NOTIFICATIONS")}),
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_DMITSHUR_NOTIFICATIONS")}),
 	}
 	cacheTransport := &httpcache.Transport{
 		Transport:           authTransport,
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
-	shurcoolGitHubNotifications := githubapi.NewService(
+	dmitshurGitHubNotifications := githubapi.NewService(
 		githubv3.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
 		githubv4.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second}),
 		router,
 	)
 
-	notificationsService := shurcoolSeesGitHubNotifications{
+	notificationsService := dmitshurSeesGitHubNotifications{
 		service:                     fs.NewService(root, users),
-		shurcoolGitHubNotifications: shurcoolGitHubNotifications,
+		dmitshurGitHubNotifications: dmitshurGitHubNotifications,
 		users:                       users,
 	}
 
@@ -140,15 +140,15 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 	return notificationsService
 }
 
-// shurcoolSeesGitHubNotifications lets shurcooL also see notifications on GitHub,
+// dmitshurSeesGitHubNotifications lets dmitshur also see notifications on GitHub,
 // in addition to local ones.
-type shurcoolSeesGitHubNotifications struct {
+type dmitshurSeesGitHubNotifications struct {
 	service                     notifications.Service
-	shurcoolGitHubNotifications notifications.Service
+	dmitshurGitHubNotifications notifications.Service
 	users                       users.Service
 }
 
-func (s shurcoolSeesGitHubNotifications) List(ctx context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
+func (s dmitshurSeesGitHubNotifications) List(ctx context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
 	var nss notifications.Notifications
 	ns, err := s.service.List(ctx, opt)
 	if err != nil {
@@ -163,8 +163,8 @@ func (s shurcoolSeesGitHubNotifications) List(ctx context.Context, opt notificat
 		if err != nil {
 			return nil, err
 		}
-		if currentUser == shurcool {
-			ns, err := s.shurcoolGitHubNotifications.List(ctx, opt)
+		if currentUser == dmitshur {
+			ns, err := s.dmitshurGitHubNotifications.List(ctx, opt)
 			if err != nil {
 				return nss, err
 			}
@@ -175,7 +175,7 @@ func (s shurcoolSeesGitHubNotifications) List(ctx context.Context, opt notificat
 	return nss, nil
 }
 
-func (s shurcoolSeesGitHubNotifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
+func (s dmitshurSeesGitHubNotifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
 	var count uint64
 	n, err := s.service.Count(ctx, opt)
 	if err != nil {
@@ -187,8 +187,8 @@ func (s shurcoolSeesGitHubNotifications) Count(ctx context.Context, opt interfac
 	if err != nil {
 		return 0, err
 	}
-	if currentUser == shurcool {
-		n, err := s.shurcoolGitHubNotifications.Count(ctx, opt)
+	if currentUser == dmitshur {
+		n, err := s.dmitshurGitHubNotifications.Count(ctx, opt)
 		if err != nil {
 			return count, err
 		}
@@ -198,65 +198,65 @@ func (s shurcoolSeesGitHubNotifications) Count(ctx context.Context, opt interfac
 	return count, nil
 }
 
-func (s shurcoolSeesGitHubNotifications) MarkRead(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64) error {
+func (s dmitshurSeesGitHubNotifications) MarkRead(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64) error {
 	if strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
 		}
-		if currentUser != shurcool {
+		if currentUser != dmitshur {
 			return os.ErrPermission
 		}
-		return s.shurcoolGitHubNotifications.MarkRead(ctx, repo, threadType, threadID)
+		return s.dmitshurGitHubNotifications.MarkRead(ctx, repo, threadType, threadID)
 	}
 
 	return s.service.MarkRead(ctx, repo, threadType, threadID)
 }
 
-func (s shurcoolSeesGitHubNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
+func (s dmitshurSeesGitHubNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
 	if strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
 		}
-		if currentUser != shurcool {
+		if currentUser != dmitshur {
 			return os.ErrPermission
 		}
-		return s.shurcoolGitHubNotifications.MarkAllRead(ctx, repo)
+		return s.dmitshurGitHubNotifications.MarkAllRead(ctx, repo)
 	}
 
 	return s.service.MarkAllRead(ctx, repo)
 }
 
-func (s shurcoolSeesGitHubNotifications) Subscribe(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+func (s dmitshurSeesGitHubNotifications) Subscribe(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
 	if strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
 		}
-		if currentUser != shurcool {
+		if currentUser != dmitshur {
 			return os.ErrPermission
 		}
-		return s.shurcoolGitHubNotifications.Subscribe(ctx, repo, threadType, threadID, subscribers)
+		return s.dmitshurGitHubNotifications.Subscribe(ctx, repo, threadType, threadID, subscribers)
 	}
 
 	return s.service.Subscribe(ctx, repo, threadType, threadID, subscribers)
 }
 
-func (s shurcoolSeesGitHubNotifications) Notify(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, nr notifications.NotificationRequest) error {
+func (s dmitshurSeesGitHubNotifications) Notify(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, nr notifications.NotificationRequest) error {
 	if strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
 		}
-		if currentUser != shurcool {
+		if currentUser != dmitshur {
 			return os.ErrPermission
 		}
-		return s.shurcoolGitHubNotifications.Notify(ctx, repo, threadType, threadID, nr)
+		return s.dmitshurGitHubNotifications.Notify(ctx, repo, threadType, threadID, nr)
 	}
 
 	return s.service.Notify(ctx, repo, threadType, threadID, nr)

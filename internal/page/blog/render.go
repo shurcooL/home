@@ -22,7 +22,7 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
+var dmitshur = users.UserSpec{ID: 1924134, Domain: "github.com"}
 
 // RenderBodyInnerHTML renders the inner HTML of the <body> element of the Blog page.
 // It's safe for concurrent use.
@@ -52,8 +52,8 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 		return err
 	}
 
-	// New Blog Post button for shurcooL.
-	if authenticatedUser.UserSpec == shurcool {
+	// New Blog Post button for dmitshur.
+	if authenticatedUser.UserSpec == dmitshur {
 		// TODO: Reuse a subset of component.PostButton (to reduce duplication of common button properties).
 		io.WriteString(w, `<div style="text-align: right;"><button style="font-family: inherit; font-size: 11px; line-height: 11px; height: 18px; border-radius: 4px; border: solid #d2d2d2 1px; background-color: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, .05);" onclick="window.location = '/blog/new';">New Blog Post</button></div>`)
 	}

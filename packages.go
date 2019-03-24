@@ -172,7 +172,7 @@ func packageHomeURL(importPath string) string {
 }
 
 // githubPackages is a hardcoded list Go packages on github.com,
-// specifically, a subset of packages made by shurcooL, excluding less noteworthy ones.
+// specifically, a subset of packages made by dmitshur, excluding less noteworthy ones.
 // It's sorted by import path.
 var githubPackages = []*code.Directory{
 	//{

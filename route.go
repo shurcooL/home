@@ -8,50 +8,50 @@ import (
 	"github.com/shurcooL/users"
 )
 
-// shurcoolSeesHomeRouter implements github.Router that
-// targets GitHub issues and PRs on home apps for shurcooL user, and
+// dmitshurSeesHomeRouter implements github.Router that
+// targets GitHub issues and PRs on home apps for dmitshur user, and
 // targets GitHub issues and PRs on github.com for all other users.
-type shurcoolSeesHomeRouter struct {
+type dmitshurSeesHomeRouter struct {
 	users users.Service
 }
 
-func (r shurcoolSeesHomeRouter) IssueURL(ctx context.Context, owner, repo string, issueID uint64) string {
-	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+func (r dmitshurSeesHomeRouter) IssueURL(ctx context.Context, owner, repo string, issueID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
 		return homeRouter{}.IssueURL(ctx, owner, repo, issueID)
 	}
 	return github.DotCom{}.IssueURL(ctx, owner, repo, issueID)
 }
 
-func (r shurcoolSeesHomeRouter) IssueCommentURL(ctx context.Context, owner, repo string, issueID, commentID uint64) string {
-	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+func (r dmitshurSeesHomeRouter) IssueCommentURL(ctx context.Context, owner, repo string, issueID, commentID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
 		return homeRouter{}.IssueCommentURL(ctx, owner, repo, issueID, commentID)
 	}
 	return github.DotCom{}.IssueCommentURL(ctx, owner, repo, issueID, commentID)
 }
 
-func (r shurcoolSeesHomeRouter) PullRequestURL(ctx context.Context, owner, repo string, prID uint64) string {
-	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+func (r dmitshurSeesHomeRouter) PullRequestURL(ctx context.Context, owner, repo string, prID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
 		return homeRouter{}.PullRequestURL(ctx, owner, repo, prID)
 	}
 	return github.DotCom{}.PullRequestURL(ctx, owner, repo, prID)
 }
 
-func (r shurcoolSeesHomeRouter) PullRequestCommentURL(ctx context.Context, owner, repo string, prID, commentID uint64) string {
-	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+func (r dmitshurSeesHomeRouter) PullRequestCommentURL(ctx context.Context, owner, repo string, prID, commentID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
 		return homeRouter{}.PullRequestCommentURL(ctx, owner, repo, prID, commentID)
 	}
 	return github.DotCom{}.PullRequestCommentURL(ctx, owner, repo, prID, commentID)
 }
 
-func (r shurcoolSeesHomeRouter) PullRequestReviewURL(ctx context.Context, owner, repo string, prID, reviewID uint64) string {
-	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+func (r dmitshurSeesHomeRouter) PullRequestReviewURL(ctx context.Context, owner, repo string, prID, reviewID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
 		return homeRouter{}.PullRequestReviewURL(ctx, owner, repo, prID, reviewID)
 	}
 	return github.DotCom{}.PullRequestReviewURL(ctx, owner, repo, prID, reviewID)
 }
 
-func (r shurcoolSeesHomeRouter) PullRequestReviewCommentURL(ctx context.Context, owner, repo string, prID, reviewCommentID uint64) string {
-	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == shurcool {
+func (r dmitshurSeesHomeRouter) PullRequestReviewCommentURL(ctx context.Context, owner, repo string, prID, reviewCommentID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
 		return homeRouter{}.PullRequestReviewCommentURL(ctx, owner, repo, prID, reviewCommentID)
 	}
 	return github.DotCom{}.PullRequestReviewCommentURL(ctx, owner, repo, prID, reviewCommentID)

@@ -90,7 +90,7 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		// Render content.
 		switch req.URL.Path {
 		case "/about":
-			shurcool, err := users.Get(req.Context(), shurcool)
+			dmitshur, err := users.Get(req.Context(), dmitshur)
 			if err != nil {
 				return err
 			}
@@ -100,21 +100,21 @@ func initAbout(notifications notifications.Service, users users.Service) {
 					attr.Style("display: table; margin-left: auto; margin-right: auto;"),
 					elem.Img(
 						attr.Style("width: 240px; height: 240px; border-radius: 8px; margin-bottom: 8px;"),
-						attr.Src(shurcool.AvatarURL),
+						attr.Src(dmitshur.AvatarURL),
 					),
 					elem.Div(
 						attr.Style("font-size: 26px; font-weight: 600;"),
-						shurcool.Name,
+						dmitshur.Name,
 					),
 					elem.Div(
 						attr.Style("font-size: 20px; font-weight: 300; color: #666;"),
-						shurcool.Login,
+						dmitshur.Login,
 					),
 					elem.Ul(
 						attr.Style("margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0;"),
 						elem.Li(iconLink{
-							Text: shurcool.Email,
-							URL:  "mailto:" + shurcool.Email,
+							Text: dmitshur.Email,
+							URL:  "mailto:" + dmitshur.Email,
 							Icon: faIcon("envelope-o"),
 						}),
 						elem.Li(iconLink{
@@ -131,7 +131,7 @@ func initAbout(notifications notifications.Service, users users.Service) {
 				),
 				elem.Div(
 					elem.P(
-						shurcool.Name+" is a software engineer and an avid ",
+						dmitshur.Name+" is a software engineer and an avid ",
 						elem.A(attr.Title("Someone who uses Go."), attr.Href("https://golang.org"),
 							"gopher",
 						),

@@ -19,13 +19,13 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var shurcool = users.UserSpec{ID: 1924134, Domain: "github.com"}
+var dmitshur = users.UserSpec{ID: 1924134, Domain: "github.com"}
 
 // Authenticated GitHub API clients with public repo scope.
 // (Since GraphQL API doesn't support unauthenticated clients at this time.)
-var shurcoolPublicRepoGHV3, shurcoolPublicRepoGHV4 = func() (*githubv3.Client, *githubv4.Client) {
+var dmitshurPublicRepoGHV3, dmitshurPublicRepoGHV4 = func() (*githubv3.Client, *githubv4.Client) {
 	authTransport := &oauth2.Transport{
-		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_SHURCOOL_PUBLIC_REPO")}),
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_DMITSHUR_PUBLIC_REPO")}),
 	}
 	cacheTransport := &httpcache.Transport{
 		Transport:           authTransport,
@@ -99,14 +99,14 @@ func withSession(req *http.Request, s *session) *http.Request {
 func initGitUsers(usersService users.Service) (gitUsers map[string]users.User, err error) {
 	// TODO: Add support for additional git users.
 	gitUsers = make(map[string]users.User) // Key is lower git author email.
-	shurcool, err := usersService.Get(context.Background(), shurcool)
+	dmitshur, err := usersService.Get(context.Background(), dmitshur)
 	if os.IsNotExist(err) {
-		log.Printf("initGitUsers: shurcool user does not exist: %v", err)
+		log.Printf("initGitUsers: dmitshur user does not exist: %v", err)
 		return gitUsers, nil
 	} else if err != nil {
 		return nil, err
 	}
-	gitUsers[strings.ToLower(shurcool.Email)] = shurcool
-	gitUsers[strings.ToLower("shurcooL@gmail.com")] = shurcool // Previous email.
+	gitUsers[strings.ToLower(dmitshur.Email)] = dmitshur
+	gitUsers[strings.ToLower("shurcooL@gmail.com")] = dmitshur // Previous email.
 	return gitUsers, nil
 }

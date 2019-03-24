@@ -38,7 +38,7 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 
 // initBlog registers a blog handler with blog URI as blog content source.
 func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.RepoSpec, notifications notifications.Service, users users.Service) error {
-	shurcoolBlogService := shurcoolBlogService{
+	dmitshurBlogService := dmitshurBlogService{
 		Service: issuesService,
 		users:   users,
 	}
@@ -108,7 +108,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 	.markdown-body { font-family: Go; }
 	tt, code, pre  { font-family: "Go Mono"; }
 </style>`,
-		BodyPre: `{{/* Override create issue button to only show up for shurcooL as New Blog Post button. */}}
+		BodyPre: `{{/* Override create issue button to only show up for dmitshur as New Blog Post button. */}}
 {{define "create-issue"}}
 	{{if and (eq .CurrentUser.ID 1924134) (eq .CurrentUser.Domain "github.com")}}
 		<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">New Blog Post</button></div>
@@ -180,7 +180,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 		// If this is not an issue page, that's okay, only include the header.
 		return []htmlg.Component{header}, nil
 	}
-	issuesApp := issuesapp.New(shurcoolBlogService, users, opt)
+	issuesApp := issuesapp.New(dmitshurBlogService, users, opt)
 
 	blogHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		prefixLen := len("/blog")
@@ -238,16 +238,16 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 	return nil
 }
 
-// shurcoolBlogService skips first comment (the issue body), because we're
+// dmitshurBlogService skips first comment (the issue body), because we're
 // taking on responsibility to render it ourselves (unless forceIssuesApp
 // is set). It also limits an issues.Service's Create method to allow only
-// shurcooL to create new blog posts.
-type shurcoolBlogService struct {
+// dmitshur to create new blog posts.
+type dmitshurBlogService struct {
 	issues.Service
 	users users.Service
 }
 
-func (s shurcoolBlogService) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
+func (s dmitshurBlogService) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
 	cs, listCommentsError := s.Service.ListComments(ctx, repo, id, opt)
 	_, forceIssuesApp := ctx.Value(forceIssuesAppContextKey).(struct{})
 	if len(cs) >= 1 && !forceIssuesApp {
@@ -258,18 +258,18 @@ func (s shurcoolBlogService) ListComments(ctx context.Context, repo issues.RepoS
 	return cs, listCommentsError
 }
 
-func (s shurcoolBlogService) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+func (s dmitshurBlogService) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
 	currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 	if err != nil {
 		return issues.Issue{}, err
 	}
-	if currentUser != shurcool {
+	if currentUser != dmitshur {
 		return issues.Issue{}, os.ErrPermission
 	}
 	return s.Service.Create(ctx, repo, issue)
 }
 
-func (s shurcoolBlogService) ThreadType(repo issues.RepoSpec) string {
+func (s dmitshurBlogService) ThreadType(repo issues.RepoSpec) string {
 	return s.Service.(interface {
 		ThreadType(issues.RepoSpec) string
 	}).ThreadType(repo)

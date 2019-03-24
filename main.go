@@ -117,7 +117,7 @@ func run(ctx context.Context, storeDir, stateFile, analyticsFile string) error {
 	if err != nil {
 		return fmt.Errorf("newReactionsService: %v", err)
 	}
-	githubRouter := shurcoolSeesHomeRouter{users: users}
+	githubRouter := dmitshurSeesHomeRouter{users: users}
 	notifications := initNotifications(
 		http.DefaultServeMux,
 		webdav.Dir(filepath.Join(storeDir, "notifications")),
