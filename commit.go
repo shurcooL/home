@@ -29,9 +29,9 @@ import (
 	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"github.com/sourcegraph/annotate"
+	"github.com/sourcegraph/go-diff/diff"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	"sourcegraph.com/sourcegraph/go-diff/diff"
 )
 
 // commitHandler is a handler for displaying a commit of a git repository.
