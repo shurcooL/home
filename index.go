@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"dmitri.shuralyov.com/html/belt"
 	"github.com/dustin/go-humanize"
@@ -577,7 +578,10 @@ func shortBody(s string) string {
 	if len(s) <= 200 {
 		return s
 	}
-	return s[:199] + "…"
+	var i int
+	for i = 1; i < utf8.UTFMax && !utf8.RuneStart(s[200-i]); i++ {
+	}
+	return s[:200-i] + "…"
 }
 
 type commits struct {
