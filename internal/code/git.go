@@ -16,6 +16,7 @@ import (
 	"github.com/AaronO/go-git-http"
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/events/event"
+	"github.com/shurcooL/go/osutil"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
@@ -119,6 +120,11 @@ func (h *gitHandler) serveGitInfoRefsUploadPack(w http.ResponseWriter, req *http
 	}
 	cmd := exec.CommandContext(req.Context(), h.gitUploadPack, "--strict", "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
+	if v := req.Header.Get("Git-Protocol"); v != "" {
+		env := osutil.Environ(os.Environ())
+		env.Set("GIT_PROTOCOL", v)
+		cmd.Env = env
+	}
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	err := cmd.Start()
@@ -158,6 +164,11 @@ func (h *gitHandler) serveGitUploadPack(w http.ResponseWriter, req *http.Request
 	}
 	cmd := exec.CommandContext(req.Context(), h.gitUploadPack, "--strict", "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
+	if v := req.Header.Get("Git-Protocol"); v != "" {
+		env := osutil.Environ(os.Environ())
+		env.Set("GIT_PROTOCOL", v)
+		cmd.Env = env
+	}
 	cmd.Stdin = req.Body
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -211,6 +222,11 @@ func (h *gitHandler) serveGitInfoRefsReceivePack(w http.ResponseWriter, req *htt
 
 	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
+	if v := req.Header.Get("Git-Protocol"); v != "" {
+		env := osutil.Environ(os.Environ())
+		env.Set("GIT_PROTOCOL", v)
+		cmd.Env = env
+	}
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	err = cmd.Start()
@@ -269,6 +285,11 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 
 	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
+	if v := req.Header.Get("Git-Protocol"); v != "" {
+		env := osutil.Environ(os.Environ())
+		env.Set("GIT_PROTOCOL", v)
+		cmd.Env = env
+	}
 	rpc := &githttp.RpcReader{
 		Reader: req.Body,
 		Rpc:    "receive-pack",
