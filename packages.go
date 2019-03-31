@@ -597,14 +597,6 @@ var githubPackages = []*code.Directory{
 		},
 	},
 	{
-		ImportPath: "github.com/shurcooL/go/ioutil",
-		RepoRoot:   "github.com/shurcooL/go",
-		Package: &code.Package{
-			Name:     "ioutil",
-			Synopsis: "Package ioutil provides a WriteFile func with an io.Reader as input.",
-		},
-	},
-	{
 		ImportPath: "github.com/shurcooL/go/open",
 		RepoRoot:   "github.com/shurcooL/go",
 		Package: &code.Package{
