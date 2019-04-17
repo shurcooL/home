@@ -32,8 +32,8 @@ var dmitshurPublicRepoGHV3, dmitshurPublicRepoGHV4 = func() (*githubv3.Client, *
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
-	return githubv3.NewClient(&http.Client{Transport: cacheTransport, Timeout: 5 * time.Second}),
-		githubv4.NewClient(&http.Client{Transport: authTransport, Timeout: 5 * time.Second})
+	return githubv3.NewClient(&http.Client{Transport: cacheTransport, Timeout: 10 * time.Second}),
+		githubv4.NewClient(&http.Client{Transport: authTransport, Timeout: 10 * time.Second})
 }()
 
 type userCreator interface {
