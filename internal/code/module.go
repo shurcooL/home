@@ -186,7 +186,7 @@ func (h ModuleHandler) ServeModuleMaybe(w http.ResponseWriter, req *http.Request
 		err = z.Close()
 		return err
 	default:
-		return os.ErrNotExist
+		panic("unreachable")
 	}
 }
 
