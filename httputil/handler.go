@@ -16,7 +16,18 @@ import (
 )
 
 // ErrorHandler factors error handling out of the HTTP handler.
-func ErrorHandler(users users.Service, handler func(w http.ResponseWriter, req *http.Request) error) http.Handler {
+// If users is nil, it treats all requests as made by an unauthenticated user.
+func ErrorHandler(
+	users interface {
+		// GetAuthenticated fetches the currently authenticated user,
+		// or User{UserSpec: UserSpec{ID: 0}} if there is no authenticated user.
+		GetAuthenticated(context.Context) (users.User, error)
+	},
+	handler func(w http.ResponseWriter, req *http.Request) error,
+) http.Handler {
+	if users == nil {
+		users = noUsers{}
+	}
 	return &errorHandler{handler: handler, users: users}
 }
 
@@ -30,11 +41,57 @@ type errorHandler struct {
 func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	rw := &headerResponseWriter{ResponseWriter: w}
 	err := h.handler(rw, req)
+	handleError(w, req, err, h.users, rw.WroteHeader)
+}
+
+// ErrorHandleMaybe factors error handling out of the HTTP maybe handler.
+// If users is nil, it treats all requests as made by an unauthenticated user.
+func ErrorHandleMaybe(
+	w http.ResponseWriter, req *http.Request,
+	users interface {
+		// GetAuthenticated fetches the currently authenticated user,
+		// or User{UserSpec: UserSpec{ID: 0}} if there is no authenticated user.
+		GetAuthenticated(context.Context) (users.User, error)
+	},
+	// maybeHandler serves an HTTP request, if it matches.
+	// It returns httperror.NotHandle if the HTTP request was explicitly not handled.
+	maybeHandler func(w http.ResponseWriter, req *http.Request) error,
+) (ok bool) {
+	if users == nil {
+		users = noUsers{}
+	}
+	rw := &headerResponseWriter{ResponseWriter: w}
+	err := maybeHandler(rw, req)
+	if err == httperror.NotHandle {
+		if rw.WroteHeader {
+			panic(fmt.Errorf("internal error: maybe handler wrote HTTP header and then returned httperror.NotHandle"))
+		}
+		// The request was explicitly not handled by the maybe handler.
+		// Do nothing, return ok==false.
+		return false
+	}
+	// The request was handled by the maybe handler.
+	// Handle error and return ok==true.
+	handleError(w, req, err, users, rw.WroteHeader)
+	return true
+}
+
+// handleError handles error err, which may be nil.
+func handleError(
+	w http.ResponseWriter, req *http.Request,
+	err error,
+	users interface {
+		// GetAuthenticated fetches the currently authenticated user,
+		// or User{UserSpec: UserSpec{ID: 0}} if there is no authenticated user.
+		GetAuthenticated(context.Context) (users.User, error)
+	},
+	wroteHeader bool,
+) {
 	if err == nil {
 		// Do nothing.
 		return
 	}
-	if err != nil && rw.WroteHeader {
+	if err != nil && wroteHeader {
 		// The header has already been written, so it's too late to send
 		// a different status code. Just log the error and move on.
 		log.Println(err)
@@ -55,7 +112,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err, ok := httperror.IsHTTP(err); ok {
 		code := err.Code
 		error := fmt.Sprintf("%d %s", code, http.StatusText(code))
-		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+		if user, e := users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, code)
@@ -74,7 +131,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if os.IsNotExist(err) {
 		log.Println(err)
 		error := "404 Not Found"
-		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+		if user, e := users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, http.StatusNotFound)
@@ -84,7 +141,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// TODO: Factor in a GetAuthenticatedSpec.ID == 0 check out here. (But this shouldn't apply for APIs.)
 		log.Println(err)
 		error := "403 Forbidden"
-		if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+		if user, e := users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 			error += "\n\n" + err.Error()
 		}
 		http.Error(w, error, http.StatusForbidden)
@@ -93,7 +150,7 @@ func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	log.Println(err)
 	error := "500 Internal Server Error"
-	if user, e := h.users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
+	if user, e := users.GetAuthenticated(req.Context()); e == nil && user.SiteAdmin {
 		error += "\n\n" + err.Error()
 	}
 	http.Error(w, error, http.StatusInternalServerError)
@@ -209,4 +266,16 @@ func bodyAllowedForStatus(status int) bool {
 	default:
 		return true
 	}
+}
+
+// noUsers implements a subset of the users.Service interface
+// relevant to fetching the currently authenticated user.
+//
+// It does not perform authentication, instead opting to
+// always report that there is an unauthenticated user.
+type noUsers struct{}
+
+// GetAuthenticated always reports that there is an unauthenticated user.
+func (noUsers) GetAuthenticated(context.Context) (users.User, error) {
+	return users.User{UserSpec: users.UserSpec{ID: 0, Domain: ""}}, nil
 }
