@@ -2,6 +2,7 @@ package code
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -22,6 +23,10 @@ import (
 	"github.com/shurcooL/users"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/gitcmd"
+)
+
+const (
+	gitTimeout = 45 * time.Second
 )
 
 // NewGitHandler creates a gitHandler.
@@ -118,7 +123,9 @@ func (h *gitHandler) serveGitInfoRefsUploadPack(w http.ResponseWriter, req *http
 		httperror.HandleMethod(w, httperror.Method{Allowed: []string{http.MethodGet}})
 		return
 	}
-	cmd := exec.CommandContext(req.Context(), h.gitUploadPack, "--strict", "--advertise-refs", ".")
+	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, h.gitUploadPack, "--strict", "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
 	if v := req.Header.Get("Git-Protocol"); v != "" {
 		env := osutil.Environ(os.Environ())
@@ -162,7 +169,9 @@ func (h *gitHandler) serveGitUploadPack(w http.ResponseWriter, req *http.Request
 		httperror.HandleBadRequest(w, httperror.BadRequest{Err: err})
 		return
 	}
-	cmd := exec.CommandContext(req.Context(), h.gitUploadPack, "--strict", "--stateless-rpc", ".")
+	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, h.gitUploadPack, "--strict", "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
 	if v := req.Header.Get("Git-Protocol"); v != "" {
 		env := osutil.Environ(os.Environ())
@@ -220,7 +229,9 @@ func (h *gitHandler) serveGitInfoRefsReceivePack(w http.ResponseWriter, req *htt
 		return
 	}
 
-	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--advertise-refs", ".")
+	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, h.gitReceivePack, "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
 	if v := req.Header.Get("Git-Protocol"); v != "" {
 		env := osutil.Environ(os.Environ())
@@ -283,7 +294,9 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	cmd := exec.CommandContext(req.Context(), h.gitReceivePack, "--stateless-rpc", ".")
+	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, h.gitReceivePack, "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
 	if v := req.Header.Get("Git-Protocol"); v != "" {
 		env := osutil.Environ(os.Environ())
