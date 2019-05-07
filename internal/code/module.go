@@ -28,20 +28,24 @@ import (
 )
 
 // ModuleHandler is a Go module server that implements the
-// module proxy protocol. It serves each repository root
-// available in Code as a Go module.
+// module proxy protocol.
 //
 // At this time, it has various limitations compared to the
 // general go mod download functionality that extracts module
 // versions from a VCS repository:
 //
-// 	•	Versions served include only pseudo-versions from
-// 		commits on master branch. Tags and other branches
-// 		are not supported at this time.
-// 	•	Multi-module repositories are not supported at this time.
+// • Versions served include only pseudo-versions from
+// commits on master branch. Tags and other branches
+// are not supported at this time.
+//
+// • Multi-module repositories are not supported at this time.
+//
+// • Major versions other than v0 are not supported at this time.
 //
 // This may change over time as my needs evolve.
 type ModuleHandler struct {
+	// Code is the underlying source of Go code.
+	// Each repository root available in it is served as a Go module.
 	Code *Service
 }
 
