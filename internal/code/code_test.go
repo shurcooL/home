@@ -19,7 +19,7 @@ import (
 	"github.com/shurcooL/users"
 )
 
-func Test(t *testing.T) {
+func TestCode(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "code_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -42,6 +42,7 @@ func Test(t *testing.T) {
 		t.Fatal("code.NewService:", err)
 	}
 
+	// Create a real HTTP server so we can git push to it.
 	gitHandler, err := code.NewGitHandler(service, filepath.Join(tempDir, "repositories"), events, users, nil, func(req *http.Request) *http.Request { return req })
 	if err != nil {
 		t.Fatal("code.NewGitHandler:", err)
@@ -50,7 +51,7 @@ func Test(t *testing.T) {
 		if ok := gitHandler.ServeGitMaybe(w, req); ok {
 			return
 		}
-		t.Error("http server got a non-git request")
+		t.Error("HTTP server got a non-git request")
 		http.NotFound(w, req)
 	}))
 	defer httpServer.Close()
