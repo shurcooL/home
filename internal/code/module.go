@@ -23,7 +23,6 @@ import (
 	"github.com/shurcooL/go/vfs/godocfs/vfsutil"
 	"github.com/shurcooL/home/internal/mod"
 	"github.com/shurcooL/httperror"
-	"golang.org/x/tools/godoc/vfs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/git"
 )
@@ -193,15 +192,16 @@ func (h ModuleHandler) serveZip(w http.ResponseWriter, repo *git.Repository, com
 			// We only care about files.
 			return nil
 		}
-		b, err := vfs.ReadFile(fs, name)
+		dst, err := z.Create(modulePath + "@" + version + name)
 		if err != nil {
 			return err
 		}
-		f, err := z.Create(modulePath + "@" + version + name)
+		src, err := fs.Open(name)
 		if err != nil {
 			return err
 		}
-		_, err = f.Write(b)
+		_, err = io.Copy(dst, src)
+		src.Close()
 		return err
 	})
 	if err != nil {
