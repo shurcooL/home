@@ -24,6 +24,7 @@ import (
 	"github.com/shurcooL/home/internal/mod"
 	"github.com/shurcooL/httperror"
 	"golang.org/x/tools/godoc/vfs"
+	"sourcegraph.com/sourcegraph/go-vcs/vcs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/git"
 )
 
@@ -86,15 +87,7 @@ func (h ModuleHandler) ServeModuleMaybe(w http.ResponseWriter, req *http.Request
 
 	// Handle "/@v/list" request.
 	if typ == "list" {
-		revs, err := listMasterCommits(req.Context(), gitDir)
-		if err != nil {
-			return err
-		}
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		for i := len(revs) - 1; i >= 0; i-- {
-			fmt.Fprintln(w, revs[i].Version)
-		}
-		return nil
+		return h.serveList(req.Context(), w, gitDir)
 	}
 
 	// Parse the time and revision from the pseudo-version.
@@ -125,73 +118,97 @@ func (h ModuleHandler) ServeModuleMaybe(w http.ResponseWriter, req *http.Request
 	// Handle one of "/@v/<version>.<ext>" requests.
 	switch typ {
 	case "info":
-		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "\t")
-		err := enc.Encode(mod.RevInfo{
-			Version: version,
-			Time:    versionTime,
-		})
-		return err
+		return h.serveInfo(w, version, versionTime)
 	case "mod":
-		fs, err := repo.FileSystem(commitID)
-		if err != nil {
-			return err
-		}
-		f, err := fs.Open("/go.mod")
-		if os.IsNotExist(err) {
-			// go.mod file doesn't exist in this commit.
-			f = nil
-		} else if err != nil {
-			return err
-		}
-		if f != nil {
-			defer f.Close()
-		}
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		if f != nil {
-			// Copy the existing go.mod file.
-			_, err := io.Copy(w, f)
-			return err
-		} else {
-			// Synthesize a go.mod file with just the module path.
-			_, err := fmt.Fprintf(w, "module %s\n", modfile.AutoQuote(modulePath))
-			return err
-		}
+		return h.serveMod(w, repo, commitID, modulePath)
 	case "zip":
-		fs, err := repo.FileSystem(commitID)
-		if err != nil {
-			return err
-		}
-		w.Header().Set("Content-Type", "application/zip")
-		z := zip.NewWriter(w)
-		err = vfsutil.Walk(fs, "/", func(name string, fi os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if fi.IsDir() {
-				// We only care about files.
-				return nil
-			}
-			b, err := vfs.ReadFile(fs, name)
-			if err != nil {
-				return err
-			}
-			f, err := z.Create(modulePath + "@" + version + name)
-			if err != nil {
-				return err
-			}
-			_, err = f.Write(b)
-			return err
-		})
-		if err != nil {
-			return err
-		}
-		err = z.Close()
-		return err
+		return h.serveZip(w, repo, commitID, modulePath, version)
 	default:
 		panic("unreachable")
 	}
+}
+
+func (h ModuleHandler) serveList(ctx context.Context, w http.ResponseWriter, gitDir string) error {
+	revs, err := listMasterCommits(ctx, gitDir)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	for i := len(revs) - 1; i >= 0; i-- {
+		fmt.Fprintln(w, revs[i].Version)
+	}
+	return nil
+}
+
+func (h ModuleHandler) serveInfo(w http.ResponseWriter, version string, time time.Time) error {
+	w.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "\t")
+	err := enc.Encode(mod.RevInfo{
+		Version: version,
+		Time:    time,
+	})
+	return err
+}
+
+func (h ModuleHandler) serveMod(w http.ResponseWriter, repo *git.Repository, commitID vcs.CommitID, modulePath string) error {
+	fs, err := repo.FileSystem(commitID)
+	if err != nil {
+		return err
+	}
+	f, err := fs.Open("/go.mod")
+	if os.IsNotExist(err) {
+		// go.mod file doesn't exist in this commit.
+		f = nil
+	} else if err != nil {
+		return err
+	}
+	if f != nil {
+		defer f.Close()
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if f != nil {
+		// Copy the existing go.mod file.
+		_, err := io.Copy(w, f)
+		return err
+	} else {
+		// Synthesize a go.mod file with just the module path.
+		_, err := fmt.Fprintf(w, "module %s\n", modfile.AutoQuote(modulePath))
+		return err
+	}
+}
+
+func (h ModuleHandler) serveZip(w http.ResponseWriter, repo *git.Repository, commitID vcs.CommitID, modulePath, version string) error {
+	fs, err := repo.FileSystem(commitID)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/zip")
+	z := zip.NewWriter(w)
+	err = vfsutil.Walk(fs, "/", func(name string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			// We only care about files.
+			return nil
+		}
+		b, err := vfs.ReadFile(fs, name)
+		if err != nil {
+			return err
+		}
+		f, err := z.Create(modulePath + "@" + version + name)
+		if err != nil {
+			return err
+		}
+		_, err = f.Write(b)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	err = z.Close()
+	return err
 }
 
 // listMasterCommits returns a list of commits in git repo on master branch.
