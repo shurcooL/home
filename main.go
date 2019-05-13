@@ -29,6 +29,7 @@ import (
 
 var (
 	httpFlag          = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
+	metricsHTTPFlag   = flag.String("metrics-http", "", "Listen for metrics HTTP connections on this address, if any.")
 	secureCookieFlag  = flag.Bool("secure-cookie", false, "Value of cookie attribute Secure.")
 	storeDirFlag      = flag.String("store-dir", filepath.Join(os.TempDir(), "home-store"), "Directory of home store (required).")
 	stateFileFlag     = flag.String("state-file", "", "Optional path to file to save/load state (file is deleted after loading).")
@@ -224,6 +225,10 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		http.DefaultServeMux,
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "projects"))),
 		notifications, users)
+
+	if *metricsHTTPFlag != "" {
+		initMetrics(cancel, *metricsHTTPFlag)
+	}
 
 	staticFiles := cookieAuth{httpgzip.FileServer(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri"))),
