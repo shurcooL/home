@@ -26,10 +26,8 @@ func TestModuleHandler(t *testing.T) {
 	moduleHandler := code.ModuleHandler{Code: service}
 
 	mux := http.NewServeMux()
+	mux.Handle("/api/module/", http.StripPrefix("/api/module/", httputil.ErrorHandler(nil, moduleHandler.ServeModule)))
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		if ok := httputil.ErrorHandleMaybe(w, req, nil, moduleHandler.ServeModuleMaybe); ok {
-			return
-		}
 		t.Error("HTTP server got a non-module proxy request")
 		http.NotFound(w, req)
 	})
@@ -43,21 +41,21 @@ func TestModuleHandler(t *testing.T) {
 	}{
 		// Module emptyrepo tests.
 		{
-			url:      "/emptyrepo/@v/list",
+			url:      "/api/module/dmitri.shuralyov.com/emptyrepo/@v/list",
 			wantType: "text/plain; charset=utf-8",
 			wantBody: "",
 		},
 
 		// Module kebabcase tests.
 		{
-			url:      "/kebabcase/@v/list",
+			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/list",
 			wantType: "text/plain; charset=utf-8",
 			wantBody: `v0.0.0-20170912031248-a1d95f8919b5
 v0.0.0-20170914162131-bf160e40a791
 `,
 		},
 		{
-			url:      "/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.info",
+			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.info",
 			wantType: "application/json",
 			wantBody: `{
 	"Version": "v0.0.0-20170912031248-a1d95f8919b5",
@@ -66,7 +64,7 @@ v0.0.0-20170914162131-bf160e40a791
 `,
 		},
 		{
-			url:      "/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.info",
+			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.info",
 			wantType: "application/json",
 			wantBody: `{
 	"Version": "v0.0.0-20170914162131-bf160e40a791",
@@ -75,31 +73,31 @@ v0.0.0-20170914162131-bf160e40a791
 `,
 		},
 		{
-			url:        "/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.mod",
+			url:        "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.mod",
 			wantType:   "text/plain; charset=utf-8",
 			wantBody:   "module dmitri.shuralyov.com/kebabcase\n",
 			wantModSum: "h1:zlZLgG71KSMQ+9XWuKJgSRws1h0iMspYv2y69MUzNFo=",
 		},
 		{
-			url:        "/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.mod",
+			url:        "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.mod",
 			wantType:   "text/plain; charset=utf-8",
 			wantBody:   "module dmitri.shuralyov.com/kebabcase\n",
 			wantModSum: "h1:zlZLgG71KSMQ+9XWuKJgSRws1h0iMspYv2y69MUzNFo=",
 		},
 		{
-			url:      "/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.zip",
+			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.zip",
 			wantType: "application/zip",
 			wantSum:  "h1:xUU8cZj0tfJxDjfyJ6xLLh6G615T10e16A1mxCoygiI=",
 		},
 		{
-			url:      "/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.zip",
+			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.zip",
 			wantType: "application/zip",
 			wantSum:  "h1:Lz+BA1qBebmQ4Ev2oGecFqNFK4jq5orgAPanU0rsL98=",
 		},
 
 		// Module scratch tests.
 		{
-			url:      "/scratch/@v/list",
+			url:      "/api/module/dmitri.shuralyov.com/scratch/@v/list",
 			wantType: "text/plain; charset=utf-8",
 			wantBody: `v0.0.0-20171129001319-b205cb69d5d7
 v0.0.0-20180121202958-53695465092b

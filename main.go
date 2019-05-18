@@ -199,6 +199,7 @@ func run(ctx context.Context, storeDir, stateFile, analyticsFile string) error {
 		return fmt.Errorf("code.NewService: %v", err)
 	}
 	moduleHandler := codepkg.ModuleHandler{Code: code}
+	http.Handle("/api/module/", http.StripPrefix("/api/module/", httputil.ErrorHandler(nil, moduleHandler.ServeModule)))
 	gitUsers, err := initGitUsers(users)
 	if err != nil {
 		return fmt.Errorf("initGitUsers: %v", err)
@@ -235,10 +236,6 @@ func run(ctx context.Context, storeDir, stateFile, analyticsFile string) error {
 		// Serve index page.
 		if req.URL.Path == "/" {
 			indexHandler.ServeHTTP(w, req)
-			return
-		}
-		// Serve module proxy protocol requests for existing repos, if the request matches.
-		if ok := httputil.ErrorHandleMaybe(w, req, nil, moduleHandler.ServeModuleMaybe); ok {
 			return
 		}
 		// Serve git protocol requests for existing repos, if the request matches.

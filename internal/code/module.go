@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,19 +27,23 @@ import (
 )
 
 // ModuleHandler is a Go module server that implements the
-// module proxy protocol.
+// module proxy protocol, as specified at
+// https://golang.org/cmd/go/#hdr-Module_proxy_protocol.
 //
-// At this time, it has various limitations compared to the
+// At this time, it has various restrictions compared to the
 // general go mod download functionality that extracts module
 // versions from a VCS repository:
 //
-// • Versions served include only pseudo-versions from
-// commits on master branch. Tags and other branches
-// are not supported at this time.
+// • It serves only pseudo-versions derived from commits
+// on master branch. No other versions or module queries
+// are supported at this time.
 //
-// • Multi-module repositories are not supported at this time.
+// • It serves a single module corresponding to the root
+// of each repository. Multi-module repositories are not
+// supported at this time.
 //
-// • Major versions other than v0 are not supported at this time.
+// • It serves only the v0 major version. Major versions
+// other than v0 are not supported at this time.
 //
 // This may change over time as my needs evolve.
 type ModuleHandler struct {
@@ -49,38 +52,30 @@ type ModuleHandler struct {
 	Code *Service
 }
 
-// ServeModuleMaybe serves a module proxy protocol HTTP request, if it matches.
-// It returns httperror.NotHandle if the HTTP request was explicitly not handled.
-func (h ModuleHandler) ServeModuleMaybe(w http.ResponseWriter, req *http.Request) error {
+// ServeModule serves a module proxy protocol HTTP request.
+//
+// The "$GOPROXY/" prefix must be stripped from req.URL.Path, so that
+// the given req.URL.Path is like "<module>/@v/<version>.info" (no leading slash).
+func (h ModuleHandler) ServeModule(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != http.MethodGet {
-		return httperror.NotHandle
+		return httperror.Method{Allowed: []string{http.MethodGet}}
 	}
 
 	// Parse the module path, type, and version from the URL.
-	r, ok := parseModuleProxyRequest("dmitri.shuralyov.com" + req.URL.Path)
+	r, ok := parseModuleProxyRequest(req.URL.Path)
 	if !ok {
-		return httperror.NotHandle
+		return os.ErrNotExist
 	}
 	dec, ok := r.Decode() // Decode module path and version.
 	if !ok {
-		// Maybe it was an unencoded module path or version (e.g., from a human visitor).
-		// Check if they can both be successfully encoded. If so, redirect to that URL.
-		if enc, ok := r.Encode(); ok {
-			// Preserve the current scheme and host.
-			u, err := url.Parse("https://" + enc.URL())
-			if err != nil {
-				return fmt.Errorf("ModuleHandler.ServeModuleMaybe: failed to parse own redirect URL: %v", err)
-			}
-			return httperror.Redirect{URL: u.Path}
-		}
-		return httperror.NotHandle
+		return httperror.BadRequest{Err: fmt.Errorf("failed to decode module path=%q and/or version=%q", r.Module, r.Version)}
 	}
 	modulePath, typ, version := dec.Module, dec.Type, dec.Version
 
 	// Look up code directory by module path.
 	d, ok := h.Code.Lookup(modulePath)
 	if !ok || !d.IsRepoRoot() {
-		return httperror.NotHandle
+		return os.ErrNotExist
 	}
 	gitDir := filepath.Join(h.Code.reposDir, filepath.FromSlash(d.RepoRoot))
 
@@ -102,7 +97,7 @@ func (h ModuleHandler) ServeModuleMaybe(w http.ResponseWriter, req *http.Request
 	}
 	defer func() {
 		if err := repo.Close(); err != nil {
-			log.Println("ModuleHandler.ServeModuleMaybe: repo.Close:", err)
+			log.Println("ModuleHandler.ServeModule: repo.Close:", err)
 		}
 	}()
 	commitID, err := repo.ResolveRevision(versionRevision)
