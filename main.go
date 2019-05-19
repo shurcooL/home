@@ -47,13 +47,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { <-int; cancel() }()
 
-	err := run(ctx, *storeDirFlag, *stateFileFlag, *analyticsFileFlag)
+	err := run(ctx, cancel, *storeDirFlag, *stateFileFlag, *analyticsFileFlag)
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func run(ctx context.Context, storeDir, stateFile, analyticsFile string) error {
+func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, analyticsFile string) error {
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
 		return err
 	}
@@ -277,6 +277,7 @@ func run(ctx context.Context, storeDir, stateFile, analyticsFile string) error {
 	err = server.ListenAndServe()
 	if err != http.ErrServerClosed {
 		log.Println("server.ListenAndServe:", err)
+		cancel()
 	}
 
 	log.Println("Ended HTTP server.")
