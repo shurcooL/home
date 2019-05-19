@@ -22,10 +22,11 @@ func TestNotificationsRedirectsLogin(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
-	if got, want := rr.Code, http.StatusSeeOther; got != want {
+	resp := rr.Result()
+	if got, want := resp.StatusCode, http.StatusSeeOther; got != want {
 		t.Errorf("got status code %d %s, want %d %s", got, http.StatusText(got), want, http.StatusText(want))
 	}
-	if got, want := rr.Header().Get("Location"), "/login?return=%2Fnotifications"; got != want {
+	if got, want := resp.Header.Get("Location"), "/login?return=%2Fnotifications"; got != want {
 		t.Errorf("got Location header %q, want %q", got, want)
 	}
 }

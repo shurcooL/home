@@ -34,10 +34,11 @@ func TestBlogNotFound(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, url, nil)
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
-		if got, want := rr.Code, http.StatusNotFound; got != want {
+		resp := rr.Result()
+		if got, want := resp.StatusCode, http.StatusNotFound; got != want {
 			t.Errorf("GET %s: got status code %d %s, want %d %s", url, got, http.StatusText(got), want, http.StatusText(want))
 		}
-		if got, want := rr.Header().Get("Content-Type"), "text/plain; charset=utf-8"; got != want {
+		if got, want := resp.Header.Get("Content-Type"), "text/plain; charset=utf-8"; got != want {
 			t.Errorf("GET %s: got Content-Type header %q, want %q", url, got, want)
 		}
 		if got, want := rr.Body.String(), "404 Not Found\n"; got != want {

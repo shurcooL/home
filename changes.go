@@ -376,7 +376,6 @@ func (h changesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		req.URL.Path = "/"
 	}
 	rr := httptest.NewRecorder()
-	rr.HeaderMap = w.Header()
 	req = req.WithContext(context.WithValue(req.Context(), repoInfoContextKey, h.Repo)) // For BodyTop.
 	req = req.WithContext(context.WithValue(req.Context(), changes.RepoSpecContextKey, h.SpecURL))
 	req = req.WithContext(context.WithValue(req.Context(), changes.BaseURIContextKey, h.BaseURL))
@@ -389,6 +388,9 @@ func (h changesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 			RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
 		}).String()
 		return httperror.Redirect{URL: loginURL}
+	}
+	for k, vs := range rr.Header() {
+		w.Header()[k] = vs
 	}
 	w.WriteHeader(rr.Code)
 	_, err := io.Copy(w, rr.Body)

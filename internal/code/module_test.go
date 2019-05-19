@@ -110,10 +110,11 @@ v0.0.0-20180326031431-f628922a6885
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)
-			if got, want := rr.Code, http.StatusOK; got != want {
+			resp := rr.Result()
+			if got, want := resp.StatusCode, http.StatusOK; got != want {
 				t.Errorf("got status code %d %s, want %d %s", got, http.StatusText(got), want, http.StatusText(want))
 			}
-			if got, want := rr.Header().Get("Content-Type"), tt.wantType; got != want {
+			if got, want := resp.Header.Get("Content-Type"), tt.wantType; got != want {
 				t.Errorf("got Content-Type header %q, want %q", got, want)
 			}
 			if tt.wantType != "application/zip" {

@@ -118,7 +118,6 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 			req.URL.Path = "/"
 		}
 		rr := httptest.NewRecorder()
-		rr.HeaderMap = w.Header()
 		req = req.WithContext(context.WithValue(req.Context(), notificationsapp.BaseURIContextKey, "/notifications"))
 		notificationsApp.ServeHTTP(rr, req)
 		// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
@@ -129,6 +128,9 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
 			}).String()
 			return httperror.Redirect{URL: loginURL}
+		}
+		for k, vs := range rr.Header() {
+			w.Header()[k] = vs
 		}
 		w.WriteHeader(rr.Code)
 		_, err := io.Copy(w, rr.Body)
