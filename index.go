@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"dmitri.shuralyov.com/html/belt"
+	statepkg "dmitri.shuralyov.com/state"
 	"github.com/dustin/go-humanize"
 	"github.com/shurcooL/component"
 	"github.com/shurcooL/events"
@@ -180,9 +181,8 @@ func (a activity) Render() []*html.Node {
 
 		// Event.
 		basicEvent := basicEvent{
-			Time:      e.Time,
-			Actor:     e.Actor.Login,
-			Container: e.Container,
+			Time:  e.Time,
+			Actor: e.Actor.Login,
 		}
 
 		if a.ShowRaw {
@@ -197,67 +197,39 @@ func (a activity) Render() []*html.Node {
 		var displayEvent htmlg.Component
 		switch p := e.Payload.(type) {
 		case event.Issue:
-			e := activityEvent{
+			ae := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.IssueOpened,
-				Action:     component.Text(fmt.Sprintf("%v an issue in", p.Action)),
+				Action:     component.Join(p.Action, " an issue ", issueFromAction(p, e.Container)),
 			}
-			details := iconLink{
-				Text:  p.IssueTitle,
-				URL:   p.IssueHTMLURL,
-				Black: true,
+			if p.Action == "reopened" {
+				ae.Icon = octicon.IssueReopened
+			} else if p.Action == "opened" && p.IssueBody != "" {
+				ae.Details = imageText{
+					ImageURL: e.Actor.AvatarURL,
+					Text:     shortBody(p.IssueBody),
+				}
 			}
-			switch p.Action {
-			case "opened":
-				details.Icon = octicon.IssueOpened
-				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-			case "closed":
-				details.Icon = octicon.IssueClosed
-				details.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-			case "reopened":
-				details.Icon = octicon.IssueReopened
-				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-
-				//default:
-				//log.Println("activity.Render: unsupported event.Issue action:", p.Action)
-				//details.Icon = octicon.IssueOpened
-			}
-			e.Details = details
-			displayEvent = e
+			displayEvent = ae
 		case event.Change:
-			e := activityEvent{
+			ae := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.GitPullRequest,
-				Action:     component.Text(fmt.Sprintf("%v a change in", p.Action)),
+				Action:     component.Join(p.Action, " a change ", changeFromAction(p, e.Container)),
 			}
-			details := iconLink{
-				Text:  p.ChangeTitle,
-				URL:   p.ChangeHTMLURL,
-				Black: true,
+			if p.Action == "opened" && p.ChangeBody != "" {
+				ae.Details = imageText{
+					ImageURL: e.Actor.AvatarURL,
+					Text:     shortBody(p.ChangeBody),
+				}
 			}
-			switch p.Action {
-			case "opened", "reopened":
-				details.Icon = octicon.GitPullRequest
-				details.IconColor = &RGB{R: 0x6c, G: 0xc6, B: 0x44} // Green.
-			case "closed":
-				details.Icon = octicon.GitPullRequest
-				details.IconColor = &RGB{R: 0xbd, G: 0x2c, B: 0x00} // Red.
-			case "merged":
-				details.Icon = octicon.GitMerge
-				details.IconColor = &RGB{R: 0x6e, G: 0x54, B: 0x94} // Purple.
-
-				//default:
-				//log.Println("activity.Render: unsupported event.Change action:", p.Action)
-				//details.Icon = octicon.GitPullRequest
-			}
-			e.Details = details
-			displayEvent = e
+			displayEvent = ae
 
 		case event.IssueComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.CommentDiscussion,
-				Action:     component.Join("commented on ", issueName(p), " in"),
+				Action:     component.Join("commented on ", issueFromComment(p, e.Container)),
 				Details: imageText{
 					ImageURL: e.Actor.AvatarURL,
 					Text:     shortBody(p.CommentBody),
@@ -281,14 +253,14 @@ func (a activity) Render() []*html.Node {
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.CommentDiscussion,
-				Action:     component.Join(verb, " on ", changeName(p), " in"),
+				Action:     component.Join(verb, " on ", changeFromComment(p, e.Container)),
 				Details:    details,
 			}
 		case event.CommitComment:
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.CommentDiscussion,
-				Action:     component.Join("commented on ", commitName(p), " in"),
+				Action:     component.Join("commented on ", commitName(p, e.Container)),
 				Details: imageText{
 					ImageURL: e.Actor.AvatarURL,
 					Text:     shortBody(p.CommentBody),
@@ -296,24 +268,26 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case event.Push:
-			e := activityEvent{
+			basicEvent.Container = e.Container
+			ae := activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.GitCommit,
-				Action:     component.Join("pushed to ", belt.Reference{Name: p.Branch}, " in"),
+				Action:     component.Join("pushed to ", belt.Reference{Name: p.Branch}),
 			}
 			switch len(p.Commits) {
 			default:
-				e.Details = commits{
+				ae.Details = commits{
 					Commits: p.Commits,
 				}
 			case 0:
 				before := belt.CommitID{SHA: p.Before, HTMLURL: p.BeforeHTMLURL}
 				head := belt.CommitID{SHA: p.Head, HTMLURL: p.HeadHTMLURL}
-				e.Details = component.Join(before, " → ", head)
+				ae.Details = component.Join(before, " → ", head)
 			}
-			displayEvent = e
+			displayEvent = ae
 
 		case event.Star:
+			basicEvent.Container = e.Container
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.Star,
@@ -321,36 +295,42 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case event.Create:
-			e := activityEvent{
+			basicEvent.Container = e.Container
+			ae := activityEvent{
 				basicEvent: &basicEvent,
 			}
 			switch p.Type {
 			case "repository":
-				e.Icon = octicon.Repo
-				e.Action = component.Text("created repository")
-				e.Details = plainText{Text: p.Description}
+				ae.Icon = octicon.Repo
+				ae.Action = component.Text("created repository")
+				if p.Description != "" {
+					ae.Details = plainText{Text: p.Description}
+				}
 			case "package":
-				e.Icon = octicon.Package
-				e.Action = component.Text("created package")
-				e.Details = plainText{Text: p.Description}
+				ae.Icon = octicon.Package
+				ae.Action = component.Text("created package")
+				if p.Description != "" {
+					ae.Details = plainText{Text: p.Description}
+				}
 			case "branch":
-				e.Icon = octicon.GitBranch
-				e.Action = component.Text("created branch in")
-				e.Details = belt.Reference{Name: p.Name}
+				ae.Icon = octicon.GitBranch
+				ae.Action = component.Text("created branch")
+				ae.Details = belt.Reference{Name: p.Name}
 			case "tag":
-				e.Icon = octicon.Tag
-				e.Action = component.Text("created tag in")
-				e.Details = belt.Reference{Name: p.Name}
+				ae.Icon = octicon.Tag
+				ae.Action = component.Text("created tag")
+				ae.Details = belt.Reference{Name: p.Name}
 
 				//default:
 				//basicEvent.WIP = true
-				//e.Action = component.Text(fmt.Sprintf("created %v in", *p.RefType))
+				//e.Action = component.Text(fmt.Sprintf("created %v", *p.RefType))
 				//e.Details = code{
 				//	Text: p.Name,
 				//}
 			}
-			displayEvent = e
+			displayEvent = ae
 		case event.Fork:
+			basicEvent.Container = e.Container
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.RepoForked,
@@ -364,10 +344,11 @@ func (a activity) Render() []*html.Node {
 				},
 			}
 		case event.Delete:
+			basicEvent.Container = e.Container
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.Trashcan,
-				Action:     component.Text(fmt.Sprintf("deleted %v in", p.Type)),
+				Action:     component.Text(fmt.Sprintf("deleted %v", p.Type)),
 				Details: belt.Reference{
 					Name:          p.Name,
 					Strikethrough: true,
@@ -375,10 +356,11 @@ func (a activity) Render() []*html.Node {
 			}
 
 		case event.Wiki:
+			basicEvent.Container = e.Container
 			displayEvent = activityEvent{
 				basicEvent: &basicEvent,
 				Icon:       octicon.Book,
-				Action:     component.Text("edited the wiki in"),
+				Action:     component.Text("edited the wiki"),
 				Details: pages{
 					ActorAvatarURL: e.Actor.AvatarURL,
 					Pages:          p.Pages,
@@ -399,40 +381,74 @@ func (a activity) Render() []*html.Node {
 	return []*html.Node{htmlg.DivClass("activity", nodes...)}
 }
 
-func issueName(p event.IssueComment) htmlg.Component {
+func issueFromAction(p event.Issue, importPath string) htmlg.Component {
+	var is statepkg.Issue
+	switch p.Action {
+	case "opened", "reopened":
+		is = statepkg.IssueOpen
+	case "closed":
+		is = statepkg.IssueClosed
+	default:
+		log.Printf("issueFromAction: unsupported event.Issue action %q\n", p.Action)
+		is = statepkg.IssueOpen
+	}
+	return belt.Issue{
+		State:   is,
+		Title:   importPath + ": " + p.IssueTitle,
+		HTMLURL: p.IssueHTMLURL,
+	}
+}
+func issueFromComment(p event.IssueComment, importPath string) htmlg.Component {
 	return belt.Issue{
 		State:   p.IssueState,
-		Title:   p.IssueTitle,
+		Title:   importPath + ": " + p.IssueTitle,
 		HTMLURL: p.CommentHTMLURL,
-		Short:   true,
 	}
 }
-func changeName(p event.ChangeComment) htmlg.Component {
+func changeFromAction(p event.Change, importPath string) htmlg.Component {
+	var cs statepkg.Change
+	switch p.Action {
+	case "opened", "reopened":
+		cs = statepkg.ChangeOpen
+	case "closed":
+		cs = statepkg.ChangeClosed
+	case "merged":
+		cs = statepkg.ChangeMerged
+	default:
+		log.Printf("changeFromAction: unsupported event.Change action %q\n", p.Action)
+		cs = statepkg.ChangeOpen
+	}
+	return belt.Change{
+		State:   cs,
+		Title:   importPath + ": " + p.ChangeTitle,
+		HTMLURL: p.ChangeHTMLURL,
+	}
+}
+func changeFromComment(p event.ChangeComment, importPath string) htmlg.Component {
 	return belt.Change{
 		State:   p.ChangeState,
-		Title:   p.ChangeTitle,
+		Title:   importPath + ": " + p.ChangeTitle,
 		HTMLURL: p.CommentHTMLURL,
-		Short:   true,
 	}
 }
-func commitName(p event.CommitComment) htmlg.Component {
+func commitName(p event.CommitComment, importPath string) htmlg.Component {
 	c := p.Commit
 	if c.Message == "" {
-		return component.Text("a commit")
+		a := htmlg.A(importPath, "https://"+importPath)
+		return component.Join("a commit in ", htmlg.NodeComponent(*a))
 	}
 	return belt.Commit{
 		SHA:             c.SHA,
-		Message:         c.Message,
+		Message:         importPath + ": " + c.Message,
 		AuthorAvatarURL: c.AuthorAvatarURL,
 		HTMLURL:         c.HTMLURL,
-		Short:           true,
 	}
 }
 
 type basicEvent struct {
 	Time      time.Time
 	Actor     string
-	Container string // URL of container without schema. E.g., "github.com/user/repo".
+	Container string // URL of container without schema. E.g., "github.com/user/repo". Optional.
 
 	WIP bool   // Whether this event's presentation is a work in progress.
 	Raw string // Raw event for debugging to display as title. Empty string excludes it.
@@ -465,17 +481,19 @@ func (e activityEvent) Render() []*html.Node {
 		htmlg.Text(e.Actor),
 		htmlg.Text(" "),
 		action,
-		htmlg.Text(" "),
-		htmlg.A(e.Container, "https://"+e.Container),
-		&html.Node{
-			Type: html.ElementNode, Data: atom.Span.String(),
-			Attr: []html.Attribute{
-				{Key: atom.Class.String(), Val: "time"},
-				{Key: atom.Title.String(), Val: humanize.Time(e.Time) + " – " + e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
-			},
-			FirstChild: htmlg.Text(compactTime(e.Time)),
-		},
 	)
+	if e.Container != "" {
+		div.AppendChild(htmlg.Text(" in "))
+		div.AppendChild(htmlg.A(e.Container, "https://"+e.Container))
+	}
+	div.AppendChild(&html.Node{
+		Type: html.ElementNode, Data: atom.Span.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Class.String(), Val: "time"},
+			{Key: atom.Title.String(), Val: humanize.Time(e.Time) + " – " + e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
+		},
+		FirstChild: htmlg.Text(compactTime(e.Time)),
+	})
 	if e.Details != nil {
 		div.AppendChild(htmlg.DivClass("details", e.Details.Render()...))
 	}
