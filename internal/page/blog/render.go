@@ -8,6 +8,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dustin/go-humanize"
 	"github.com/shurcooL/github_flavored_markdown"
@@ -98,7 +99,11 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 		// Contents.
 		io.WriteString(w, `<div class="markdown-body" style="padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 8px;">`)
-		w.Write(github_flavored_markdown.Markdown([]byte(comment.Body)))
+		body, shortened := shorten([]byte(comment.Body))
+		w.Write(github_flavored_markdown.Markdown(body))
+		if shortened {
+			fmt.Fprintf(w, `<p style="box-shadow: 0 0 100px 100px white; position: relative;"><a href="/blog/%d">View Full Post</a></p>`, issue.ID)
+		}
 		io.WriteString(w, `</div>`)
 
 		// Reactions bar.
@@ -120,6 +125,16 @@ func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.
 
 	_, err = io.WriteString(w, `</div>`)
 	return err
+}
+
+func shorten(s []byte) ([]byte, bool) {
+	if len(s) <= 2000 {
+		return s, false
+	}
+	var i int
+	for i = 1; i < utf8.UTFMax && !utf8.RuneStart(s[2000-i]); i++ {
+	}
+	return append(s[:2000-i], []byte("…")...), true
 }
 
 // Post is an individual blog post.
