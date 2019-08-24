@@ -73,6 +73,10 @@ a:hover, a:active {
 	float: right;
 	text-align: right;
 }
+.itemheader .location {
+	font-size: 75%;
+	font-weight: normal;
+}
 ul {
 	margin: 13px 0px 0px 0px;
 	list-style-type: square;
