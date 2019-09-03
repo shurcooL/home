@@ -228,6 +228,8 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 
 	if *metricsHTTPFlag != "" {
 		initMetrics(cancel, *metricsHTTPFlag)
+		go measureGitHubV3RateLimit()
+		go measureGitHubV4RateLimit()
 	}
 
 	staticFiles := cookieAuth{httpgzip.FileServer(

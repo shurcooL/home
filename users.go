@@ -36,6 +36,35 @@ var dmitshurPublicRepoGHV3, dmitshurPublicRepoGHV4 = func() (*githubv3.Client, *
 		githubv4.NewClient(&http.Client{Transport: authTransport, Timeout: 10 * time.Second})
 }()
 
+// measureGitHubV3RateLimit measures and reports GitHub API v3 rate limit.
+func measureGitHubV3RateLimit() {
+	for {
+		rate, _, err := dmitshurPublicRepoGHV3.RateLimits(context.Background())
+		if err != nil {
+			log.Println("dmitshurPublicRepoGHV3.RateLimits:", err)
+			time.Sleep(time.Minute)
+			continue
+		}
+		metrics.SetGitHubRateLimit("dmitshur-v3", rate.Core.Remaining)
+		time.Sleep(time.Minute)
+	}
+}
+
+// measureGitHubV4RateLimit measures and reports GitHub API v4 rate limit.
+func measureGitHubV4RateLimit() {
+	for {
+		var q struct{ RateLimit struct{ Remaining int } }
+		err := dmitshurPublicRepoGHV4.Query(context.Background(), &q, nil)
+		if err != nil {
+			log.Println("dmitshurPublicRepoGHV4.Query for RateLimit:", err)
+			time.Sleep(time.Minute)
+			continue
+		}
+		metrics.SetGitHubRateLimit("dmitshur-v4", q.RateLimit.Remaining)
+		time.Sleep(time.Minute)
+	}
+}
+
 type userCreator interface {
 	// Create creates the specified user.
 	// It returns os.ErrExist if the user already exists.
