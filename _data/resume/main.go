@@ -14,7 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gopherjs/gopherjs/js"
 	"github.com/shurcooL/frontend/reactionsmenu"
+	homecomponent "github.com/shurcooL/home/component"
 	homehttp "github.com/shurcooL/home/http"
 	"github.com/shurcooL/home/internal/page/resume"
 	"github.com/shurcooL/notificationsapp/httpclient"
@@ -50,6 +52,8 @@ func setup(ctx context.Context) {
 	query, _ := url.ParseQuery(strings.TrimPrefix(dom.GetWindow().Location().Search, "?"))
 	prerender, _ := strconv.ParseBool(query.Get("prerender"))
 	if !prerender {
+		homecomponent.RedLogo = js.Global.Get("RedLogo").Bool()
+
 		httpClient := httpClient()
 
 		notificationsService := httpclient.NewNotifications(httpClient, "", "")

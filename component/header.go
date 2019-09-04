@@ -17,6 +17,10 @@ type Header struct {
 	ReturnURL         string
 }
 
+// RedLogo controls whether the logo is displayed in red,
+// rather than its normal color.
+var RedLogo bool
+
 // Render implements htmlg.Component.
 func (h Header) Render() []*html.Node {
 	// TODO: Make this much nicer.
@@ -87,6 +91,15 @@ header.header .user {
 	float: right;
 	padding-top: 8px;
 }`))
+	if RedLogo {
+		style.AppendChild(htmlg.Text(`
+header.header a.Logo {
+	color: red;
+}
+header.header a.Logo:hover {
+	color: darkred;
+}`))
+	}
 
 	header := &html.Node{
 		Type: html.ElementNode, Data: atom.Header.String(),
@@ -208,6 +221,7 @@ func (Logo) Render() []*html.Node {
 		Attr: []html.Attribute{
 			{Key: atom.Href.String(), Val: "/"},
 			{Key: atom.Style.String(), Val: "display: inline-block;"},
+			{Key: atom.Class.String(), Val: "Logo"},
 		},
 	}
 	svg := &html.Node{

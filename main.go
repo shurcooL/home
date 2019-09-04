@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"mime"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/shurcooL/home/assets"
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
 	codepkg "github.com/shurcooL/home/internal/code"
@@ -34,6 +36,8 @@ var (
 	storeDirFlag      = flag.String("store-dir", filepath.Join(os.TempDir(), "home-store"), "Directory of home store (required).")
 	stateFileFlag     = flag.String("state-file", "", "Optional path to file to save/load state (file is deleted after loading).")
 	analyticsFileFlag = flag.String("analytics-file", "", "Optional path to file containing analytics HTML to insert at the beginning of <head>.")
+	noRobotsFlag      = flag.Bool("no-robots", false, "Disallow all robots on all pages.")
+	redLogoFlag       = flag.Bool("red-logo", false, "Display the logo in red.")
 )
 
 var (
@@ -48,13 +52,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { <-int; cancel() }()
 
-	err := run(ctx, cancel, *storeDirFlag, *stateFileFlag, *analyticsFileFlag)
+	err := run(ctx, cancel, *storeDirFlag, *stateFileFlag, *analyticsFileFlag, *noRobotsFlag, *redLogoFlag)
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, analyticsFile string) error {
+func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, analyticsFile string, noRobots, redLogo bool) error {
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
 		return err
 	}
@@ -68,6 +72,23 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 			return err
 		}
 		analyticsHTML = template.HTML(b)
+	}
+	if noRobots {
+		http.HandleFunc("/robots.txt", func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			io.WriteString(w, "User-agent: *\nDisallow: /\n")
+		})
+	}
+	if redLogo {
+		component.RedLogo = true
+		http.HandleFunc("/icon.png", func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Content-Type", "image/png")
+			w.Header()["Content-Encoding"] = nil // Disable automatic gzip compression, png is already compressed.
+			err := serveFile(w, req, filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "icon-red.png"))
+			if err != nil {
+				log.Println(`serveFile("icon-red.png"):`, err)
+			}
+		})
 	}
 
 	initStores := func(storeDir string) error {

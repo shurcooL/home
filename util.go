@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 	"net/url"
+	"os"
+
+	"github.com/shurcooL/httpgzip"
 )
 
 // copyRequestAndURL returns a copy of req and its URL field.
@@ -26,4 +29,19 @@ func stripPrefix(r *http.Request, prefixLen int) *http.Request {
 		r2.URL.Path = "/"
 	}
 	return r2
+}
+
+// serveFile opens the file at path and serves it using httpgzip.ServeContent.
+func serveFile(w http.ResponseWriter, req *http.Request, path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	fi, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	httpgzip.ServeContent(w, req, fi.Name(), fi.ModTime(), f)
+	return nil
 }

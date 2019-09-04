@@ -23,6 +23,7 @@ var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/resume/style.css" rel="stylesheet" type="text/css">
+		<script>var RedLogo = {{.RedLogo}};</script>
 
 		{{noescape "<!-- Unminified source is at https://github.com/shurcooL/resume. -->"}}
 		<script async src="/assets/resume/resume.js"></script>
@@ -36,7 +37,10 @@ func initResume(reactions reactions.Service, notifications notifications.Service
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
+		data := struct {
+			AnalyticsHTML template.HTML
+			RedLogo       bool
+		}{analyticsHTML, *redLogoFlag}
 		err := resumeHTML.Execute(w, data)
 		if err != nil {
 			return err
