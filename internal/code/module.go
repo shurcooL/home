@@ -17,11 +17,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rogpeppe/go-internal/modfile"
-	"github.com/rogpeppe/go-internal/module"
 	"github.com/shurcooL/go/vfs/godocfs/vfsutil"
 	"github.com/shurcooL/home/internal/mod"
 	"github.com/shurcooL/httperror"
+	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/module"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/git"
 )
@@ -66,11 +66,11 @@ func (h ModuleHandler) ServeModule(w http.ResponseWriter, req *http.Request) err
 	if !ok {
 		return os.ErrNotExist
 	}
-	dec, ok := r.Decode() // Decode module path and version.
+	unesc, ok := r.Unescape() // Unescape module path and version.
 	if !ok {
-		return httperror.BadRequest{Err: fmt.Errorf("failed to decode module path=%q and/or version=%q", r.Module, r.Version)}
+		return httperror.BadRequest{Err: fmt.Errorf("failed to unescape module path=%q and/or version=%q", r.Module, r.Version)}
 	}
-	modulePath, typ, version := dec.Module, dec.Type, dec.Version
+	modulePath, typ, version := unesc.Module, unesc.Type, unesc.Version
 
 	// Look up code directory by module path.
 	d, ok := h.Code.Lookup(modulePath)
@@ -257,7 +257,7 @@ func readLine(b *[]byte) string {
 }
 
 // moduleProxyRequest represents a module proxy request.
-// The Module and Version fields may be encoded or unencoded.
+// The Module and Version fields may be escaped or unescaped.
 type moduleProxyRequest struct {
 	Module  string // Module path.
 	Type    string // Type of request. One of "list", "info", "mod", or "zip".
@@ -265,7 +265,7 @@ type moduleProxyRequest struct {
 }
 
 // parseModuleProxyRequest parses the module proxy request
-// from the given URL. It does not attempt to decode the
+// from the given URL. It does not attempt to unescape the
 // module path and version, the caller is responsible for that.
 func parseModuleProxyRequest(url string) (_ moduleProxyRequest, ok bool) {
 	// Split "<module>/@v/<file>" into module and file.
@@ -296,34 +296,34 @@ func parseModuleProxyRequest(url string) (_ moduleProxyRequest, ok bool) {
 	}
 }
 
-// Decode returns a copy of r with Module and Version fields decoded.
-func (r moduleProxyRequest) Decode() (_ moduleProxyRequest, ok bool) {
+// Unescape returns a copy of r with Module and Version fields unescaped.
+func (r moduleProxyRequest) Unescape() (_ moduleProxyRequest, ok bool) {
 	var err error
-	r.Module, err = module.DecodePath(r.Module)
+	r.Module, err = module.UnescapePath(r.Module)
 	if err != nil {
 		return moduleProxyRequest{}, false
 	}
 	if r.Type == "list" {
 		return r, true
 	}
-	r.Version, err = module.DecodeVersion(r.Version)
+	r.Version, err = module.UnescapeVersion(r.Version)
 	if err != nil {
 		return moduleProxyRequest{}, false
 	}
 	return r, true
 }
 
-// Encode returns a copy of r with Module and Version fields encoded.
-func (r moduleProxyRequest) Encode() (_ moduleProxyRequest, ok bool) {
+// Escape returns a copy of r with Module and Version fields escaped.
+func (r moduleProxyRequest) Escape() (_ moduleProxyRequest, ok bool) {
 	var err error
-	r.Module, err = module.EncodePath(r.Module)
+	r.Module, err = module.EscapePath(r.Module)
 	if err != nil {
 		return moduleProxyRequest{}, false
 	}
 	if r.Type == "list" {
 		return r, true
 	}
-	r.Version, err = module.EncodeVersion(r.Version)
+	r.Version, err = module.EscapeVersion(r.Version)
 	if err != nil {
 		return moduleProxyRequest{}, false
 	}

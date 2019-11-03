@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rogpeppe/go-internal/dirhash"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/mod"
+	"golang.org/x/mod/sumdb/dirhash"
 )
 
 func TestModuleHandler(t *testing.T) {

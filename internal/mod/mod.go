@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rogpeppe/go-internal/dirhash"
-	"github.com/rogpeppe/go-internal/semver"
+	"golang.org/x/mod/semver"
+	"golang.org/x/mod/sumdb/dirhash"
 )
 
 // A RevInfo describes a single revision in a module repository.
