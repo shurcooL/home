@@ -29,6 +29,13 @@ func (r dmitshurSeesHomeRouter) IssueCommentURL(ctx context.Context, owner, repo
 	return github.DotCom{}.IssueCommentURL(ctx, owner, repo, issueID, commentID)
 }
 
+func (r dmitshurSeesHomeRouter) IssueEventURL(ctx context.Context, owner, repo string, issueID, eventID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
+		return homeRouter{}.IssueEventURL(ctx, owner, repo, issueID, eventID)
+	}
+	return github.DotCom{}.IssueEventURL(ctx, owner, repo, issueID, eventID)
+}
+
 func (r dmitshurSeesHomeRouter) PullRequestURL(ctx context.Context, owner, repo string, prID uint64) string {
 	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
 		return homeRouter{}.PullRequestURL(ctx, owner, repo, prID)
@@ -57,6 +64,13 @@ func (r dmitshurSeesHomeRouter) PullRequestReviewCommentURL(ctx context.Context,
 	return github.DotCom{}.PullRequestReviewCommentURL(ctx, owner, repo, prID, reviewCommentID)
 }
 
+func (r dmitshurSeesHomeRouter) PullRequestEventURL(ctx context.Context, owner, repo string, prID, eventID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
+		return homeRouter{}.PullRequestEventURL(ctx, owner, repo, prID, eventID)
+	}
+	return github.DotCom{}.PullRequestEventURL(ctx, owner, repo, prID, eventID)
+}
+
 // homeRouter implements github.Router that
 // targets GitHub issues on home's issuesapp, and
 // targets GitHub pull requests on home's changes app.
@@ -70,6 +84,10 @@ func (homeRouter) IssueURL(_ context.Context, owner, repo string, issueID uint64
 
 func (homeRouter) IssueCommentURL(_ context.Context, owner, repo string, issueID, commentID uint64) string {
 	return fmt.Sprintf("/issues/github.com/%s/%s/%d#comment-%d", owner, repo, issueID, commentID)
+}
+
+func (homeRouter) IssueEventURL(_ context.Context, owner, repo string, issueID, eventID uint64) string {
+	return fmt.Sprintf("/issues/github.com/%s/%s/%d#event-%d", owner, repo, issueID, eventID)
 }
 
 func (homeRouter) PullRequestURL(_ context.Context, owner, repo string, prID uint64) string {
@@ -86,4 +104,8 @@ func (homeRouter) PullRequestReviewURL(_ context.Context, owner, repo string, pr
 
 func (homeRouter) PullRequestReviewCommentURL(_ context.Context, owner, repo string, prID, reviewCommentID uint64) string {
 	return fmt.Sprintf("/changes/github.com/%s/%s/%d#comment-rc%d", owner, repo, prID, reviewCommentID)
+}
+
+func (homeRouter) PullRequestEventURL(_ context.Context, owner, repo string, prID, eventID uint64) string {
+	return fmt.Sprintf("/changes/github.com/%s/%s/%d#event-%d", owner, repo, prID, eventID)
 }
