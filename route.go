@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"dmitri.shuralyov.com/route/gerrit"
 	"dmitri.shuralyov.com/route/github"
 	"github.com/shurcooL/users"
 )
 
-// dmitshurSeesHomeRouter implements github.Router that
-// targets GitHub issues and PRs on home apps for dmitshur user, and
-// targets GitHub issues and PRs on github.com for all other users.
+// dmitshurSeesHomeRouter implements github.Router and gerrit.Router that
+// targets GitHub issues, PRs and Gerrit CLs on home apps for dmitshur user, and
+// targets GitHub issues, PRs on github.com and Gerrit CLs on googlesource.com for all other users.
 type dmitshurSeesHomeRouter struct {
 	users users.Service
 }
@@ -71,9 +72,23 @@ func (r dmitshurSeesHomeRouter) PullRequestEventURL(ctx context.Context, owner, 
 	return github.DotCom{}.PullRequestEventURL(ctx, owner, repo, prID, eventID)
 }
 
-// homeRouter implements github.Router that
+func (r dmitshurSeesHomeRouter) ChangeURL(ctx context.Context, server, project string, changeID uint64) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
+		return homeRouter{}.ChangeURL(ctx, server, project, changeID)
+	}
+	return gerrit.GoogleSource{}.ChangeURL(ctx, server, project, changeID)
+}
+
+func (r dmitshurSeesHomeRouter) ChangeMessageURL(ctx context.Context, server, project string, changeID uint64, messageID string) string {
+	if currentUser, err := r.users.GetAuthenticatedSpec(ctx); err == nil && currentUser == dmitshur {
+		return homeRouter{}.ChangeMessageURL(ctx, server, project, changeID, messageID)
+	}
+	return gerrit.GoogleSource{}.ChangeMessageURL(ctx, server, project, changeID, messageID)
+}
+
+// homeRouter implements github.Router and gerrit.Router that
 // targets GitHub issues on home's issuesapp, and
-// targets GitHub pull requests on home's changes app.
+// targets GitHub PRs and Gerrit CLs on home's changes app.
 //
 // THINK: It embeds home, issuesapp, changes app routing details; can it be composed better?
 type homeRouter struct{}
@@ -108,4 +123,12 @@ func (homeRouter) PullRequestReviewCommentURL(_ context.Context, owner, repo str
 
 func (homeRouter) PullRequestEventURL(_ context.Context, owner, repo string, prID, eventID uint64) string {
 	return fmt.Sprintf("/changes/github.com/%s/%s/%d#event-%d", owner, repo, prID, eventID)
+}
+
+func (homeRouter) ChangeURL(_ context.Context, server, project string, changeID uint64) string {
+	return fmt.Sprintf("/changes/%s/%s/%d", server, project, changeID)
+}
+
+func (homeRouter) ChangeMessageURL(_ context.Context, server, project string, changeID uint64, messageID string) string {
+	return fmt.Sprintf("/changes/%s/%s/%d#comment-%s", server, project, changeID, messageID)
 }
