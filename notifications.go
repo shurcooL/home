@@ -47,7 +47,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 		router,
 	)
 
-	notificationsService := dmitshurSeesGitHubNotifications{
+	notificationsService := dmitshurSeesOwnNotifications{
 		service:                     fs.NewService(root, users),
 		dmitshurGitHubNotifications: dmitshurGitHubNotifications,
 		users:                       users,
@@ -142,15 +142,16 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 	return notificationsService
 }
 
-// dmitshurSeesGitHubNotifications lets dmitshur also see notifications on GitHub,
+// dmitshurSeesOwnNotifications lets dmitshur see own notifications on GitHub and Gerrit,
 // in addition to local ones.
-type dmitshurSeesGitHubNotifications struct {
+type dmitshurSeesOwnNotifications struct {
 	service                     notifications.Service
 	dmitshurGitHubNotifications notifications.Service
+	dmitshurGerritNotifications notifications.Service
 	users                       users.Service
 }
 
-func (s dmitshurSeesGitHubNotifications) List(ctx context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
+func (s dmitshurSeesOwnNotifications) List(ctx context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
 	var nss notifications.Notifications
 	ns, err := s.service.List(ctx, opt)
 	if err != nil {
@@ -174,10 +175,24 @@ func (s dmitshurSeesGitHubNotifications) List(ctx context.Context, opt notificat
 		}
 	}
 
+	if opt.Repo == nil || strings.HasPrefix(opt.Repo.URI, "go.googlesource.com/") {
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser == dmitshur {
+			ns, err := s.dmitshurGerritNotifications.List(ctx, opt)
+			if err != nil {
+				return nss, err
+			}
+			nss = append(nss, ns...)
+		}
+	}
+
 	return nss, nil
 }
 
-func (s dmitshurSeesGitHubNotifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
+func (s dmitshurSeesOwnNotifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
 	var count uint64
 	n, err := s.service.Count(ctx, opt)
 	if err != nil {
@@ -195,14 +210,21 @@ func (s dmitshurSeesGitHubNotifications) Count(ctx context.Context, opt interfac
 			return count, err
 		}
 		count += n
+
+		n, err = s.dmitshurGerritNotifications.Count(ctx, opt)
+		if err != nil {
+			return count, err
+		}
+		count += n
 	}
 
 	return count, nil
 }
 
-func (s dmitshurSeesGitHubNotifications) MarkRead(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64) error {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+func (s dmitshurSeesOwnNotifications) MarkRead(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64) error {
+	switch {
+	case strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
@@ -211,14 +233,24 @@ func (s dmitshurSeesGitHubNotifications) MarkRead(ctx context.Context, repo noti
 			return os.ErrPermission
 		}
 		return s.dmitshurGitHubNotifications.MarkRead(ctx, repo, threadType, threadID)
+	case strings.HasPrefix(repo.URI, "go.googlesource.com/"):
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return err
+		}
+		if currentUser != dmitshur {
+			return os.ErrPermission
+		}
+		return s.dmitshurGerritNotifications.MarkRead(ctx, repo, threadType, threadID)
 	}
 
 	return s.service.MarkRead(ctx, repo, threadType, threadID)
 }
 
-func (s dmitshurSeesGitHubNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+func (s dmitshurSeesOwnNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
+	switch {
+	case strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
@@ -227,14 +259,24 @@ func (s dmitshurSeesGitHubNotifications) MarkAllRead(ctx context.Context, repo n
 			return os.ErrPermission
 		}
 		return s.dmitshurGitHubNotifications.MarkAllRead(ctx, repo)
+	case strings.HasPrefix(repo.URI, "go.googlesource.com/"):
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return err
+		}
+		if currentUser != dmitshur {
+			return os.ErrPermission
+		}
+		return s.dmitshurGerritNotifications.MarkAllRead(ctx, repo)
 	}
 
 	return s.service.MarkAllRead(ctx, repo)
 }
 
-func (s dmitshurSeesGitHubNotifications) Subscribe(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+func (s dmitshurSeesOwnNotifications) Subscribe(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+	switch {
+	case strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
@@ -243,14 +285,24 @@ func (s dmitshurSeesGitHubNotifications) Subscribe(ctx context.Context, repo not
 			return os.ErrPermission
 		}
 		return s.dmitshurGitHubNotifications.Subscribe(ctx, repo, threadType, threadID, subscribers)
+	case strings.HasPrefix(repo.URI, "go.googlesource.com/"):
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return err
+		}
+		if currentUser != dmitshur {
+			return os.ErrPermission
+		}
+		return s.dmitshurGerritNotifications.Subscribe(ctx, repo, threadType, threadID, subscribers)
 	}
 
 	return s.service.Subscribe(ctx, repo, threadType, threadID, subscribers)
 }
 
-func (s dmitshurSeesGitHubNotifications) Notify(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, nr notifications.NotificationRequest) error {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+func (s dmitshurSeesOwnNotifications) Notify(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, nr notifications.NotificationRequest) error {
+	switch {
+	case strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
 			return err
@@ -259,6 +311,15 @@ func (s dmitshurSeesGitHubNotifications) Notify(ctx context.Context, repo notifi
 			return os.ErrPermission
 		}
 		return s.dmitshurGitHubNotifications.Notify(ctx, repo, threadType, threadID, nr)
+	case strings.HasPrefix(repo.URI, "go.googlesource.com/"):
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return err
+		}
+		if currentUser != dmitshur {
+			return os.ErrPermission
+		}
+		return s.dmitshurGerritNotifications.Notify(ctx, repo, threadType, threadID, nr)
 	}
 
 	return s.service.Notify(ctx, repo, threadType, threadID, nr)
