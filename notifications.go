@@ -16,6 +16,8 @@ import (
 	"github.com/shurcooL/githubv4"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
+	"github.com/shurcooL/home/internal/exp/service/notification/v2tov1"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
@@ -32,7 +34,13 @@ import (
 // initNotifications creates and returns a notification service,
 // registers handlers for its HTTP API,
 // and handlers for the notifications app.
-func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.Service, router github.Router) notifications.Service {
+func initNotifications(
+	mux *http.ServeMux,
+	root webdav.FileSystem,
+	gerritNotification notification.Service,
+	users users.Service,
+	router github.Router,
+) notifications.Service {
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_DMITSHUR_NOTIFICATIONS")}),
 	}
@@ -50,6 +58,7 @@ func initNotifications(mux *http.ServeMux, root webdav.FileSystem, users users.S
 	notificationsService := dmitshurSeesOwnNotifications{
 		service:                     fs.NewService(root, users),
 		dmitshurGitHubNotifications: dmitshurGitHubNotifications,
+		dmitshurGerritNotifications: v2tov1.Service{V2: gerritNotification},
 		users:                       users,
 	}
 

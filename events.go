@@ -4,16 +4,18 @@ import (
 	"context"
 	"sort"
 
-	"dmitri.shuralyov.com/route/github"
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/events/event"
 	"github.com/shurcooL/events/fs"
-	"github.com/shurcooL/events/githubapi"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 )
 
-func newEventsService(root webdav.FileSystem, users users.Service, router github.Router) (events.Service, error) {
+func newEventsService(
+	root webdav.FileSystem,
+	githubEvents, gerritEvents events.Service,
+	users users.Service,
+) (events.Service, error) {
 	dmitshur, err := users.Get(context.Background(), dmitshur)
 	if err != nil {
 		return nil, err
@@ -22,13 +24,10 @@ func newEventsService(root webdav.FileSystem, users users.Service, router github
 	if err != nil {
 		return nil, err
 	}
-	github, err := githubapi.NewService(dmitshurPublicRepoGHV3, dmitshurPublicRepoGHV4, dmitshur, router)
-	if err != nil {
-		return nil, err
-	}
 	return multiEvents{
-		github, // Events from GitHub API.
-		local,  // Events from local store.
+		githubEvents, // Events from GitHub.
+		local,        // Events from local store.
+		gerritEvents, // Events from Gerrit instance at go.googlesource.com.
 	}, nil
 }
 

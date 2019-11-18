@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shurcooL/home/assets"
@@ -108,6 +109,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 			"users",
 			"reactions",
 			"notifications",
+			"notificationv2",
 			"events",
 			"issues",
 			"usercontent",
@@ -126,6 +128,8 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		return err
 	}
 
+	var wg sync.WaitGroup
+
 	users, userStore, err := newUsersService(
 		webdav.Dir(filepath.Join(storeDir, "users")),
 	)
@@ -140,16 +144,29 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		return fmt.Errorf("newReactionsService: %v", err)
 	}
 	githubRouter := dmitshurSeesHomeRouter{users: users}
+	githubActivity, gerritActivity, err := initNotificationsV2(
+		ctx, &wg, http.DefaultServeMux,
+		webdav.Dir(filepath.Join(storeDir, "notificationv2")),
+		filepath.Join(storeDir, "mail", "githubnotif"),
+		filepath.Join(storeDir, "mail", "gerritnotif"),
+		users,
+		githubRouter,
+	)
+	if err != nil {
+		return fmt.Errorf("initNotificationsV2: %v", err)
+	}
 	notifications := initNotifications(
 		http.DefaultServeMux,
 		webdav.Dir(filepath.Join(storeDir, "notifications")),
+		gerritActivity,
 		users,
 		githubRouter,
 	)
 	events, err := newEventsService(
 		webdav.Dir(filepath.Join(storeDir, "events")),
+		githubActivity,
+		gerritActivity,
 		users,
-		githubRouter,
 	)
 	if err != nil {
 		return fmt.Errorf("newEventsService: %v", err)
@@ -309,6 +326,8 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	}
 
 	log.Println("Ended HTTP server.")
+
+	wg.Wait()
 
 	if stateFile != "" {
 		err := global.Save(stateFile)
