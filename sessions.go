@@ -581,5 +581,5 @@ func sanitizeReturn(returnURL string) string {
 	if u.Path == "" {
 		return "/"
 	}
-	return (&url.URL{Path: u.Path, RawQuery: u.RawQuery}).String()
+	return (&url.URL{Path: u.Path, RawQuery: u.RawQuery, Fragment: u.Fragment}).String()
 }

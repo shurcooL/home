@@ -324,9 +324,9 @@ type top struct{ Handler http.Handler }
 func (t top) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 	started := time.Now()
-	rw := &responseWriter{ResponseWriter: w}
+	rw := &responseWriter{ResponseWriter: w, Flusher: w.(http.Flusher)}
 	t.Handler.ServeHTTP(rw, req)
-	fmt.Printf("TIMING: %s: %v\n", path, time.Since(started))
+	fmt.Printf("TIMING: %s: %v\n", req.URL, time.Since(started))
 	if path != req.URL.Path {
 		log.Printf("warning: req.URL.Path was modified from %v to %v\n", path, req.URL.Path)
 	}
@@ -345,6 +345,7 @@ func haveType(w http.ResponseWriter) bool {
 // whether any bytes were written.
 type responseWriter struct {
 	http.ResponseWriter
+	http.Flusher
 
 	WroteBytes bool // Whether non-zero bytes have been written.
 }

@@ -39,7 +39,7 @@ type errorHandler struct {
 }
 
 func (h *errorHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	rw := &headerResponseWriter{ResponseWriter: w}
+	rw := &headerResponseWriter{ResponseWriter: w, Flusher: w.(http.Flusher)}
 	err := h.handler(rw, req)
 	handleError(w, req, err, h.users, rw.WroteHeader)
 }
@@ -60,7 +60,7 @@ func ErrorHandleMaybe(
 	if users == nil {
 		users = noUsers{}
 	}
-	rw := &headerResponseWriter{ResponseWriter: w}
+	rw := &headerResponseWriter{ResponseWriter: w, Flusher: w.(http.Flusher)}
 	err := maybeHandler(rw, req)
 	if err == httperror.NotHandle {
 		if rw.WroteHeader {
@@ -160,6 +160,7 @@ func handleError(
 // whether or not the header has been written.
 type headerResponseWriter struct {
 	http.ResponseWriter
+	http.Flusher
 
 	WroteHeader bool // Write or WriteHeader was called.
 }
@@ -192,20 +193,27 @@ func (h gzipHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// Otherwise, use gzipResponseWriter to start gzip compression when WriteHeader
 	// is called, but only if the handler didn't already take care of it.
-	rw := &gzipResponseWriter{ResponseWriter: w}
+	rw := &gzipResponseWriter{ResponseWriter: w, Flusher: w.(http.Flusher)}
 	defer rw.Close()
 	h.handler.ServeHTTP(rw, req)
 }
 
 // gzipResponseWriter starts gzip compression when WriteHeader is called, unless compression
 // has already been applied by that time (i.e., the "Content-Encoding" header is set).
+// Close must be called when done with gzipResponseWriter.
 type gzipResponseWriter struct {
 	http.ResponseWriter
+	http.Flusher
 
 	// These fields are set by setWriterAndCloser
 	// during first call to Write or WriteHeader.
-	w io.Writer // When set, must be non-nil.
-	c io.Closer // May be nil.
+	w io.Writer   // When set, must be non-nil.
+	c flushCloser // May be nil.
+}
+
+type flushCloser interface {
+	Flush() error
+	io.Closer
 }
 
 func (rw *gzipResponseWriter) WriteHeader(code int) {
@@ -241,6 +249,16 @@ func (rw *gzipResponseWriter) setWriterAndCloser(status int) {
 	gw := gzip.NewWriter(rw.ResponseWriter)
 	rw.w = gw
 	rw.c = gw
+}
+
+func (rw *gzipResponseWriter) Flush() {
+	if rw.c != nil {
+		err := rw.c.Flush()
+		if err != nil {
+			log.Printf("gzipResponseWriter.Flush: error flushing *gzip.Writer: %v", err)
+		}
+	}
+	rw.Flusher.Flush()
 }
 
 func (rw *gzipResponseWriter) Close() {
