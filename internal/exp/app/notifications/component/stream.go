@@ -269,16 +269,16 @@ func (e streamNotification) Render() []*html.Node {
 			htmlg.Text(e.Actor),
 			htmlg.Text(" "),
 			action,
-			&html.Node{
-				Type: html.ElementNode, Data: atom.Span.String(),
-				Attr: []html.Attribute{
-					{Key: atom.Class.String(), Val: "time"},
-					{Key: atom.Title.String(), Val: humanize.Time(e.Time) + " – " + e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
-				},
-				FirstChild: htmlg.Text(compactTime(e.Time)),
-			},
 		),
 		&html.Node{
+			Type: html.ElementNode, Data: atom.Span.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Class.String(), Val: "time"},
+				{Key: atom.Title.String(), Val: humanize.Time(e.Time) + " – " + e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
+			},
+			FirstChild: htmlg.Text(compactTime(e.Time)),
+		},
+		htmlg.SpanClass("right", &html.Node{
 			Type: html.ElementNode, Data: atom.A.String(),
 			Attr: []html.Attribute{
 				{Key: atom.Class.String(), Val: "icon"},
@@ -288,7 +288,7 @@ func (e streamNotification) Render() []*html.Node {
 				{Key: atom.Title.String(), Val: "Mark as read"},
 			},
 			FirstChild: octicon.Check(),
-		},
+		}),
 	))
 	if e.Details != nil {
 		div.AppendChild(htmlg.DivClass("details", e.Details.Render()...))

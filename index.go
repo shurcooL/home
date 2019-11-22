@@ -29,7 +29,8 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-var indexHTML = template.Must(template.New("").Parse(`<html>
+var indexHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
+<html lang="en">
 	<head>
 {{.AnalyticsHTML}}		<title>Dmitri Shuralyov</title>
 		<link href="/icon.png" rel="icon" type="image/png">
@@ -476,24 +477,27 @@ func (e activityEvent) Render() []*html.Node {
 		action.Attr = append(action.Attr, html.Attribute{Key: atom.Title.String(), Val: e.Raw})
 	}
 	htmlg.AppendChildren(action, e.Action.Render()...)
-	div := htmlg.DivClass(divClass,
-		htmlg.SpanClass("icon", e.Icon()),
+	middle := []*html.Node{
 		htmlg.Text(e.Actor),
 		htmlg.Text(" "),
 		action,
-	)
-	if e.Container != "" {
-		div.AppendChild(htmlg.Text(" in "))
-		div.AppendChild(htmlg.A(e.Container, "https://"+e.Container))
 	}
-	div.AppendChild(&html.Node{
-		Type: html.ElementNode, Data: atom.Span.String(),
-		Attr: []html.Attribute{
-			{Key: atom.Class.String(), Val: "time"},
-			{Key: atom.Title.String(), Val: humanize.Time(e.Time) + " – " + e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
+	if e.Container != "" {
+		middle = append(middle, htmlg.Text(" in "))
+		middle = append(middle, htmlg.A(e.Container, "https://"+e.Container))
+	}
+	div := htmlg.DivClass(divClass, htmlg.DivClass("overview",
+		htmlg.SpanClass("icon", e.Icon()),
+		htmlg.SpanClass("middle", middle...),
+		&html.Node{
+			Type: html.ElementNode, Data: atom.Span.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Class.String(), Val: "time"},
+				{Key: atom.Title.String(), Val: humanize.Time(e.Time) + " – " + e.Time.Local().Format(timeFormat)}, // TODO: Use local time of page viewer, not server.
+			},
+			FirstChild: htmlg.Text(compactTime(e.Time)),
 		},
-		FirstChild: htmlg.Text(compactTime(e.Time)),
-	})
+	))
 	if e.Details != nil {
 		div.AppendChild(htmlg.DivClass("details", e.Details.Render()...))
 	}

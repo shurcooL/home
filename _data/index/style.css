@@ -41,15 +41,25 @@ div.activity code {
 .activity div.event.wip {
 	background-color: #ffffdd;
 }
-.activity span.icon {
+.activity div.event div.overview {
+	display: flex;
+	align-items: baseline;
+}
+.activity div.event div.overview span.icon {
+	flex-shrink: 0;
 	color: #bbb;
 	display: inline-block;
 	width: 16px;
 	margin-left: 16px;
 	margin-right: 16px;
-	vertical-align: middle;
 }
-.activity span.time {
+.activity div.event div.overview span.middle {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.activity div.event div.overview span.time {
+	flex-shrink: 0;
 	color: #bbb;
 	font-size: 12px;
 	margin-left: 4px;
