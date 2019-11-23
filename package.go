@@ -133,7 +133,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	err = vec.RenderHTML(w,
 		elem.H3("Installation"),
 		elem.P(elem.Pre("go get -u "+h.Pkg.Spec)),
-		elem.H3(elem.A("Documentation", attr.Href("https://godoc.org/"+h.Pkg.Spec))),
+		elem.H3(elem.A("Documentation", attr.Href("https://pkg.go.dev/"+h.Pkg.Spec))),
 		elem.H3(elem.A("Code", attr.Href("https://gotools.org/"+h.Pkg.Spec))),
 		elem.H3(elem.A("License", attr.Href(h.Pkg.LicenseURL))),
 	)
