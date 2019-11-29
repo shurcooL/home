@@ -134,7 +134,7 @@ func initNotifications(
 		if s := req.Context().Value(sessionContextKey).(*session); rr.Code == http.StatusForbidden && s == nil {
 			loginURL := (&url.URL{
 				Path:     "/login",
-				RawQuery: url.Values{returnQueryName: {returnURL}}.Encode(),
+				RawQuery: url.Values{returnParameterName: {returnURL}}.Encode(),
 			}).String()
 			return httperror.Redirect{URL: loginURL}
 		}

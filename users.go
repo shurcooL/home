@@ -21,6 +21,15 @@ import (
 
 var dmitshur = users.UserSpec{ID: 1924134, Domain: "github.com"}
 
+// Unauthenticated GitHub API client for use by unauthenticated requests.
+var unauthGHV3 = githubv3.NewClient(&http.Client{
+	Transport: &httpcache.Transport{
+		Cache:               httpcache.NewMemoryCache(),
+		MarkCachedResponses: true,
+	},
+	Timeout: 5 * time.Second,
+})
+
 // Authenticated GitHub API clients with public repo scope.
 // (Since GraphQL API doesn't support unauthenticated clients at this time.)
 var dmitshurPublicRepoGHV3, dmitshurPublicRepoGHV4 = func() (*githubv3.Client, *githubv4.Client) {

@@ -38,6 +38,7 @@ var (
 	stateFileFlag     = flag.String("state-file", "", "Optional path to file to save/load state (file is deleted after loading).")
 	analyticsFileFlag = flag.String("analytics-file", "", "Optional path to file containing analytics HTML to insert at the beginning of <head>.")
 	noRobotsFlag      = flag.Bool("no-robots", false, "Disallow all robots on all pages.")
+	siteNameFlag      = flag.String("site-name", "home (local devel)", "Name of site, displayed on sign in page.")
 	redLogoFlag       = flag.Bool("red-logo", false, "Display the logo in red.")
 )
 
@@ -180,12 +181,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	}
 	changeService := newChangeService(reactions, users, githubRouter)
 
-	sessionsHandler := &sessionsHandler{users, userStore}
-	http.Handle("/login/github", sessionsHandler)
-	http.Handle("/callback/github", sessionsHandler)
-	http.Handle("/logout", sessionsHandler)
-	http.Handle("/login", sessionsHandler)
-	http.Handle("/sessions", sessionsHandler)
+	initAuth(users, userStore)
 
 	usersAPIHandler := httphandler.Users{Users: users}
 	http.Handle("/api/userspec", cookieAuth{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticatedSpec)})
