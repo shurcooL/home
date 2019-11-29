@@ -17,6 +17,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	githubv3 "github.com/google/go-github/github"
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
@@ -34,7 +35,13 @@ var githubConfig = oauth2.Config{
 }
 
 func initAuth(usersService users.Service, userStore userCreator) {
-	serveSignInPage := signInPage{}.Serve
+	logoStyle := "header a.Logo { color: rgb(35, 35, 35); } header a.Logo:hover { color: #4183c4; }"
+	if component.RedLogo {
+		logoStyle = "header a.Logo { color: red; } header a.Logo:hover { color: darkred; }"
+	}
+	serveSignInPage := signInPage{
+		Logo: template.HTML("<style>" + logoStyle + "</style>" + htmlg.RenderComponentsString(component.Logo{})),
+	}.Serve
 
 	type state struct {
 		Expiry       time.Time
@@ -405,17 +412,19 @@ func sanitizeReturn(returnURL string) string {
 	return (&url.URL{Path: u.Path, RawQuery: u.RawQuery, Fragment: u.Fragment}).String()
 }
 
-type signInPage struct{}
+type signInPage struct {
+	Logo template.HTML
+}
 
-func (signInPage) Serve(w http.ResponseWriter, errorText string) error {
+func (p signInPage) Serve(w http.ResponseWriter, errorText string) error {
 	// TODO: redirect to /login or some other friendlier URL and show the page there (via query params)?
 	// TODO: consider using http.StatusUnauthorized rather than 200 OK status when errorText != ""?
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	return signInHTML.Execute(w, struct {
+		Logo     template.HTML
 		SiteName string
-		RedLogo  bool
 		Error    string
-	}{*siteNameFlag, *redLogoFlag, errorText})
+	}{p.Logo, *siteNameFlag, errorText})
 }
 
 var signInHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
@@ -458,7 +467,7 @@ footer {
 	margin-top: 50px;
 	margin-bottom: 50px;
 }
-h1 {
+header h1 {
 	margin-top: 30px;
 }
 div.error {
@@ -497,18 +506,11 @@ b {
 small {
 	font-size: 10px;
 }
-{{if .RedLogo}}
-header .logo {
-	color: red;
-}
-{{end}}
 		</style>
 	</head>
 	<body>
 		<header>
-			<svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="32" height="32" style="fill: currentColor;
-stroke: currentColor;
-vertical-align: middle;"><circle cx="100" cy="100" r="90" stroke-width="20" fill="none"></circle><circle cx="100" cy="100" r="60"></circle></svg>
+			{{.Logo}}
 			<h1>Sign In to {{.SiteName}}</h1>
 		</header>
 		{{with .Error}}<div class="error">{{.}}</div>{{end}}
@@ -522,8 +524,8 @@ vertical-align: middle;"><circle cx="100" cy="100" r="90" stroke-width="20" fill
 			<p><button type="submit">Sign In</button></p>
 		</form>
 		<footer>
-			<p style="font-size: 80%; color: gray;">Problem with signing in?
-			Please <a href="/about" style="color: gray;">contact me</a> and I'll fix it.</p>
+			<p style="font-size: 80%; color: gray;">Problem signing in?
+			Please <a href="/about" style="color: gray;">let me know</a> and I'll fix it.</p>
 		</footer>
 	</body>
 </html>
