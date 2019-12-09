@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 	"time"
 
@@ -65,14 +64,20 @@ func PseudoVersion(major, older string, t time.Time, rev string) string {
 	return v + patch + "-0." + segment + build
 }
 
-// ParsePseudoVersion returns the time stamp and the revision identifier
-// of the pseudo-version v.
-// It returns an error if v is not a pseudo-version or if the time stamp
-// embedded in the pseudo-version is not a valid time.
-func ParsePseudoVersion(v string) (_ time.Time, rev string, err error) {
-	timestamp, rev, err := parsePseudoVersion(v)
-	if err != nil {
-		return time.Time{}, "", err
+// ParseV000PseudoVersion returns the time stamp and the revision identifier
+// of the v0.0.0 pseudo-version v.
+// It returns an error if v is not a valid v0.0.0 pseudo-version
+// of the form "v0.0.0-yyyymmddhhmmss-abcdef123456".
+func ParseV000PseudoVersion(v string) (_ time.Time, rev string, err error) {
+	if len(v) != len("v0.0.0-yyyymmddhhmmss-abcdef123456") ||
+		!strings.HasPrefix(v, "v0.0.0-") ||
+		v[len("v0.0.0-yyyymmddhhmmss")] != '-' {
+		return time.Time{}, "", fmt.Errorf("not a v0.0.0 pseudo-version %q", v)
+	}
+	timestamp, rev := v[len("v0.0.0-"):len("v0.0.0-yyyymmddhhmmss")], v[len("v0.0.0-yyyymmddhhmmss-"):]
+	if !allDec(timestamp) ||
+		!allHex(rev) {
+		return time.Time{}, "", fmt.Errorf("not a v0.0.0 pseudo-version %q", v)
 	}
 	t, err := time.Parse("20060102150405", timestamp)
 	if err != nil {
@@ -81,37 +86,24 @@ func ParsePseudoVersion(v string) (_ time.Time, rev string, err error) {
 	return t, rev, nil
 }
 
-func parsePseudoVersion(v string) (timestamp, rev string, err error) {
-	if !isPseudoVersion(v) {
-		return "", "", fmt.Errorf("malformed pseudo-version %q", v)
-	}
-	v = strings.TrimSuffix(v, "+incompatible")
-	j := strings.LastIndex(v, "-")
-	v, rev = v[:j], v[j+1:]
-	i := strings.LastIndex(v, "-")
-	if j := strings.LastIndex(v, "."); j > i {
-		timestamp = v[j+1:]
-	} else {
-		timestamp = v[i+1:]
-	}
-	return timestamp, rev, nil
-}
-
-// isPseudoVersion reports whether v is a pseudo-version.
-func isPseudoVersion(v string) bool {
-	return strings.Count(v, "-") >= 2 && semver.IsValid(v) && pseudoVersionRE.MatchString(v)
-}
-
-var pseudoVersionRE = regexp.MustCompile(`^v[0-9]+\.(0\.0-|\d+\.\d+-([^+]*\.)?0\.)\d{14}-[A-Za-z0-9]+(\+incompatible)?$`)
-
-// AllHex reports whether the revision rev is entirely lower-case hexadecimal digits.
-func AllHex(rev string) bool {
-	for i := 0; i < len(rev); i++ {
-		c := rev[i]
-		if '0' <= c && c <= '9' || 'a' <= c && c <= 'f' {
-			continue
+// allDec reports whether timestamp is entirely decimal digits.
+func allDec(timestamp string) bool {
+	for _, b := range []byte(timestamp) {
+		ok := '0' <= b && b <= '9'
+		if !ok {
+			return false
 		}
-		return false
+	}
+	return true
+}
+
+// allHex reports whether the revision rev is entirely lower-case hexadecimal digits.
+func allHex(rev string) bool {
+	for _, b := range []byte(rev) {
+		ok := '0' <= b && b <= '9' || 'a' <= b && b <= 'f'
+		if !ok {
+			return false
+		}
 	}
 	return true
 }

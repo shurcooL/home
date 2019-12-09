@@ -33,14 +33,17 @@ func TestModuleHandler(t *testing.T) {
 	})
 
 	for _, tt := range []struct {
-		url        string
-		wantType   string
-		wantBody   string
-		wantSum    string // Expected checksum for module .zip (as in go.sum).
-		wantModSum string // Expected checksum for go.mod file (as in go.sum).
+		name         string
+		url          string
+		wantNotExist bool // If true, expect 404 status code.
+		wantType     string
+		wantBody     string
+		wantSum      string // Expected checksum for module .zip (as in go.sum).
+		wantModSum   string // Expected checksum for go.mod file (as in go.sum).
 	}{
 		// Module emptyrepo tests.
 		{
+			name:     "emptyrepo version list",
 			url:      "/api/module/dmitri.shuralyov.com/emptyrepo/@v/list",
 			wantType: "text/plain; charset=utf-8",
 			wantBody: "",
@@ -48,6 +51,7 @@ func TestModuleHandler(t *testing.T) {
 
 		// Module kebabcase tests.
 		{
+			name:     "kebabcase version list",
 			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/list",
 			wantType: "text/plain; charset=utf-8",
 			wantBody: `v0.0.0-20170912031248-a1d95f8919b5
@@ -55,6 +59,7 @@ v0.0.0-20170914162131-bf160e40a791
 `,
 		},
 		{
+			name:     "kebabcase version 1 info",
 			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.info",
 			wantType: "application/json",
 			wantBody: `{
@@ -64,6 +69,7 @@ v0.0.0-20170914162131-bf160e40a791
 `,
 		},
 		{
+			name:     "kebabcase version 2 info",
 			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.info",
 			wantType: "application/json",
 			wantBody: `{
@@ -73,23 +79,27 @@ v0.0.0-20170914162131-bf160e40a791
 `,
 		},
 		{
+			name:       "kebabcase version 1 mod",
 			url:        "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.mod",
 			wantType:   "text/plain; charset=utf-8",
 			wantBody:   "module dmitri.shuralyov.com/kebabcase\n",
 			wantModSum: "h1:zlZLgG71KSMQ+9XWuKJgSRws1h0iMspYv2y69MUzNFo=",
 		},
 		{
+			name:       "kebabcase version 2 mod",
 			url:        "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.mod",
 			wantType:   "text/plain; charset=utf-8",
 			wantBody:   "module dmitri.shuralyov.com/kebabcase\n",
 			wantModSum: "h1:zlZLgG71KSMQ+9XWuKJgSRws1h0iMspYv2y69MUzNFo=",
 		},
 		{
+			name:     "kebabcase version 1 zip",
 			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5.zip",
 			wantType: "application/zip",
 			wantSum:  "h1:xUU8cZj0tfJxDjfyJ6xLLh6G615T10e16A1mxCoygiI=",
 		},
 		{
+			name:     "kebabcase version 2 zip",
 			url:      "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170914162131-bf160e40a791.zip",
 			wantType: "application/zip",
 			wantSum:  "h1:Lz+BA1qBebmQ4Ev2oGecFqNFK4jq5orgAPanU0rsL98=",
@@ -97,6 +107,7 @@ v0.0.0-20170914162131-bf160e40a791
 
 		// Module scratch tests.
 		{
+			name:     "scratch version list",
 			url:      "/api/module/dmitri.shuralyov.com/scratch/@v/list",
 			wantType: "text/plain; charset=utf-8",
 			wantBody: `v0.0.0-20171129001319-b205cb69d5d7
@@ -105,12 +116,70 @@ v0.0.0-20180125023930-cdbe493822d6
 v0.0.0-20180326031431-f628922a6885
 `,
 		},
+
+		// Versions that do not exist must serve 404.
+		{
+			name:         "wrong timestamp",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-11111111111111-a1d95f8919b5.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "wrong revision",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-aaaaaaaaaaaa.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "revision length is not 12",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "wrong separator",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248.a1d95f8919b5.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "revision is not all lower-case",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-!a1d95f8919b5.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "incompatible version",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20170912031248-a1d95f8919b5+incompatible.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "version v1.0.0",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v1.0.0-20170912031248-a1d95f8919b5.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "version v2.0.0",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v2.0.0-20170912031248-a1d95f8919b5.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "pseudo-version after v1.2.3-pre",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v1.2.3-pre.0.20170912031248-a1d95f8919b5.info",
+			wantNotExist: true,
+		},
+		{
+			name:         "pseudo-version after v1.2.3",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v1.2.4-0.20170912031248-a1d95f8919b5.info",
+			wantNotExist: true,
+		},
 	} {
-		t.Run(tt.url[1:], func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)
 			resp := rr.Result()
+			if tt.wantNotExist {
+				if got, want := resp.StatusCode, http.StatusNotFound; got != want {
+					t.Errorf("got status code %d %s, want %d %s", got, http.StatusText(got), want, http.StatusText(want))
+				}
+				return
+			}
 			if got, want := resp.StatusCode, http.StatusOK; got != want {
 				t.Errorf("got status code %d %s, want %d %s", got, http.StatusText(got), want, http.StatusText(want))
 			}

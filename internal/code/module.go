@@ -84,9 +84,9 @@ func (h ModuleHandler) ServeModule(w http.ResponseWriter, req *http.Request) err
 		return h.serveList(req.Context(), w, gitDir)
 	}
 
-	// Parse the time and revision from the pseudo-version.
-	versionTime, versionRevision, err := mod.ParsePseudoVersion(version)
-	if err != nil || len(versionRevision) != 12 || !mod.AllHex(versionRevision) {
+	// Parse the time and revision from the v0.0.0 pseudo-version.
+	versionTime, versionRevision, err := mod.ParseV000PseudoVersion(version)
+	if err != nil {
 		return os.ErrNotExist
 	}
 
