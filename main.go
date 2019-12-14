@@ -39,8 +39,11 @@ var (
 	analyticsFileFlag = flag.String("analytics-file", "", "Optional path to file containing analytics HTML to insert at the beginning of <head>.")
 	noRobotsFlag      = flag.Bool("no-robots", false, "Disallow all robots on all pages.")
 	siteNameFlag      = flag.String("site-name", "home (local devel)", "Name of site, displayed on sign in page.")
-	redLogoFlag       = flag.Bool("red-logo", false, "Display the logo in red.")
 )
+
+func init() {
+	flag.BoolVar(&component.RedLogo, "red-logo", false, "Display the logo in red.")
+}
 
 var (
 	analyticsHTML template.HTML // Set early in run.
@@ -54,13 +57,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { <-int; cancel() }()
 
-	err := run(ctx, cancel, *storeDirFlag, *stateFileFlag, *analyticsFileFlag, *noRobotsFlag, *redLogoFlag)
+	err := run(ctx, cancel, *storeDirFlag, *stateFileFlag, *analyticsFileFlag, *noRobotsFlag)
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, analyticsFile string, noRobots, redLogo bool) error {
+func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, analyticsFile string, noRobots bool) error {
 	if err := mime.AddExtensionType(".md", "text/markdown"); err != nil {
 		return err
 	}
@@ -81,8 +84,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 			io.WriteString(w, "User-agent: *\nDisallow: /\n")
 		})
 	}
-	if redLogo {
-		component.RedLogo = true
+	if component.RedLogo {
 		http.HandleFunc("/icon.png", func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Content-Type", "image/png")
 			w.Header()["Content-Encoding"] = nil // Disable automatic gzip compression, png is already compressed.

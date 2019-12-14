@@ -20,6 +20,7 @@ import (
 	githubv3 "github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/githubv4"
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	notificationsv2 "github.com/shurcooL/home/internal/exp/app/notifications"
 	gerritactivity "github.com/shurcooL/home/internal/exp/service/activity/gerrit"
@@ -127,7 +128,7 @@ func initNotificationsV2(
 	// Register notifications app endpoints.
 	opt := notificationsv2.Options{
 		BaseURL: "/notificationsv2",
-		RedLogo: *redLogoFlag,
+		RedLogo: component.RedLogo,
 		HeadPre: analyticsHTML + `<title>Notifications v2</title>
 <link href="/icon.png" rel="icon" type="image/png">
 <meta name="viewport" content="width=device-width">

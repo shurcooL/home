@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/page/resume"
 	"github.com/shurcooL/httperror"
@@ -40,7 +41,7 @@ func initResume(reactions reactions.Service, notifications notifications.Service
 		data := struct {
 			AnalyticsHTML template.HTML
 			RedLogo       bool
-		}{analyticsHTML, *redLogoFlag}
+		}{analyticsHTML, component.RedLogo}
 		err := resumeHTML.Execute(w, data)
 		if err != nil {
 			return err
