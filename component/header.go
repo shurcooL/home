@@ -2,6 +2,7 @@ package component
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/octicon"
@@ -47,7 +48,7 @@ func (h Header) Render() []*html.Node {
 				</a>
 				PostButton{Action: "/logout", Text: "Sign out", ReturnURL: h.ReturnURL}
 			{{else}}
-				PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: h.ReturnURL}
+				<a class="Login" href="/login?return={{.ReturnURL}}">Sign in via URL</a>
 			{{end}}
 		</header>
 	*/
@@ -67,10 +68,16 @@ header.header {
 header.header a {
 	color: rgb(35, 35, 35);
 	text-decoration: none;
-	font-weight: bold;
 }
 header.header a:hover {
 	color: #4183c4;
+}
+header.header a.Login {
+	color: #4183c4;
+	text-decoration: none;
+}
+header.header a.Login:hover {
+	text-decoration: underline;
 }
 
 header.header ul.nav {
@@ -82,9 +89,10 @@ header.header ul.nav {
 header.header li.nav {
 	display: inline-block;
 	margin-left: 20px;
+	font-weight: bold;
 }
-header.header .nav.smaller {
-	font-size: smaller;
+header.header .smaller {
+	font-size: 12px;
 }
 
 header.header .user {
@@ -156,8 +164,19 @@ vertical-align: top;`},
 		signOut := PostButton{Action: "/logout", Text: "Sign out", ReturnURL: h.ReturnURL}
 		htmlg.AppendChildren(userSpan, signOut.Render()...)
 	} else {
-		signInViaGitHub := PostButton{Action: "/login/github", Text: "Sign in via GitHub", ReturnURL: h.ReturnURL}
-		htmlg.AppendChildren(userSpan, signInViaGitHub.Render()...)
+		u := url.URL{Path: "/login"}
+		if h.ReturnURL != "/" {
+			u.RawQuery = url.Values{"return": {h.ReturnURL}}.Encode()
+		}
+		signInViaURL := &html.Node{
+			Type: html.ElementNode, Data: atom.A.String(),
+			Attr: []html.Attribute{
+				{Key: atom.Class.String(), Val: "Login"},
+				{Key: atom.Href.String(), Val: u.String()},
+			},
+			FirstChild: htmlg.Text("Sign in via URL"),
+		}
+		userSpan.AppendChild(signInViaURL)
 	}
 	header.AppendChild(userSpan)
 

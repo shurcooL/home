@@ -127,7 +127,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 	{{end}}
 	<div id="new-item-marker"></div>
 	{{if (and (eq .CurrentUser.ID 0) (not .Items))}}
-		{{/* HACK: Negative offset to make "Sign in via GitHub to comment." appear aligned. */}}
+		{{/* HACK: Negative offset to make "Sign in via URL to comment." appear aligned. */}}
 		<div style="margin-left: -58px;">{{template "new-comment" .}}</div>
 	{{else}}
 		{{template "new-comment" .}}
@@ -135,6 +135,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 {{end}}
 
 <div style="max-width: 800px; margin: 0 auto 100px auto;">`,
+		SignIn: signInViaURL,
 	}
 	opt.BodyTop = func(req *http.Request) ([]htmlg.Component, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())

@@ -117,39 +117,6 @@ func initAuth(usersService users.Service, userStore userCreator) {
 			}
 		},
 	)})
-	http.Handle("/login/github", cookieAuth{httputil.ErrorHandler(usersService,
-		func(w http.ResponseWriter, req *http.Request) error {
-			if err := httputil.AllowMethods(req, http.MethodPost); err != nil {
-				return err
-			}
-
-			returnURL := sanitizeReturn(req.PostFormValue(returnParameterName))
-
-			if u, err := usersService.GetAuthenticatedSpec(req.Context()); err != nil {
-				return err
-			} else if u != (users.UserSpec{}) {
-				return httperror.Redirect{URL: returnURL}
-			}
-
-			// Add new state.
-			stateKey := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ASCII bytes in state, so use base64.
-			statesMu.Lock()
-			for key, s := range states { // Clean up expired states.
-				if time.Now().Before(s.Expiry) {
-					continue
-				}
-				delete(states, key)
-			}
-			states[stateKey] = state{
-				Expiry:    time.Now().Add(5 * time.Minute), // Enough time to get password, use 2 factor auth, etc.
-				ReturnURL: returnURL,
-			}
-			statesMu.Unlock()
-
-			url := githubConfig.AuthCodeURL(stateKey, oauth2.SetAuthURLParam("allow_signup", "false"))
-			return httperror.Redirect{URL: url}
-		},
-	)})
 	http.Handle("/callback/github", cookieAuth{httputil.ErrorHandler(usersService,
 		func(w http.ResponseWriter, req *http.Request) error {
 			if err := httputil.AllowMethods(req, http.MethodGet); err != nil {

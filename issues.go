@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -113,6 +114,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 	tt, code, pre  { font-family: "Go Mono"; }
 </style>`,
 		BodyPre: `<div style="max-width: 800px; margin: 0 auto 100px auto;">`,
+		SignIn:  signInViaURL,
 	}
 	opt.BodyTop = func(req *http.Request) ([]htmlg.Component, error) {
 		authenticatedUser, err := users.GetAuthenticated(req.Context())
@@ -278,6 +280,20 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 	mux.Handle("/issues/github.com/", githubIssuesHandler)
 
 	return issuesApp
+}
+
+func signInViaURL(returnURL string) template.HTML {
+	const style = `a.Login { color: #4183c4; text-decoration: none; } a.Login:hover { text-decoration: underline; }`
+	u := url.URL{Path: "/login", RawQuery: url.Values{"return": {returnURL}}.Encode()}
+	signInViaURL := &html.Node{
+		Type: html.ElementNode, Data: atom.A.String(),
+		Attr: []html.Attribute{
+			{Key: atom.Class.String(), Val: "Login"},
+			{Key: atom.Href.String(), Val: u.String()},
+		},
+		FirstChild: htmlg.Text("Sign in via URL"),
+	}
+	return template.HTML("<style>" + style + "</style>" + htmlg.Render(signInViaURL))
 }
 
 type issuesHandler struct {
