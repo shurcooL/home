@@ -114,15 +114,15 @@ func (h ModuleHandler) ServeModule(w http.ResponseWriter, req *http.Request) err
 	case "info":
 		return h.serveInfo(w, version, versionTime)
 	case "mod":
-		return h.serveMod(w, repo, commitID, modulePath)
+		return h.serveMod(w, modulePath, repo, commitID)
 	case "zip":
-		return h.serveZip(w, repo, commitID, modulePath, version)
+		return h.serveZip(w, modulePath, version, repo, commitID)
 	default:
 		panic("unreachable")
 	}
 }
 
-func (h ModuleHandler) serveList(ctx context.Context, w http.ResponseWriter, gitDir string) error {
+func (ModuleHandler) serveList(ctx context.Context, w http.ResponseWriter, gitDir string) error {
 	revs, err := listMasterCommits(ctx, gitDir)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func (h ModuleHandler) serveList(ctx context.Context, w http.ResponseWriter, git
 	return nil
 }
 
-func (h ModuleHandler) serveInfo(w http.ResponseWriter, version string, time time.Time) error {
+func (ModuleHandler) serveInfo(w http.ResponseWriter, version string, time time.Time) error {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "\t")
@@ -145,7 +145,7 @@ func (h ModuleHandler) serveInfo(w http.ResponseWriter, version string, time tim
 	return err
 }
 
-func (h ModuleHandler) serveMod(w http.ResponseWriter, repo *git.Repository, commitID vcs.CommitID, modulePath string) error {
+func (ModuleHandler) serveMod(w http.ResponseWriter, modulePath string, repo *git.Repository, commitID vcs.CommitID) error {
 	fs, err := repo.FileSystem(commitID)
 	if err != nil {
 		return err
@@ -172,22 +172,39 @@ func (h ModuleHandler) serveMod(w http.ResponseWriter, repo *git.Repository, com
 	}
 }
 
-func (h ModuleHandler) serveZip(w http.ResponseWriter, repo *git.Repository, commitID vcs.CommitID, modulePath, version string) error {
-	fs, err := repo.FileSystem(commitID)
+func (ModuleHandler) serveZip(w http.ResponseWriter, modulePath, version string, repo *git.Repository, commitID vcs.CommitID) error {
+	w.Header().Set("Content-Type", "application/zip")
+	return WriteModuleZip(w, module.Version{Path: modulePath, Version: version}, repo, commitID)
+}
+
+// WriteModuleZip builds a zip archive for module version m
+// by including all files from repository r at commit id,
+// and writes the result to w.
+//
+// WriteModuleZip does not support multi-module repositories.
+// A go.mod file may be in root, but not in any other directory.
+//
+// Unlike "golang.org/x/mod/zip".Create, it does not verify
+// any module zip restrictions. It will produce an invalid
+// module zip if given a commit containing invalid files.
+// It should be used on commits that are known to have files
+// that are all acceptable to include in a module zip.
+//
+func WriteModuleZip(w io.Writer, m module.Version, r vcs.Repository, id vcs.CommitID) error {
+	fs, err := r.FileSystem(id)
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/zip")
 	z := zip.NewWriter(w)
 	err = vfsutil.Walk(fs, "/", func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if fi.IsDir() {
-			// We only care about files.
+			// We need to include only files, not directories.
 			return nil
 		}
-		dst, err := z.Create(modulePath + "@" + version + name)
+		dst, err := z.Create(m.Path + "@" + m.Version + name)
 		if err != nil {
 			return err
 		}

@@ -110,8 +110,8 @@ func allHex(rev string) bool {
 
 // HashZip is like dirhash.HashZip, but the .zip file
 // it takes can be in memory rather than on disk.
-func HashZip(r *bytes.Reader, hash dirhash.Hash) (string, error) {
-	z, err := zip.NewReader(r, int64(r.Len()))
+func HashZip(b []byte, hash dirhash.Hash) (string, error) {
+	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	if err != nil {
 		return "", err
 	}

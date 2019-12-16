@@ -29,26 +29,24 @@ const (
 	gitTimeout = 45 * time.Second
 )
 
+// TODO: Consider moving NewGitHandler into Service.
+
 // NewGitHandler creates a gitHandler.
-// TODO: Consider moving it into Service.
-func NewGitHandler(code *Service, reposDir string, events events.ExternalService, users users.Service, gitUsers map[string]users.User, authenticate func(*http.Request) *http.Request) (*gitHandler, error) {
-	gitUploadPack, err := exec.LookPath("git-upload-pack")
-	if err != nil {
-		return nil, err
-	}
-	gitReceivePack, err := exec.LookPath("git-receive-pack")
+// gitHooksDir specifies the directory where to look for git hooks.
+func NewGitHandler(code *Service, reposDir, gitHooksDir string, events events.ExternalService, users users.Service, gitUsers map[string]users.User, authenticate func(*http.Request) *http.Request) (*gitHandler, error) {
+	gitBin, err := exec.LookPath("git")
 	if err != nil {
 		return nil, err
 	}
 	return &gitHandler{
-		code:           code,
-		reposDir:       reposDir,
-		events:         events,
-		users:          users,
-		gitUsers:       gitUsers,
-		authenticate:   authenticate,
-		gitUploadPack:  gitUploadPack,
-		gitReceivePack: gitReceivePack,
+		code:         code,
+		reposDir:     reposDir,
+		events:       events,
+		users:        users,
+		gitUsers:     gitUsers,
+		authenticate: authenticate,
+		gitBin:       gitBin,
+		gitHooksDir:  gitHooksDir,
 	}, nil
 }
 
@@ -61,8 +59,8 @@ type gitHandler struct {
 
 	authenticate func(*http.Request) *http.Request
 
-	gitUploadPack  string // Path to git-upload-pack binary.
-	gitReceivePack string // Path to git-receive-pack binary.
+	gitBin      string // Path to git binary.
+	gitHooksDir string // Directory where to look for git hooks.
 }
 
 // ServeGitMaybe serves a git HTTP request, if it matches.
@@ -125,13 +123,15 @@ func (h *gitHandler) serveGitInfoRefsUploadPack(w http.ResponseWriter, req *http
 	}
 	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, h.gitUploadPack, "--strict", "--advertise-refs", ".")
+	cmd := exec.CommandContext(ctx, h.gitBin, "-c", "core.hooksPath="+h.gitHooksDir,
+		"upload-pack", "--strict", "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
+	env := osutil.Environ(os.Environ())
+	env.Set("HOME_MODULE_PATH", repo.Spec)
 	if v := req.Header.Get("Git-Protocol"); v != "" {
-		env := osutil.Environ(os.Environ())
 		env.Set("GIT_PROTOCOL", v)
-		cmd.Env = env
 	}
+	cmd.Env = env
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	err := cmd.Start()
@@ -171,13 +171,15 @@ func (h *gitHandler) serveGitUploadPack(w http.ResponseWriter, req *http.Request
 	}
 	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, h.gitUploadPack, "--strict", "--stateless-rpc", ".")
+	cmd := exec.CommandContext(ctx, h.gitBin, "-c", "core.hooksPath="+h.gitHooksDir,
+		"upload-pack", "--strict", "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
+	env := osutil.Environ(os.Environ())
+	env.Set("HOME_MODULE_PATH", repo.Spec)
 	if v := req.Header.Get("Git-Protocol"); v != "" {
-		env := osutil.Environ(os.Environ())
 		env.Set("GIT_PROTOCOL", v)
-		cmd.Env = env
 	}
+	cmd.Env = env
 	cmd.Stdin = req.Body
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -221,7 +223,7 @@ func (h *gitHandler) serveGitInfoRefsReceivePack(w http.ResponseWriter, req *htt
 
 	// Authorization check.
 	if currentUser.ID == 0 {
-		w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
+		w.Header().Set("Www-Authenticate", `Basic realm="git"`)
 		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
 		return
 	} else if !currentUser.SiteAdmin {
@@ -231,13 +233,15 @@ func (h *gitHandler) serveGitInfoRefsReceivePack(w http.ResponseWriter, req *htt
 
 	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, h.gitReceivePack, "--advertise-refs", ".")
+	cmd := exec.CommandContext(ctx, h.gitBin, "-c", "core.hooksPath="+h.gitHooksDir,
+		"receive-pack", "--advertise-refs", ".")
 	cmd.Dir = repo.Dir
+	env := osutil.Environ(os.Environ())
+	env.Set("HOME_MODULE_PATH", repo.Spec)
 	if v := req.Header.Get("Git-Protocol"); v != "" {
-		env := osutil.Environ(os.Environ())
 		env.Set("GIT_PROTOCOL", v)
-		cmd.Env = env
 	}
+	cmd.Env = env
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	err = cmd.Start()
@@ -286,7 +290,7 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 
 	// Authorization check.
 	if currentUser.ID == 0 {
-		w.Header().Set("WWW-Authenticate", `Basic realm="git"`)
+		w.Header().Set("Www-Authenticate", `Basic realm="git"`)
 		http.Error(w, "401 Unauthorized", http.StatusUnauthorized)
 		return
 	} else if !currentUser.SiteAdmin {
@@ -296,13 +300,15 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 
 	ctx, cancel := context.WithTimeout(req.Context(), gitTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, h.gitReceivePack, "--stateless-rpc", ".")
+	cmd := exec.CommandContext(ctx, h.gitBin, "-c", "core.hooksPath="+h.gitHooksDir,
+		"receive-pack", "--stateless-rpc", ".")
 	cmd.Dir = repo.Dir
+	env := osutil.Environ(os.Environ())
+	env.Set("HOME_MODULE_PATH", repo.Spec)
 	if v := req.Header.Get("Git-Protocol"); v != "" {
-		env := osutil.Environ(os.Environ())
 		env.Set("GIT_PROTOCOL", v)
-		cmd.Env = env
 	}
+	cmd.Env = env
 	rpc := &githttp.RpcReader{
 		Reader: req.Body,
 		Rpc:    "receive-pack",

@@ -31,7 +31,7 @@ func TestCode(t *testing.T) {
 	}()
 	err = exec.Command("cp", "-R", filepath.Join("testdata", "repositories"), tempDir).Run()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("cp -R failed:", err)
 	}
 
 	notifications := mockNotifications{}
@@ -43,7 +43,7 @@ func TestCode(t *testing.T) {
 	}
 
 	// Create a real HTTP server so we can git push to it.
-	gitHandler, err := code.NewGitHandler(service, filepath.Join(tempDir, "repositories"), events, users, nil, func(req *http.Request) *http.Request { return req })
+	gitHandler, err := code.NewGitHandler(service, filepath.Join(tempDir, "repositories"), "", events, users, nil, func(req *http.Request) *http.Request { return req })
 	if err != nil {
 		t.Fatal("code.NewGitHandler:", err)
 	}
@@ -281,9 +281,9 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 	{
 		cmd := exec.Command("git", "push", httpServer.URL+"/new/repo", "master:master")
 		cmd.Dir = filepath.Join("testdata", "repositories", "dmitri.shuralyov.com", "scratch")
-		err = cmd.Run()
+		out, err := cmd.CombinedOutput()
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("git push failed: %v\n%s", err, out)
 		}
 	}
 

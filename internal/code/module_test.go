@@ -192,7 +192,7 @@ v0.0.0-20180326031431-f628922a6885
 				}
 			}
 			if tt.wantSum != "" {
-				gotSum, err := mod.HashZip(bytes.NewReader(rr.Body.Bytes()), dirhash.DefaultHash)
+				gotSum, err := mod.HashZip(rr.Body.Bytes(), dirhash.DefaultHash)
 				if err != nil {
 					t.Fatal(err)
 				}

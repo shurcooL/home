@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -241,7 +242,8 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	if err != nil {
 		return fmt.Errorf("initGitUsers: %v", err)
 	}
-	gitHandler, err := codepkg.NewGitHandler(code, reposDir, events, users, gitUsers, func(req *http.Request) *http.Request {
+	gitHooksDir := filepath.Join(storeDir, "bin", runtime.GOOS+"_"+runtime.GOARCH, "githook")
+	gitHandler, err := codepkg.NewGitHandler(code, reposDir, gitHooksDir, events, users, gitUsers, func(req *http.Request) *http.Request {
 		session, _ := lookUpSessionViaBasicAuth(req, users)
 		return withSession(req, session)
 	})
