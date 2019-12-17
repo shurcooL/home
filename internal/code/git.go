@@ -330,10 +330,15 @@ func (h *gitHandler) serveGitReceivePack(w http.ResponseWriter, req *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	hookDeclined := bytes.HasSuffix(buf.Bytes(), []byte(" pre-receive hook declined\n00000000"))
 	w.Header().Set("Content-Type", "application/x-git-receive-pack-result")
 	_, err = io.Copy(w, &buf)
 	if err != nil {
 		log.Println(err)
+	}
+
+	if hookDeclined {
+		return
 	}
 
 	added, _, err := h.code.Rediscover(repo.Spec)
