@@ -97,6 +97,11 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return err
 	}
 
+	err = html.Render(w, htmlg.H3(htmlg.Text("Activity")))
+	if err != nil {
+		return err
+	}
+
 	events, eventsError := h.events.List(req.Context())
 	var error string
 	if eventsError != nil {
