@@ -2,15 +2,14 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +18,7 @@ import (
 	githubv3 "github.com/google/go-github/github"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/indieauth"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
@@ -39,9 +39,12 @@ func initAuth(usersService users.Service, userStore userCreator) {
 	if component.RedLogo {
 		logoStyle = "header a.Logo { color: red; } header a.Logo:hover { color: darkred; }"
 	}
-	serveSignInPage := signInPage{
+	signInPage := signInPage{
 		Logo: template.HTML("<style>" + logoStyle + "</style>" + htmlg.RenderComponentsString(component.Logo{})),
-	}.Serve
+	}
+	serveSignInPage := func(w http.ResponseWriter, errorText string) error {
+		return signInPage.Serve(w, "", errorText)
+	}
 
 	type state struct {
 		Expiry       time.Time
@@ -61,15 +64,28 @@ func initAuth(usersService users.Service, userStore userCreator) {
 			if u, err := usersService.GetAuthenticatedSpec(req.Context()); err != nil {
 				return err
 			} else if u != (users.UserSpec{}) {
-				return httperror.Redirect{URL: returnURL}
+				return httperror.Redirect{URL: returnURL.String()}
+			}
+
+			serveSignInPage := serveSignInPage
+			if returnURL.Path == "/api/indieauth/authorization" {
+				// Display "to continue to <target site>" after "Sign in to <site name>".
+				clientID, err := indieauth.ParseClientID(returnURL.Query().Get("client_id"))
+				if err != nil {
+					return httperror.BadRequest{Err: fmt.Errorf("bad client_id value: %v", err)}
+				}
+				continueTo := displayURL(*clientID)
+				serveSignInPage = func(w http.ResponseWriter, errorText string) error {
+					return signInPage.Serve(w, continueTo, errorText)
+				}
 			}
 
 			switch req.Method {
 			case http.MethodGet:
 				return serveSignInPage(w, "")
 			case http.MethodPost:
-				me, err := parseProfileURL(req.PostFormValue("me"))
-				log.Printf("parseProfileURL(%q) -> err=%v me=%q\n", req.PostFormValue("me"), err, me)
+				me, err := indieauth.ParseProfileURL(req.PostFormValue("me"))
+				log.Printf("indieauth.ParseProfileURL(%q) -> err=%v me=%q\n", req.PostFormValue("me"), err, me)
 				if err != nil {
 					return serveSignInPage(w, err.Error())
 				}
@@ -101,7 +117,7 @@ func initAuth(usersService users.Service, userStore userCreator) {
 					states[stateKey] = state{
 						Expiry:       time.Now().Add(5 * time.Minute), // Enough time to get password, use 2 factor auth, etc.
 						EnteredLogin: login,
-						ReturnURL:    returnURL,
+						ReturnURL:    returnURL.String(),
 					}
 					statesMu.Unlock()
 
@@ -223,7 +239,7 @@ func initAuth(usersService users.Service, userStore userCreator) {
 				global.mu.Unlock()
 			}
 			clearAccessTokenCookie(w)
-			return httperror.Redirect{URL: sanitizeReturn(req.PostFormValue(returnParameterName))}
+			return httperror.Redirect{URL: sanitizeReturn(req.PostFormValue(returnParameterName)).String()}
 		},
 	))
 
@@ -285,64 +301,144 @@ func initAuth(usersService users.Service, userStore userCreator) {
 	)})
 }
 
-// parseProfileURL parses a user profile URL that a user is identified by.
-//
-// It verifies the restrictions as described in the IndieAuth specification
-// at https://indieauth.spec.indieweb.org/#user-profile-url:
-//
-// 	Profile URLs
-// 		MUST have either an https or http scheme,
-// 		MUST contain a path component (/ is a valid path),
-// 		MUST NOT contain single-dot or double-dot path segments,
-// 		MAY contain a query string component,
-// 		MUST NOT contain a fragment component,
-// 		MUST NOT contain a username or password component, and
-// 		MUST NOT contain a port.
-// 	Additionally, hostnames
-// 		MUST be domain names and
-// 		MUST NOT be ipv4 or ipv6 addresses.
-//
-// It applies a few additional restrictions for now.
-//
-func parseProfileURL(me string) (*url.URL, error) {
-	if len(me) > 50 {
-		return nil, fmt.Errorf("URL should not be longer than 50 bytes (for now)")
+// initIndieAuth initializes the IndieAuth authorization endpoint.
+// canonicalMe is the canonical IndieAuth 'me' user profile URL.
+func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
+	type authz struct {
+		Expiry      time.Time
+		ClientID    string
+		RedirectURL string
 	}
-	u, err := url.Parse(me)
-	if err != nil {
-		return nil, err
-	}
-	if u.Scheme != "https" {
-		// Require "https" scheme. This is stricter than IndieAuth spec requires.
-		return nil, fmt.Errorf("URL scheme must be https")
-	}
-	if u.Path == "" {
-		// Canonicalize empty path to "/" to meet the requirement of special URLs.
-		//
-		// See https://indieauth.spec.indieweb.org/#url-canonicalization
-		// and https://url.spec.whatwg.org/#special-scheme.
-		u.Path = "/"
-	}
-	if path.Clean("/"+u.Path) != u.Path || u.RawPath != "" {
-		return nil, fmt.Errorf("URL path must be clean")
-	}
-	if u.Fragment != "" {
-		return nil, fmt.Errorf("URL must not have a fragment")
-	}
-	if u.User != nil {
-		return nil, fmt.Errorf("URL must not have a username or password")
-	}
-	if u.Port() != "" {
-		return nil, fmt.Errorf("URL must not contain a port")
-	}
-	if !strings.Contains(u.Host, ".") {
-		return nil, fmt.Errorf("URL must be a domain name (contain a dot)")
-	}
-	if net.ParseIP(u.Host) != nil {
-		return nil, fmt.Errorf("URL must not be an IP")
-	}
-	u.Host = strings.ToLower(u.Host)
-	return u, nil
+	var authzsMu sync.Mutex
+	var authzs = make(map[string]authz) // Code -> Authorization.
+	http.Handle("/api/indieauth/authorization", cookieAuth{httputil.ErrorHandler(usersService,
+		func(w http.ResponseWriter, req *http.Request) error {
+			if err := httputil.AllowMethods(req, http.MethodGet, http.MethodPost); err != nil {
+				return err
+			}
+			if err := req.ParseForm(); err != nil {
+				return httperror.BadRequest{Err: err}
+			}
+			ru, err := url.Parse(req.Form.Get("redirect_uri"))
+			if err != nil {
+				return httperror.BadRequest{Err: err}
+			}
+			if q := ru.Query(); q.Get("code") != "" || q.Get("state") != "" {
+				return httperror.BadRequest{Err: fmt.Errorf("redirect_uri contains an unexpected code or state query parameter")}
+			}
+			switch req.Method {
+			case http.MethodGet:
+				if typ := req.Form.Get("response_type"); typ != "" && typ != "id" {
+					return httperror.BadRequest{Err: fmt.Errorf("unexpected request type %q", typ)}
+				}
+				me := req.Form.Get("me")
+				if me != canonicalMe.String() {
+					return httperror.BadRequest{Err: fmt.Errorf("unexpected me value %q, want %q", me, canonicalMe.String())}
+				}
+				if req.Form.Get("state") == "" {
+					return httperror.BadRequest{Err: fmt.Errorf("missing state parameter")}
+				}
+				clientID, err := indieauth.ParseClientID(req.Form.Get("client_id"))
+				if err != nil {
+					return httperror.BadRequest{Err: fmt.Errorf("bad client_id value: %v", err)}
+				}
+				// TODO: When starting to allow arbitrary IndieAuth URLs, check here if clientID is me.
+				if ru.Scheme != clientID.Scheme || ru.Host != clientID.Host {
+					// Ensure the redirect_uri scheme, host and port match that of the client_id.
+					//
+					// TODO: support more advanced https://indieauth.spec.indieweb.org/#redirect-url cases:
+					//       If the URL scheme, host or port of the redirect_uri in the request do not match
+					//       that of the client_id, then the authorization endpoint SHOULD verify that the
+					//       requested redirect_uri matches one of the redirect URLs published by the client,
+					//       and SHOULD block the request from proceeding if not.
+					return httperror.BadRequest{Err: fmt.Errorf("scheme+host of redirect_uri %q doesn't match scheme+host of client_id %q", ru.Scheme+"://"+ru.Host, clientID.Scheme+"://"+clientID.Host)}
+				}
+				if u, err := usersService.GetAuthenticatedSpec(req.Context()); err != nil {
+					return err
+				} else if u == (users.UserSpec{}) {
+					loginURL := (&url.URL{
+						Path:     "/login",
+						RawQuery: url.Values{returnParameterName: {req.URL.String()}}.Encode(),
+					}).String()
+					return httperror.Redirect{URL: loginURL}
+				} else if u != dmitshur {
+					// Redirect with an OAuth 2.0 error. See https://tools.ietf.org/html/rfc6749#section-4.1.2.1.
+					q := ru.Query()
+					q.Set("error", "access_denied")
+					q.Set("error_description", fmt.Sprintf("you are authenticated to %s as %d@%s, not as %d@%s", *siteNameFlag, u.ID, u.Domain, dmitshur.ID, dmitshur.Domain))
+					q.Set("state", req.Form.Get("state"))
+					ru.RawQuery = q.Encode()
+					return httperror.Redirect{URL: ru.String()}
+				}
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				err = consentHTML.Execute(w, struct {
+					ClientID    *url.URL
+					Me          *url.URL
+					RedirectURL *url.URL
+				}{clientID, canonicalMe, ru})
+				return err
+			case http.MethodPost:
+				switch authzCode := req.Form.Get("code"); {
+				// Press of Allow button.
+				case authzCode == "":
+					if u, err := usersService.GetAuthenticatedSpec(req.Context()); err != nil {
+						return err
+					} else if u != dmitshur {
+						return os.ErrPermission
+					}
+
+					// Add new authz code.
+					authzCode := string(cryptoRandBytes())
+					expiry := time.Now().Add(time.Minute)
+					authzsMu.Lock()
+					for code, a := range authzs { // Clean up expired authorization codes.
+						if time.Now().Before(a.Expiry) {
+							continue
+						}
+						delete(authzs, code)
+					}
+					authzs[authzCode] = authz{
+						Expiry:      expiry,
+						ClientID:    req.Form.Get("client_id"),
+						RedirectURL: req.Form.Get("redirect_uri"),
+					}
+					authzsMu.Unlock()
+
+					q := ru.Query()
+					q.Set("code", authzCode)
+					q.Set("state", req.Form.Get("state"))
+					ru.RawQuery = q.Encode()
+					return httperror.Redirect{URL: ru.String()}
+				// Verification of authorization code.
+				default:
+					// Consume authz code.
+					authzsMu.Lock()
+					a, ok := authzs[authzCode]
+					delete(authzs, authzCode)
+					authzsMu.Unlock()
+
+					// Verify code, expiry, client_id, redirect_id match.
+					if !ok || !time.Now().Before(a.Expiry) ||
+						req.Form.Get("client_id") != a.ClientID ||
+						req.Form.Get("redirect_uri") != a.RedirectURL {
+
+						// Respond with an OAuth 2.0 error. See https://tools.ietf.org/html/rfc6749#section-5.2.
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusBadRequest)
+						return json.NewEncoder(w).Encode(struct {
+							Error string `json:"error"`
+						}{"invalid_grant"})
+					}
+
+					return httperror.JSONResponse{V: struct {
+						Me string `json:"me"`
+					}{canonicalMe.String()}}
+				}
+			default:
+				panic("unreachable")
+			}
+		},
+	)})
 }
 
 func parseGitHubLogin(githubURLPath string) (string, bool) {
@@ -365,33 +461,42 @@ func parseGitHubLogin(githubURLPath string) (string, bool) {
 	return login, true
 }
 
-func sanitizeReturn(returnURL string) string {
+// sanitizeReturn sanitizes a return URL. It must be
+// a valid relative URL, otherwise "/" is returned.
+func sanitizeReturn(returnURL string) *url.URL {
 	u, err := url.Parse(returnURL)
-	if err != nil {
-		return "/"
+	if err != nil ||
+		u.Scheme != "" || u.Opaque != "" || u.User != nil || u.Host != "" ||
+		u.Path == "" || u.RawPath != "" {
+		return &url.URL{Path: "/"}
 	}
-	if u.Scheme != "" || u.Opaque != "" || u.User != nil || u.Host != "" {
-		return "/"
+	return &url.URL{Path: u.Path, RawQuery: u.RawQuery, Fragment: u.Fragment}
+}
+
+// displayURL returns the URL u in short form for display purposes.
+// The scheme is omitted, and the "/" path isn't shown.
+func displayURL(u url.URL) string {
+	u.Scheme = ""
+	if u.Path == "/" {
+		u.Path = ""
 	}
-	if u.Path == "" {
-		return "/"
-	}
-	return (&url.URL{Path: u.Path, RawQuery: u.RawQuery, Fragment: u.Fragment}).String()
+	return strings.TrimPrefix(u.String(), "//")
 }
 
 type signInPage struct {
 	Logo template.HTML
 }
 
-func (p signInPage) Serve(w http.ResponseWriter, errorText string) error {
+func (p signInPage) Serve(w http.ResponseWriter, continueTo, errorText string) error {
 	// TODO: redirect to /login or some other friendlier URL and show the page there (via query params)?
 	// TODO: consider using http.StatusUnauthorized rather than 200 OK status when errorText != ""?
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	return signInHTML.Execute(w, struct {
-		Logo     template.HTML
-		SiteName string
-		Error    string
-	}{p.Logo, *siteNameFlag, errorText})
+		Logo       template.HTML
+		SiteName   string
+		ContinueTo string
+		Error      string
+	}{p.Logo, *siteNameFlag, continueTo, errorText})
 }
 
 var signInHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
@@ -478,7 +583,8 @@ small {
 	<body>
 		<header>
 			{{.Logo}}
-			<h1>Sign In to {{.SiteName}}</h1>
+			<h1>Sign in to {{.SiteName}}</h1>
+			{{with .ContinueTo}}<h2>to continue to {{.}}</h2>{{end}}
 		</header>
 		{{with .Error}}<div class="error">{{.}}</div>{{end}}
 		<form method="post" action="/login">
@@ -494,6 +600,52 @@ small {
 			<p style="font-size: 80%; color: gray;">Problem signing in?
 			Please <a href="/about" style="color: gray;">let me know</a> and I'll fix it.</p>
 		</footer>
+	</body>
+</html>
+`))
+
+var consentHTML = template.Must(template.New("").Funcs(template.FuncMap{
+	"displayURL": displayURL,
+}).Parse(`<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Dmitri Shuralyov - Consent</title>
+		<link href="/icon.png" rel="icon" type="image/png">
+		<meta name="viewport" content="width=device-width">
+		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
+		<style type="text/css">
+body, input {
+	font-family: Go;
+	font-size: 80%;
+}
+.center {
+	text-align: center;
+}
+.mt100 {
+	margin-top: 100px;
+}
+.bold {
+	font-weight: bold;
+}
+		</style>
+	</head>
+	<body>
+		<div class="center mt100">
+			<form class="center" method="post">
+				<h1>Consent</h1>
+				<p><a class="bold" href="{{.ClientID}}" title="{{.ClientID}}">{{displayURL .ClientID}}</a> would like to:</p>
+				<p>• identify you as <abbr title="{{.Me}}">{{displayURL .Me}}</abbr></p>
+				{{if ne .RedirectURL.Host .ClientID.Host}}
+					<p>Authorizing will redirect to a different host:<br>
+					<strong>{{.RedirectURL}}</strong></p>
+				{{end}}
+				<button type="submit" style="
+font-family: inherit;
+height: 18px;
+border-radius: 4px;
+box-shadow: 0 1px 1px rgba(0, 0, 0, .05);">Allow</button>
+			</form>
+		</div>
 	</body>
 </html>
 `))

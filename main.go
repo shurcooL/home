@@ -23,6 +23,7 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httphandler"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/indieauth"
 	codepkg "github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
@@ -40,6 +41,7 @@ var (
 	analyticsFileFlag = flag.String("analytics-file", "", "Optional path to file containing analytics HTML to insert at the beginning of <head>.")
 	noRobotsFlag      = flag.Bool("no-robots", false, "Disallow all robots on all pages.")
 	siteNameFlag      = flag.String("site-name", "home (local devel)", "Name of site, displayed on sign in page.")
+	indieauthMeFlag   = indieauth.MeFlag("indieauth-me", "", "Canonical IndieAuth 'me' user profile URL for this home instance, or the empty string to disable the IndieAuth authorization endpoint. See https://indieauth.spec.indieweb.org/#user-profile-url.")
 )
 
 func init() {
@@ -185,6 +187,9 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	changeService := newChangeService(reactions, users, githubRouter)
 
 	initAuth(users, userStore)
+	if me := indieauthMeFlag.Me; me != nil {
+		initIndieAuth(users, me)
+	}
 
 	usersAPIHandler := httphandler.Users{Users: users}
 	http.Handle("/api/userspec", cookieAuth{httputil.ErrorHandler(users, usersAPIHandler.GetAuthenticatedSpec)})

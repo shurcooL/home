@@ -37,6 +37,7 @@ var indexHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/index/style.css" rel="stylesheet" type="text/css">
+		{{if .AuthzEndpoint}}<link href="/api/indieauth/authorization" rel="authorization_endpoint">{{end}}
 		<link href="https://github.com/dmitshur" rel="me">
 	</head>
 	<body>
@@ -67,7 +68,10 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		return nil
 	}
 
-	data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
+	data := struct {
+		AnalyticsHTML template.HTML
+		AuthzEndpoint bool // Whether to advertise the IndieAuth authorization endpoint.
+	}{analyticsHTML, indieauthMeFlag.Me != nil}
 	err := indexHTML.Execute(w, data)
 	if err != nil {
 		return err
