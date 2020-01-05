@@ -218,9 +218,9 @@ func initAuth(usersService users.Service, userStore userCreator) {
 				delete(global.sessions, token)
 			}
 			global.sessions[accessToken] = session{
-				GitHubUserID: us.ID,
-				Expiry:       expiry,
-				AccessToken:  accessToken,
+				UserSpec:    us.UserSpec,
+				Expiry:      expiry,
+				AccessToken: accessToken,
 			}
 			global.mu.Unlock()
 
@@ -271,16 +271,16 @@ func initAuth(usersService users.Service, userStore userCreator) {
 			global.mu.Unlock()
 			var nodes []*html.Node
 			for _, s := range ss {
-				u, err := usersService.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"})
+				u, err := usersService.Get(req.Context(), s.UserSpec)
 				if err != nil {
-					log.Printf("usersService.Get(%+v): %v\n", users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"}, err)
+					log.Printf("usersService.Get(%+v): %v\n", s.UserSpec, err)
 					u = users.User{
-						UserSpec: users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"},
-						Login:    fmt.Sprintf("??? (GitHubUserID=%d)", s.GitHubUserID),
+						UserSpec: s.UserSpec,
+						Login:    fmt.Sprintf("??? (UserSpec=%+v)", s.UserSpec),
 					}
 				}
 				nodes = append(nodes,
-					htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q Domain: %q expiry: %v accessToken: %q...", u.Login, u.Domain, humanize.Time(s.Expiry), base64.RawURLEncoding.EncodeToString([]byte(s.AccessToken)[:15])))),
+					htmlg.Div(htmlg.Text(fmt.Sprintf("Login: %q UserSpec: %d@%q expiry: %v accessToken: %q...", u.Login, u.UserSpec.ID, u.UserSpec.Domain, humanize.Time(s.Expiry), base64.RawURLEncoding.EncodeToString([]byte(s.AccessToken)[:15])))),
 				)
 			}
 			if len(ss) == 0 {

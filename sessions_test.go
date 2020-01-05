@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/shurcooL/users"
 )
 
 func TestLookUpSessionViaCookie(t *testing.T) {
@@ -12,14 +14,14 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 	}()
 	var (
 		sessionA = session{
-			GitHubUserID: 1,
-			Expiry:       time.Now().Add(6*24*time.Hour + time.Minute),
-			AccessToken:  "aaa",
+			UserSpec:    users.UserSpec{ID: 1, Domain: "example.com"},
+			Expiry:      time.Now().Add(6*24*time.Hour + time.Minute),
+			AccessToken: "aaa",
 		}
 		sessionB = session{
-			GitHubUserID: 2,
-			Expiry:       time.Now().Add(6*24*time.Hour - time.Minute),
-			AccessToken:  "bbb",
+			UserSpec:    users.UserSpec{ID: 2, Domain: "example.com"},
+			Expiry:      time.Now().Add(6*24*time.Hour - time.Minute),
+			AccessToken: "bbb",
 		}
 	)
 	global = state{sessions: map[string]session{
@@ -54,9 +56,9 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 				},
 			},
 			wantSession: &session{
-				GitHubUserID: 2,
-				Expiry:       time.Now().Add(7 * 24 * time.Hour), // Extended expiry.
-				AccessToken:  "bbb",
+				UserSpec:    users.UserSpec{ID: 2, Domain: "example.com"},
+				Expiry:      time.Now().Add(7 * 24 * time.Hour), // Extended expiry.
+				AccessToken: "bbb",
 			},
 			wantExtended: true,
 		},
@@ -98,7 +100,7 @@ func TestLookUpSessionViaCookie(t *testing.T) {
 // They're equal if both are nil, or both are not nil and have equal fields.
 func equalSession(a, b *session) bool {
 	return a == nil && b == nil || a != nil && b != nil &&
-		a.GitHubUserID == b.GitHubUserID &&
+		a.UserSpec == b.UserSpec &&
 		-time.Second < a.Expiry.Sub(b.Expiry) && a.Expiry.Sub(b.Expiry) < time.Second && // Expiry times within a second.
 		a.AccessToken == b.AccessToken
 }

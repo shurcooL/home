@@ -105,10 +105,7 @@ func (Users) GetAuthenticatedSpec(ctx context.Context) (users.UserSpec, error) {
 	if s == nil {
 		return users.UserSpec{}, nil
 	}
-	return users.UserSpec{
-		ID:     s.GitHubUserID,
-		Domain: "github.com",
-	}, nil
+	return s.UserSpec, nil
 }
 
 func (u Users) GetAuthenticated(ctx context.Context) (users.User, error) {

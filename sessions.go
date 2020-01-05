@@ -86,8 +86,8 @@ func (k *contextKey) String() string { return "github.com/shurcooL/home context 
 // session is a user session. Nil session pointer represents no session.
 // Non-nil session pointers are expected to have valid users.
 type session struct {
-	// GitHubUserID is a valid (i.e., non-zero) GitHub user ID. Domain is "github.com".
-	GitHubUserID uint64
+	// UserSpec is the spec of a valid existing (i.e., non-zero) user.
+	UserSpec users.UserSpec
 
 	Expiry      time.Time
 	AccessToken string // Access token. Needed to be able to clear session when the user signs out.
@@ -244,7 +244,7 @@ func lookUpSessionViaBasicAuth(req *http.Request, usersService users.Service) (*
 		return nil, errBadAccessToken
 	}
 	// Existing session, now get user and verify the username matches.
-	user, err := usersService.Get(req.Context(), users.UserSpec{ID: s.GitHubUserID, Domain: "github.com"})
+	user, err := usersService.Get(req.Context(), s.UserSpec)
 	if err != nil {
 		log.Println("lookUpSessionUserViaBasicAuth: failed to get user:", err)
 		return nil, errBadAccessToken
