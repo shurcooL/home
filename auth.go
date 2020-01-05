@@ -46,13 +46,13 @@ func initAuth(usersService users.Service, userStore userCreator) {
 		return signInPage.Serve(w, req, "", errorText)
 	}
 
-	type state struct {
+	type ghState struct {
 		Expiry       time.Time
 		EnteredLogin string
 		ReturnURL    string
 	}
-	var statesMu sync.Mutex
-	var states = make(map[string]state) // State Key -> State.
+	var ghStatesMu sync.Mutex
+	var ghStates = make(map[string]ghState) // State Key -> GitHub State.
 	http.Handle("/login", cookieAuth{httputil.ErrorHandler(usersService,
 		func(w http.ResponseWriter, req *http.Request) error {
 			if err := httputil.AllowMethods(req, http.MethodGet, http.MethodPost); err != nil {
@@ -105,21 +105,21 @@ func initAuth(usersService users.Service, userStore userCreator) {
 						return serveSignInPage(w, req, fmt.Sprintf("%q is a GitHub %v; need a GitHub User", login, u.GetType()))
 					}
 
-					// Add new state.
+					// Add new GitHub state.
 					stateKey := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ASCII bytes in state, so use base64.
-					statesMu.Lock()
-					for key, s := range states { // Clean up expired states.
+					ghStatesMu.Lock()
+					for key, s := range ghStates { // Clean up expired GitHub states.
 						if time.Now().Before(s.Expiry) {
 							continue
 						}
-						delete(states, key)
+						delete(ghStates, key)
 					}
-					states[stateKey] = state{
+					ghStates[stateKey] = ghState{
 						Expiry:       time.Now().Add(5 * time.Minute), // Enough time to get password, use 2 factor auth, etc.
 						EnteredLogin: login,
 						ReturnURL:    returnURL.String(),
 					}
-					statesMu.Unlock()
+					ghStatesMu.Unlock()
 
 					url := githubConfig.AuthCodeURL(stateKey,
 						oauth2.SetAuthURLParam("login", login),
@@ -145,12 +145,12 @@ func initAuth(usersService users.Service, userStore userCreator) {
 				return httperror.Redirect{URL: "/"}
 			}
 
-			// Consume state.
+			// Consume GitHub state.
 			stateKey := req.FormValue("state")
-			statesMu.Lock()
-			state, ok := states[stateKey]
-			delete(states, stateKey)
-			statesMu.Unlock()
+			ghStatesMu.Lock()
+			state, ok := ghStates[stateKey]
+			delete(ghStates, stateKey)
+			ghStatesMu.Unlock()
 
 			// Verify state and expiry.
 			if !ok || !time.Now().Before(state.Expiry) {
