@@ -6,10 +6,15 @@ import "github.com/shurcooL/users"
 //
 // 	root
 // 	└── users (newline separated JSON stream of user objects)
+//
+// There may be multiple entries with the same
+// user spec. Later entries take precedence.
 
 // user is an on-disk representation of users.User.
 type user struct {
-	UserSpec  userSpec
+	UserSpec    userSpec
+	CanonicalMe string `json:",omitempty"`
+
 	Elsewhere []userSpec `json:",omitempty"`
 
 	Login     string
@@ -27,7 +32,9 @@ func fromUser(u users.User) user {
 		elsewhere = append(elsewhere, fromUserSpec(us))
 	}
 	return user{
-		UserSpec:  fromUserSpec(u.UserSpec),
+		UserSpec:    fromUserSpec(u.UserSpec),
+		CanonicalMe: u.CanonicalMe,
+
 		Elsewhere: elsewhere,
 
 		Login:     u.Login,
@@ -46,7 +53,9 @@ func (u user) User() users.User {
 		elsewhere = append(elsewhere, us.UserSpec())
 	}
 	return users.User{
-		UserSpec:  u.UserSpec.UserSpec(),
+		UserSpec:    u.UserSpec.UserSpec(),
+		CanonicalMe: u.CanonicalMe,
+
 		Elsewhere: elsewhere,
 
 		Login:     u.Login,

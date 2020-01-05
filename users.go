@@ -79,6 +79,16 @@ type userCreator interface {
 	// UserSpec must specify a valid (i.e., non-zero) user.
 	// It returns os.ErrExist if the user already exists.
 	Create(ctx context.Context, user users.User) error
+
+	// InsertByCanonicalMe inserts a user identified by the CanonicalMe
+	// field into the user store. If a user with the same CanonicalMe
+	// value doesn't exist yet, a new user is created. Otherwise,
+	// the existing user is updated. CanonicalMe must not be empty.
+	//
+	// The user ID must be 0 and domain must be non-empty.
+	// The returned user keeps the same domain and gets
+	// assigned a unique persistent non-zero ID.
+	InsertByCanonicalMe(ctx context.Context, user users.User) (users.User, error)
 }
 
 func newUsersService(root webdav.FileSystem) (users.Service, userCreator, error) {
@@ -91,7 +101,7 @@ func newUsersService(root webdav.FileSystem) (users.Service, userCreator, error)
 
 // Users implements users.Service.
 type Users struct {
-	store users.Store
+	store *fs.Store
 }
 
 func (u Users) Get(ctx context.Context, user users.UserSpec) (users.User, error) {
