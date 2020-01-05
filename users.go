@@ -13,8 +13,8 @@ import (
 	githubv3 "github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/githubv4"
+	"github.com/shurcooL/home/internal/exp/service/user/fs"
 	"github.com/shurcooL/users"
-	"github.com/shurcooL/users/fs"
 	"golang.org/x/net/webdav"
 	"golang.org/x/oauth2"
 )
@@ -76,6 +76,7 @@ func measureGitHubV4RateLimit() {
 
 type userCreator interface {
 	// Create creates the specified user.
+	// UserSpec must specify a valid (i.e., non-zero) user.
 	// It returns os.ErrExist if the user already exists.
 	Create(ctx context.Context, user users.User) error
 }
