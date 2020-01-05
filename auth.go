@@ -42,8 +42,8 @@ func initAuth(usersService users.Service, userStore userCreator) {
 	signInPage := signInPage{
 		Logo: template.HTML("<style>" + logoStyle + "</style>" + htmlg.RenderComponentsString(component.Logo{})),
 	}
-	serveSignInPage := func(w http.ResponseWriter, errorText string) error {
-		return signInPage.Serve(w, "", errorText)
+	serveSignInPage := func(w http.ResponseWriter, req *http.Request, errorText string) error {
+		return signInPage.Serve(w, req, "", errorText)
 	}
 
 	type state struct {
@@ -75,34 +75,34 @@ func initAuth(usersService users.Service, userStore userCreator) {
 					return httperror.BadRequest{Err: fmt.Errorf("bad client_id value: %v", err)}
 				}
 				continueTo := displayURL(*clientID)
-				serveSignInPage = func(w http.ResponseWriter, errorText string) error {
-					return signInPage.Serve(w, continueTo, errorText)
+				serveSignInPage = func(w http.ResponseWriter, req *http.Request, errorText string) error {
+					return signInPage.Serve(w, req, continueTo, errorText)
 				}
 			}
 
 			switch req.Method {
 			case http.MethodGet:
-				return serveSignInPage(w, "")
+				return serveSignInPage(w, req, "")
 			case http.MethodPost:
 				me, err := indieauth.ParseProfileURL(req.PostFormValue("me"))
 				log.Printf("indieauth.ParseProfileURL(%q) -> err=%v me=%q\n", req.PostFormValue("me"), err, me)
 				if err != nil {
-					return serveSignInPage(w, err.Error())
+					return serveSignInPage(w, req, err.Error())
 				}
 				switch me.Host {
 				case "github.com":
 					login, ok := parseGitHubLogin(me.Path)
 					if !ok {
-						return serveSignInPage(w, "GitHub URL must be like https://github.com/example")
+						return serveSignInPage(w, req, "GitHub URL must be like https://github.com/example")
 					}
 
 					// Do a best-effort preemptive check. Don't use an authenticated client here
 					// because unauthenticated requests can force it to exceed GitHub rate limit.
 					if u, resp, err := unauthGHV3.Users.Get(req.Context(), login); resp != nil &&
 						resp.StatusCode == http.StatusNotFound {
-						return serveSignInPage(w, fmt.Sprintf("GitHub user %q doesn't exist", login))
+						return serveSignInPage(w, req, fmt.Sprintf("GitHub user %q doesn't exist", login))
 					} else if err == nil && u.GetType() != "User" {
-						return serveSignInPage(w, fmt.Sprintf("%q is a GitHub %v; need a GitHub User", login, u.GetType()))
+						return serveSignInPage(w, req, fmt.Sprintf("%q is a GitHub %v; need a GitHub User", login, u.GetType()))
 					}
 
 					// Add new state.
@@ -126,7 +126,7 @@ func initAuth(usersService users.Service, userStore userCreator) {
 						oauth2.SetAuthURLParam("allow_signup", "false"))
 					return httperror.Redirect{URL: url}
 				default:
-					return serveSignInPage(w, "other URL types aren't supported yet, only GitHub URLs like https://github.com/example are supported now")
+					return serveSignInPage(w, req, "other URL types aren't supported yet, only GitHub URLs like https://github.com/example are supported now")
 				}
 			default:
 				panic("unreachable")
@@ -190,11 +190,11 @@ func initAuth(usersService users.Service, userStore userCreator) {
 			if err != nil {
 				log.Println("/callback/github: error getting user from GitHub:", err)
 				// Show a problem page, if, for example, error came from gh.Users.Get("") due to GitHub being down.
-				return serveSignInPage(w, "there was a problem authenticating via GitHub")
+				return serveSignInPage(w, req, "there was a problem authenticating via GitHub")
 			}
 
 			if state.EnteredLogin != "" && !strings.EqualFold(us.Login, state.EnteredLogin) {
-				return serveSignInPage(w, fmt.Sprintf("GitHub authenticated you as %q, doesn't match entered %q", "github.com/"+us.Login, "github.com/"+state.EnteredLogin))
+				return serveSignInPage(w, req, fmt.Sprintf("GitHub authenticated you as %q, doesn't match entered %q", "github.com/"+us.Login, "github.com/"+state.EnteredLogin))
 			}
 
 			// If the user doesn't already exist, create it.
@@ -256,7 +256,7 @@ func initAuth(usersService users.Service, userStore userCreator) {
 				// TODO: Factor out this os.IsPermission(err) && s == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
 				loginURL := (&url.URL{
 					Path:     "/login",
-					RawQuery: url.Values{returnParameterName: {req.URL.String()}}.Encode(),
+					RawQuery: url.Values{returnParameterName: {req.RequestURI}}.Encode(),
 				}).String()
 				return httperror.Redirect{URL: loginURL}
 			} else if !u.SiteAdmin {
@@ -358,7 +358,7 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 				} else if u == (users.UserSpec{}) {
 					loginURL := (&url.URL{
 						Path:     "/login",
-						RawQuery: url.Values{returnParameterName: {req.URL.String()}}.Encode(),
+						RawQuery: url.Values{returnParameterName: {req.RequestURI}}.Encode(),
 					}).String()
 					return httperror.Redirect{URL: loginURL}
 				} else if u != dmitshur {
@@ -487,16 +487,17 @@ type signInPage struct {
 	Logo template.HTML
 }
 
-func (p signInPage) Serve(w http.ResponseWriter, continueTo, errorText string) error {
+func (p signInPage) Serve(w http.ResponseWriter, req *http.Request, continueTo, errorText string) error {
 	// TODO: redirect to /login or some other friendlier URL and show the page there (via query params)?
 	// TODO: consider using http.StatusUnauthorized rather than 200 OK status when errorText != ""?
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	return signInHTML.Execute(w, struct {
 		Logo       template.HTML
 		SiteName   string
+		ReturnURL  string
 		ContinueTo string
 		Error      string
-	}{p.Logo, *siteNameFlag, continueTo, errorText})
+	}{p.Logo, *siteNameFlag, req.FormValue(returnParameterName), continueTo, errorText})
 }
 
 var signInHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
@@ -587,7 +588,7 @@ small {
 			{{with .ContinueTo}}<h2>to continue to {{.}}</h2>{{end}}
 		</header>
 		{{with .Error}}<div class="error">{{.}}</div>{{end}}
-		<form method="post" action="/login">
+		<form method="post" action="/login{{with .ReturnURL}}?return={{.}}{{end}}">
 			<p>Enter your URL to sign in.</p>
 			<p><input type="url" name="me" value="https://"></p>
 			<p style="font-size: 80%; color: gray; margin-bottom: 8px;">Supported authentication methods:</p>
