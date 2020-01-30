@@ -42,6 +42,7 @@ var (
 	noRobotsFlag      = flag.Bool("no-robots", false, "Disallow all robots on all pages.")
 	siteNameFlag      = flag.String("site-name", "home (local devel)", "Name of site, displayed on sign in page.")
 	indieauthMeFlag   = indieauth.MeFlag("indieauth-me", "", "Canonical IndieAuth 'me' user profile URL for this home instance, or the empty string to disable the IndieAuth authorization endpoint. See https://indieauth.spec.indieweb.org/#user-profile-url.")
+	githubRelMeFlag   = flag.String("github-rel-me", "dmitshur", "GitHub username to advertise in a rel='me' link.")
 )
 
 func init() {
