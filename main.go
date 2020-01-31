@@ -25,6 +25,9 @@ import (
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/indieauth"
 	codepkg "github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/auth"
+	"github.com/shurcooL/home/internal/exp/service/auth/directfetch"
+	"github.com/shurcooL/home/internal/exp/service/auth/gcpfetch"
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
@@ -43,6 +46,8 @@ var (
 	siteNameFlag      = flag.String("site-name", "home (local devel)", "Name of site, displayed on sign in page.")
 	indieauthMeFlag   = indieauth.MeFlag("indieauth-me", "", "Canonical IndieAuth 'me' user profile URL for this home instance, or the empty string to disable the IndieAuth authorization endpoint. See https://indieauth.spec.indieweb.org/#user-profile-url.")
 	githubRelMeFlag   = flag.String("github-rel-me", "dmitshur", "GitHub username to advertise in a rel='me' link.")
+	fetchFuncURLFlag  = flag.String("fetch-func-url", "", "Optional URL to FetchService function.")
+	fetchKeyFileFlag  = flag.String("fetch-key-file", "", "Optional path to key file for FetchService function.")
 )
 
 func init() {
@@ -187,7 +192,18 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	}
 	changeService := newChangeService(reactions, users, githubRouter)
 
-	initAuth(users, userStore)
+	var fs auth.FetchService
+	switch *fetchFuncURLFlag {
+	case "":
+		fs = directfetch.NewService()
+	default:
+		var err error
+		fs, err = gcpfetch.NewService(*fetchFuncURLFlag, *fetchKeyFileFlag)
+		if err != nil {
+			return fmt.Errorf("gcpfetch.NewService: %v", err)
+		}
+	}
+	initAuth(fs, users, userStore)
 	if me := indieauthMeFlag.Me; me != nil {
 		initIndieAuth(users, me)
 	}

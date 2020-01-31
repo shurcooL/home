@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-// ParseProfileURL parses a profile URL that a user is identified by.
+// ParseUserProfile parses a user profile URL that a user is identified by.
 //
 // It verifies the restrictions as described in the IndieAuth specification
 // at https://indieauth.spec.indieweb.org/#user-profile-url:
@@ -34,7 +34,7 @@ import (
 //
 // It applies a few additional restrictions for now.
 //
-func ParseProfileURL(me string) (*url.URL, error) {
+func ParseUserProfile(me string) (*url.URL, error) {
 	if len(me) > 50 {
 		return nil, fmt.Errorf("URL should not be longer than 50 bytes (for now)")
 	}
@@ -86,8 +86,8 @@ func ParseProfileURL(me string) (*url.URL, error) {
 // 		MUST NOT contain single-dot or double-dot path segments,
 // 		MAY contain a query string component,
 // 		MUST NOT contain a fragment component,
-// 		MUST NOT contain a username or password component,
-// 		and MAY contain a port.
+// 		MUST NOT contain a username or password component, and
+// 		MAY contain a port.
 // 	Additionally, hostnames
 // 		MUST be domain names or a loopback interface and
 // 		MUST NOT be IPv4 or IPv6 addresses except for IPv4 127.0.0.1 or IPv6 [::1].
@@ -130,7 +130,7 @@ func ParseClientID(clientID string) (*url.URL, error) {
 
 // MeFlag defines a user profile URL flag with specified name, default value, and usage string.
 // The return value is the address of a meFlag variable that stores the value of the flag.
-// The flag accepts the canonical form of a value acceptable to ParseProfileURL,
+// The flag accepts the canonical form of a value acceptable to ParseUserProfile,
 // or the empty string. MeFlag panics if the provided default value is not acceptable.
 func MeFlag(name string, value string, usage string) *meFlag {
 	f := new(meFlag)
@@ -153,7 +153,7 @@ func (f *meFlag) Set(s string) error {
 		f.Me = nil
 		return nil
 	}
-	me, err := ParseProfileURL(s)
+	me, err := ParseUserProfile(s)
 	if err != nil {
 		return err
 	} else if canonicalMe := me.String(); s != canonicalMe {

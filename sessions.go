@@ -61,6 +61,29 @@ func (s *state) Save(path string) error {
 	return err
 }
 
+// AddNewSession adds a new session with the specified user.
+// userSpec must be a valid existing (i.e., non-zero) user.
+func (s *state) AddNewSession(userSpec users.UserSpec) (accessToken string, expiry time.Time) {
+	accessToken = string(cryptoRandBytes())
+	expiry = time.Now().Add(7 * 24 * time.Hour)
+
+	s.mu.Lock()
+	for token, user := range s.sessions { // Clean up expired sessions.
+		if time.Now().Before(user.Expiry) {
+			continue
+		}
+		delete(s.sessions, token)
+	}
+	s.sessions[accessToken] = session{
+		UserSpec:    userSpec,
+		Expiry:      expiry,
+		AccessToken: accessToken,
+	}
+	s.mu.Unlock()
+
+	return accessToken, expiry
+}
+
 func cryptoRandBytes() []byte {
 	b := make([]byte, 256)
 	_, err := cryptorand.Read(b)

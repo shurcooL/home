@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/indieauth"
+	"github.com/shurcooL/home/internal/exp/service/auth"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
@@ -27,6 +29,11 @@ import (
 	githuboauth2 "golang.org/x/oauth2/github"
 )
 
+var indieauthClient = indieauth.Client{
+	ClientID:    os.Getenv("HOME_IA_CLIENT_ID"),
+	RedirectURL: os.Getenv("HOME_IA_REDIRECT_URL"),
+}
+
 var githubConfig = oauth2.Config{
 	ClientID:     os.Getenv("HOME_GH_CLIENT_ID"),
 	ClientSecret: os.Getenv("HOME_GH_CLIENT_SECRET"),
@@ -34,7 +41,7 @@ var githubConfig = oauth2.Config{
 	Endpoint:     githuboauth2.Endpoint,
 }
 
-func initAuth(usersService users.Service, userStore userCreator) {
+func initAuth(fs auth.FetchService, usersService users.Service, userStore userCreator) {
 	logoStyle := "header a.Logo { color: rgb(35, 35, 35); } header a.Logo:hover { color: #4183c4; }"
 	if component.RedLogo {
 		logoStyle = "header a.Logo { color: red; } header a.Logo:hover { color: darkred; }"
@@ -46,10 +53,26 @@ func initAuth(usersService users.Service, userStore userCreator) {
 		return signInPage.Serve(w, req, "", errorText)
 	}
 
+	// A semaphore to limit concurrent sign in processes.
+	signInSem := make(chan struct{}, 5)
+
+	type iaState struct {
+		Expiry        time.Time
+		User          users.User // User is the user signing in.
+		EnteredHost   string     // Host of entered user profile URL.
+		AuthzEndpoint *url.URL   // URL of IndieAuth authorization endpoint.
+		ReturnURL     string
+	}
+	var iaStatesMu sync.Mutex
+	var iaStates = make(map[string]iaState) // State Key -> IndieAuth State.
 	type ghState struct {
-		Expiry       time.Time
-		EnteredLogin string
-		ReturnURL    string
+		Expiry time.Time
+		// User is the user signing in.
+		// True GitHub users have Domain set to "github.com".
+		// Indie users signing in via RelMeAuth (using GitHub) have Domain set to "dmitri.shuralyov.com",
+		// and the CanonicalMe field set to their canonical user profile URL.
+		User      users.User
+		ReturnURL string
 	}
 	var ghStatesMu sync.Mutex
 	var ghStates = make(map[string]ghState) // State Key -> GitHub State.
@@ -84,29 +107,156 @@ func initAuth(usersService users.Service, userStore userCreator) {
 			case http.MethodGet:
 				return serveSignInPage(w, req, "")
 			case http.MethodPost:
-				me, err := indieauth.ParseProfileURL(req.PostFormValue("me"))
-				log.Printf("indieauth.ParseProfileURL(%q) -> err=%v me=%q\n", req.PostFormValue("me"), err, me)
+				// Throttle unauthenticated sign in requests.
+				select {
+				case signInSem <- struct{}{}:
+				default:
+					return serveSignInPage(w, req, "too many requests to sign in are being made now, please try later")
+				}
+				defer func() { <-signInSem }()
+
+				// Parse the entered user profile URL.
+				me, err := indieauth.ParseUserProfile(req.PostFormValue("me"))
+				log.Printf("indieauth.ParseUserProfile(%q) -> err=%v me=%q\n", req.PostFormValue("me"), err, me)
 				if err != nil {
 					return serveSignInPage(w, req, err.Error())
 				}
+
+				var (
+					user        users.User // User who wants to sign in.
+					enteredHost string     // Host of entered user profile URL.
+					authVia     struct {   // Their authentication options.
+						AuthzEndpoint *url.URL // URL of IndieAuth authorization endpoint, or nil if not available.
+						GitHubLogin   string   // GitHub user login, or empty string if not available.
+					}
+				)
+
+				// Fetch the entered user (but don't attempt to authenticate them yet).
+				// Report an error on failure, or if the user information is malformed.
 				switch me.Host {
+				// A user on the independent web.
+				default:
+					indieUser, err := fs.FetchUserProfile(req.Context(), me)
+					if err != nil {
+						log.Printf("/login: error fetching user profile %q: %v\n", me, err)
+						return serveSignInPage(w, req, err.Error())
+					}
+
+					// Discover presence on GitHub, if any.
+					ghUser, err := func(ctx context.Context, fs auth.FetchService, p auth.UserProfile) (*users.User, error) {
+						if p.GitHubLogin == "" {
+							// This indie user doesn't have a presence on GitHub.
+							return nil, nil
+						}
+						ghUser, ghUserWebsiteURL, err := fs.FetchGitHubUser(ctx, p.GitHubLogin)
+						if err != nil {
+							return nil, fmt.Errorf("user profile page at %q has a rel=\"me\" link to https://github.com/%s, but failed to fetch it: %v", p.CanonicalMe, p.GitHubLogin, err)
+						}
+						// Verify that the GitHub user's Website URL equals the user profile URL.
+						if ghUserWebsiteURL == "" {
+							return nil, fmt.Errorf("GitHub user %q has no Website URL set, but it needs to match user profile URL %q", ghUser.Login, p.CanonicalMe)
+						} else if ghUserWebsite, err := indieauth.ParseUserProfile(ghUserWebsiteURL); err != nil {
+							return nil, fmt.Errorf("GitHub user %q Website URL is %q, which is not a valid user profile URL: %v", ghUser.Login, ghUserWebsiteURL, err)
+						} else if *ghUserWebsite != *p.CanonicalMe {
+							return nil, fmt.Errorf("GitHub user %q Website URL is %q, doesn't match user profile URL %q", ghUser.Login, ghUserWebsite, p.CanonicalMe)
+						}
+						return &ghUser, nil
+					}(req.Context(), fs, indieUser)
+					if err != nil {
+						return serveSignInPage(w, req, err.Error())
+					}
+
+					// Construct the user that is about to sign in.
+					var (
+						elsewhere []users.UserSpec
+						avatarURL string
+					)
+					if ghUser != nil {
+						elsewhere = append(elsewhere, ghUser.UserSpec)
+					}
+					avatarURL = indieUser.AvatarURL
+					if avatarURL == "" && ghUser != nil {
+						// Fall back to GitHub avatar.
+						avatarURL = ghUser.AvatarURL
+					}
+					if avatarURL == "" {
+						// Fall back to default avatar.
+						avatarURL = "https://secure.gravatar.com/avatar?d=mm&f=y&s=96"
+					}
+					user = users.User{
+						UserSpec:    users.UserSpec{Domain: "dmitri.shuralyov.com"},
+						CanonicalMe: indieUser.CanonicalMe.String(),
+
+						Elsewhere: elsewhere,
+
+						Login:     displayURL(*indieUser.CanonicalMe),
+						AvatarURL: avatarURL,
+						HTMLURL:   indieUser.CanonicalMe.String(),
+					}
+					enteredHost = indieUser.CanonicalMe.Host
+
+					// Populate authentication options.
+					authVia.AuthzEndpoint = indieUser.AuthzEndpoint
+					if ghUser != nil {
+						authVia.GitHubLogin = ghUser.Login
+					}
+
+				// GitHub user.
+				case "www.github.com":
+					return serveSignInPage(w, req, `GitHub URL must omit the "www." subdomain, like https://github.com/example`)
 				case "github.com":
+					if me.Path == "/" {
+						return serveSignInPage(w, req, "GitHub URL must include the user, like https://github.com/example")
+					}
 					login, ok := parseGitHubLogin(me.Path)
 					if !ok {
 						return serveSignInPage(w, req, "GitHub URL must be like https://github.com/example")
 					}
-
-					// Do a best-effort preemptive check. Don't use an authenticated client here
-					// because unauthenticated requests can force it to exceed GitHub rate limit.
-					if u, resp, err := unauthGHV3.Users.Get(req.Context(), login); resp != nil &&
-						resp.StatusCode == http.StatusNotFound {
-						return serveSignInPage(w, req, fmt.Sprintf("GitHub user %q doesn't exist", login))
-					} else if err == nil && u.GetType() != "User" {
-						return serveSignInPage(w, req, fmt.Sprintf("%q is a GitHub %v; need a GitHub User", login, u.GetType()))
+					ghUser, _, err := fs.FetchGitHubUser(req.Context(), login)
+					if err != nil {
+						log.Printf("/login: error getting user %q from GitHub: %v\n", login, err)
+						return serveSignInPage(w, req, fmt.Sprintf("error getting user %q from GitHub: %v", login, err))
 					}
 
+					// TODO: Discover presence on the independent web, if doing so is useful.
+
+					// Construct the user that is about to sign in,
+					// and populate authentication options.
+					user = ghUser
+					authVia.GitHubLogin = ghUser.Login
+				}
+
+				// Start authenticating the entered user via one of the authentication
+				// options available to them. Prefer IndieAuth first, GitHub second.
+				switch {
+				// Authenticate via IndieAuth.
+				case authVia.AuthzEndpoint != nil:
+					// Add new IndieAuth state.
+					stateKey := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // OAuth 2.0 requires state to be printable ASCII, so use base64. See https://tools.ietf.org/html/rfc6749#appendix-A.5.
+					iaStatesMu.Lock()
+					for key, s := range iaStates { // Clean up expired IndieAuth states.
+						if time.Now().Before(s.Expiry) {
+							continue
+						}
+						delete(iaStates, key)
+					}
+					iaStates[stateKey] = iaState{
+						Expiry:        time.Now().Add(5 * time.Minute), // Enough time to get password, use 2 factor auth, etc.
+						User:          user,
+						EnteredHost:   enteredHost,
+						AuthzEndpoint: authVia.AuthzEndpoint,
+						ReturnURL:     returnURL.String(),
+					}
+					iaStatesMu.Unlock()
+
+					// Build the authentication request URL and redirect to it.
+					url := indieauthClient.AuthnReqURL(authVia.AuthzEndpoint, user.CanonicalMe, stateKey)
+					return httperror.Redirect{URL: url}
+
+				// Authenticate via GitHub (either directly, or via RelMeAuth).
+				case authVia.AuthzEndpoint == nil && authVia.GitHubLogin != "":
 					// Add new GitHub state.
-					stateKey := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // GitHub doesn't handle all non-ASCII bytes in state, so use base64.
+					stateKey := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // OAuth 2.0 requires state to be printable ASCII, so use base64. See https://tools.ietf.org/html/rfc6749#appendix-A.5.
 					ghStatesMu.Lock()
 					for key, s := range ghStates { // Clean up expired GitHub states.
 						if time.Now().Before(s.Expiry) {
@@ -115,22 +265,87 @@ func initAuth(usersService users.Service, userStore userCreator) {
 						delete(ghStates, key)
 					}
 					ghStates[stateKey] = ghState{
-						Expiry:       time.Now().Add(5 * time.Minute), // Enough time to get password, use 2 factor auth, etc.
-						EnteredLogin: login,
-						ReturnURL:    returnURL.String(),
+						Expiry:    time.Now().Add(5 * time.Minute), // Enough time to get password, use 2 factor auth, etc.
+						User:      user,
+						ReturnURL: returnURL.String(),
 					}
 					ghStatesMu.Unlock()
 
 					url := githubConfig.AuthCodeURL(stateKey,
-						oauth2.SetAuthURLParam("login", login),
+						oauth2.SetAuthURLParam("login", authVia.GitHubLogin),
 						oauth2.SetAuthURLParam("allow_signup", "false"))
 					return httperror.Redirect{URL: url}
+
+				// No supported authentication options found.
 				default:
-					return serveSignInPage(w, req, "other URL types aren't supported yet, only GitHub URLs like https://github.com/example are supported now")
+					return serveSignInPage(w, req, fmt.Sprintf("couldn't find any supported way to authenticate you using your website\n"+
+						"\n"+
+						"to authenticate as %q, you can either:\n"+
+						"\n"+
+						"• add an IndieAuth authorization endpoint\n"+
+						"• add a rel='me' link to your GitHub profile", me))
 				}
 			default:
 				panic("unreachable")
 			}
+		},
+	)})
+	http.Handle("/callback/indieauth", cookieAuth{httputil.ErrorHandler(usersService,
+		func(w http.ResponseWriter, req *http.Request) error {
+			if err := httputil.AllowMethods(req, http.MethodGet); err != nil {
+				return err
+			}
+
+			if u, err := usersService.GetAuthenticatedSpec(req.Context()); err != nil {
+				return err
+			} else if u != (users.UserSpec{}) {
+				return httperror.Redirect{URL: "/"}
+			}
+
+			// Consume IndieAuth state.
+			stateKey := req.FormValue("state")
+			iaStatesMu.Lock()
+			state, ok := iaStates[stateKey]
+			delete(iaStates, stateKey)
+			iaStatesMu.Unlock()
+			user := state.User
+
+			// Verify state and expiry.
+			if !ok || !time.Now().Before(state.Expiry) {
+				return httperror.BadRequest{Err: fmt.Errorf("state not recognized")}
+			}
+
+			// Handle an authentication error, if any.
+			if err := req.FormValue("error"); err != "" {
+				errorText := "there was a problem authenticating via IndieAuth: " + err
+				if desc := req.FormValue("error_description"); desc != "" {
+					errorText += "\n\n" + desc
+				}
+				return serveSignInPage(w, req, errorText)
+			}
+
+			// Verify the authorization code by making a POST request to the authorization endpoint.
+			me, err := indieauthClient.Verify(req.Context(), state.AuthzEndpoint.String(), state.EnteredHost, req.FormValue("code"))
+			if err != nil {
+				return serveSignInPage(w, req, err.Error())
+			}
+			if me.String() != user.CanonicalMe {
+				// TODO, THINK: Disallow any mismatch for now. If allowed, may need to re-fetch all user info? Think more first.
+				return serveSignInPage(w, req, fmt.Sprintf("authorization endpoint authenticated you as %q, doesn't match entered %q", me, user.CanonicalMe))
+			}
+
+			// Create or update user by their CanonicalMe.
+			user, err = userStore.InsertByCanonicalMe(req.Context(), user)
+			if err != nil {
+				log.Println("/callback/indieauth: error creating or updating user:", err)
+				return httperror.HTTP{Code: http.StatusInternalServerError, Err: err}
+			}
+
+			// Add new session with user who authenticated via IndieAuth.
+			accessToken, expiry := global.AddNewSession(user.UserSpec)
+			setAccessTokenCookie(w, accessToken, expiry)
+
+			return httperror.Redirect{URL: state.ReturnURL}
 		},
 	)})
 	http.Handle("/callback/github", cookieAuth{httputil.ErrorHandler(usersService,
@@ -151,80 +366,88 @@ func initAuth(usersService users.Service, userStore userCreator) {
 			state, ok := ghStates[stateKey]
 			delete(ghStates, stateKey)
 			ghStatesMu.Unlock()
+			user := state.User
 
 			// Verify state and expiry.
 			if !ok || !time.Now().Before(state.Expiry) {
 				return httperror.BadRequest{Err: fmt.Errorf("state not recognized")}
 			}
 
-			us, err := func() (users.User, error) {
+			// Verify the authenticated GitHub user equals the entered user.
+			ghUserSpec, ghUserLogin, err := func() (users.UserSpec, string, error) {
 				token, err := githubConfig.Exchange(req.Context(), req.FormValue("code"))
 				if err != nil {
-					return users.User{}, err
+					return users.UserSpec{}, "", err
 				}
 				httpClient := githubConfig.Client(req.Context(), token)
 				httpClient.Timeout = 5 * time.Second
 				ghUser, _, err := githubv3.NewClient(httpClient).Users.Get(req.Context(), "")
 				if err != nil {
-					return users.User{}, err
+					return users.UserSpec{}, "", err
 				}
-				if ghUser.ID == nil || *ghUser.ID == 0 {
-					return users.User{}, errors.New("GitHub user ID is nil or 0")
+				if ghUser.ID == nil || *ghUser.ID <= 0 {
+					return users.UserSpec{}, "", errors.New("GitHub user ID is nil or nonpositive")
 				}
 				if ghUser.Login == nil || *ghUser.Login == "" {
-					return users.User{}, errors.New("GitHub user Login is nil or empty")
+					return users.UserSpec{}, "", errors.New("GitHub user Login is nil or empty")
 				}
-				if ghUser.AvatarURL == nil {
-					return users.User{}, errors.New("GitHub user AvatarURL is nil")
-				}
-				if ghUser.HTMLURL == nil {
-					return users.User{}, errors.New("GitHub user HTMLURL is nil")
-				}
-				return users.User{
-					UserSpec:  users.UserSpec{ID: uint64(*ghUser.ID), Domain: "github.com"},
-					Login:     *ghUser.Login,
-					AvatarURL: *ghUser.AvatarURL,
-					HTMLURL:   *ghUser.HTMLURL,
-				}, nil
+				return users.UserSpec{ID: uint64(*ghUser.ID), Domain: "github.com"}, *ghUser.Login, nil
 			}()
 			if err != nil {
 				log.Println("/callback/github: error getting user from GitHub:", err)
 				// Show a problem page, if, for example, error came from gh.Users.Get("") due to GitHub being down.
 				return serveSignInPage(w, req, "there was a problem authenticating via GitHub")
 			}
-
-			if state.EnteredLogin != "" && !strings.EqualFold(us.Login, state.EnteredLogin) {
-				return serveSignInPage(w, req, fmt.Sprintf("GitHub authenticated you as %q, doesn't match entered %q", "github.com/"+us.Login, "github.com/"+state.EnteredLogin))
-			}
-
-			// If the user doesn't already exist, create it.
-			err = userStore.Create(req.Context(), us)
-			switch err {
-			case nil, os.ErrExist:
-				// Do nothing.
-			default:
-				log.Println("/callback/github: error creating user:", err)
-				return httperror.HTTP{Code: http.StatusInternalServerError, Err: err}
-			}
-
-			// Add new session.
-			accessToken := string(cryptoRandBytes())
-			expiry := time.Now().Add(7 * 24 * time.Hour)
-			global.mu.Lock()
-			for token, user := range global.sessions { // Clean up expired sesions.
-				if time.Now().Before(user.Expiry) {
-					continue
+			switch user.Domain {
+			// Indie user signing in via RelMeAuth.
+			case "dmitri.shuralyov.com":
+				if len(user.Elsewhere) == 0 || user.Elsewhere[0].Domain != "github.com" {
+					return fmt.Errorf("internal error: GitHub authenticated you as %q (GitHub ID %d), but can't find your expected GitHub identity", "github.com/"+ghUserLogin, ghUserSpec.ID)
+				} else if ghUserSpec != user.Elsewhere[0] {
+					return serveSignInPage(w, req, fmt.Sprintf("GitHub authenticated you as %q (GitHub ID %d), doesn't match expected GitHub ID %d", "github.com/"+ghUserLogin, ghUserSpec.ID, user.Elsewhere[0].ID))
 				}
-				delete(global.sessions, token)
+			// True GitHub user.
+			case "github.com":
+				if ghUserSpec != user.UserSpec {
+					return serveSignInPage(w, req, fmt.Sprintf("GitHub authenticated you as %q, doesn't match entered %q", "github.com/"+ghUserLogin, "github.com/"+user.Login))
+				}
+			default:
+				panic("unreachable")
 			}
-			global.sessions[accessToken] = session{
-				UserSpec:    us.UserSpec,
-				Expiry:      expiry,
-				AccessToken: accessToken,
-			}
-			global.mu.Unlock()
 
+			// Create or update user.
+			switch user.Domain {
+			// Indie user signing in via RelMeAuth.
+			case "dmitri.shuralyov.com":
+				// Create or update user by their CanonicalMe.
+				var err error
+				user, err = userStore.InsertByCanonicalMe(req.Context(), user)
+				if err != nil {
+					log.Println("/callback/github: error creating or updating user:", err)
+					return httperror.HTTP{Code: http.StatusInternalServerError, Err: err}
+				}
+			// True GitHub user.
+			case "github.com":
+				// TODO: Now is a good time to update user's Elsewhere, Login, AvatarURL, and HTMLURL if needed.
+				//       But be mindful of SiteAdmin.
+
+				// If the user doesn't already exist, create it.
+				err := userStore.Create(req.Context(), user)
+				switch err {
+				case nil, os.ErrExist:
+					// Do nothing.
+				default:
+					log.Println("/callback/github: error creating user:", err)
+					return httperror.HTTP{Code: http.StatusInternalServerError, Err: err}
+				}
+			default:
+				panic("unreachable")
+			}
+
+			// Add new session with user who authenticated via GitHub.
+			accessToken, expiry := global.AddNewSession(user.UserSpec)
 			setAccessTokenCookie(w, accessToken, expiry)
+
 			return httperror.Redirect{URL: state.ReturnURL}
 		},
 	)})
@@ -342,7 +565,6 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 				if err != nil {
 					return httperror.BadRequest{Err: fmt.Errorf("bad client_id value: %v", err)}
 				}
-				// TODO: When starting to allow arbitrary IndieAuth URLs, check here if clientID is me.
 				if ru.Scheme != clientID.Scheme || ru.Host != clientID.Host {
 					// Ensure the redirect_uri scheme, host and port match that of the client_id.
 					//
@@ -352,6 +574,15 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 					//       requested redirect_uri matches one of the redirect URLs published by the client,
 					//       and SHOULD block the request from proceeding if not.
 					return httperror.BadRequest{Err: fmt.Errorf("scheme+host of redirect_uri %q doesn't match scheme+host of client_id %q", ru.Scheme+"://"+ru.Host, clientID.Scheme+"://"+clientID.Host)}
+				}
+				if clientID.String() == canonicalMe.String() {
+					// Redirect with an OAuth 2.0 error. See https://tools.ietf.org/html/rfc6749#section-4.1.2.1.
+					q := ru.Query()
+					q.Set("error", "access_denied")
+					q.Set("error_description", "recursive sign in attempt; can't sign in into this site using this site")
+					q.Set("state", req.Form.Get("state"))
+					ru.RawQuery = q.Encode()
+					return httperror.Redirect{URL: ru.String()}
 				}
 				if u, err := usersService.GetAuthenticatedSpec(req.Context()); err != nil {
 					return err
@@ -388,7 +619,7 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 					}
 
 					// Add new authz code.
-					authzCode := string(cryptoRandBytes())
+					authzCode := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // OAuth 2.0 requires code to be printable ASCII, so use base64. See https://tools.ietf.org/html/rfc6749#appendix-A.11.
 					expiry := time.Now().Add(time.Minute)
 					authzsMu.Lock()
 					for code, a := range authzs { // Clean up expired authorization codes.
@@ -441,12 +672,19 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 	)})
 }
 
+// parseGitHubLogin parses a syntactically valid GitHub login from the path of a GitHub URL.
+// The logic is derived from error messages on the GitHub sign up page, such as:
+//
+// 	• Username may only contain alphanumeric characters or single hyphens,
+// 	  and cannot begin or end with a hyphen.
+// 	• Username is too long (maximum is 39 characters).
+//
 func parseGitHubLogin(githubURLPath string) (string, bool) {
 	if !strings.HasPrefix(githubURLPath, "/") {
 		return "", false
 	}
 	login := githubURLPath[1:]
-	if login == "" {
+	if login == "" || len(login) > 39 {
 		return "", false
 	}
 	for _, b := range []byte(login) {
@@ -546,6 +784,7 @@ header h1 {
 div.error {
 	font-size: 87.5%;
 	text-align: center;
+	white-space: pre-wrap;
 	background-color: rgb(255, 229, 232);
 	border: 1px solid rgb(195, 137, 139);
 	border-radius: 5px;
@@ -573,7 +812,7 @@ p {
 ul {
 	line-height: 1.4;
 }
-b {
+strong {
 	font-weight: 500;
 }
 small {
@@ -593,7 +832,8 @@ small {
 			<p><input type="url" name="me" value="https://"></p>
 			<p style="font-size: 80%; color: gray; margin-bottom: 8px;">Supported authentication methods:</p>
 			<ul style="font-size: 80%; color: gray; margin-top: 8px; padding-left: 20px;">
-				<li>https://github.com/example<small> — authenticate as <b>example</b> on GitHub</small></li>
+				<li>https://example.com<small> — authenticate as <strong>example.com</strong> via <a href="https://indieauth.net" style="color: gray;">IndieAuth</a> or <a href="http://microformats.org/wiki/relmeauth" style="color: gray;">RelMeAuth</a></small></li>
+				<li>https://github.com/example<small> — authenticate as <strong>example</strong> on GitHub</small></li>
 			</ul>
 			<p><button type="submit">Sign In</button></p>
 		</form>
