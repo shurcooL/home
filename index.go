@@ -37,7 +37,6 @@ var indexHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/index/style.css" rel="stylesheet" type="text/css">
-		{{if .AuthzEndpoint}}<link href="/api/indieauth/authorization" rel="authorization_endpoint">{{end}}
 		<link href="https://github.com/{{.GitHubRelMe}}" rel="me">
 	</head>
 	<body>
@@ -45,6 +44,7 @@ var indexHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 
 func initIndex(events events.Service, notifications notifications.Service, users users.Service) http.Handler {
 	h := &indexHandler{
+		AuthzEndpoint: indieauthMeFlag.Me != nil,
 		events:        events,
 		notifications: notifications,
 		users:         users,
@@ -53,6 +53,7 @@ func initIndex(events events.Service, notifications notifications.Service, users
 }
 
 type indexHandler struct {
+	AuthzEndpoint bool // Whether to advertise the IndieAuth authorization endpoint.
 	events        events.Service
 	notifications notifications.Service
 	users         users.Service
@@ -64,15 +65,18 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.AuthzEndpoint {
+		// Advertise the IndieAuth authorization endpoint.
+		w.Header().Set("Link", `</api/indieauth/authorization>; rel="authorization_endpoint"`)
+	}
 	if req.Method == http.MethodHead {
 		return nil
 	}
 
 	data := struct {
 		AnalyticsHTML template.HTML
-		AuthzEndpoint bool   // Whether to advertise the IndieAuth authorization endpoint.
 		GitHubRelMe   string // GitHub username to advertise in a rel='me' link.
-	}{analyticsHTML, indieauthMeFlag.Me != nil, *githubRelMeFlag}
+	}{analyticsHTML, *githubRelMeFlag}
 	err := indexHTML.Execute(w, data)
 	if err != nil {
 		return err
