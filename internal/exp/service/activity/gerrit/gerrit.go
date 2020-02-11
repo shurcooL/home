@@ -785,7 +785,7 @@ func walkMail(ctx context.Context, fs http.FileSystem, segs, handled []fileSeg, 
 		}
 		err := walkSegMail(ctx, fs, seg, fn)
 		if err != nil {
-			return err
+			return fmt.Errorf("walkSegMail(%#v): %v", seg, err)
 		}
 	}
 	return nil

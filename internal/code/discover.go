@@ -78,7 +78,7 @@ func walkRepositoryStore(reposDir string) ([]*Directory, error) {
 		}
 		ds, err := walkRepository(path, path[len(reposDir)+1:])
 		if err != nil {
-			return err
+			return fmt.Errorf("walkRepository(%q): %v", path, err)
 		}
 		dirs = append(dirs, ds...)
 		return filepath.SkipDir
