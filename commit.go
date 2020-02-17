@@ -90,17 +90,6 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
 
-	t0 := time.Now()
-	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
-	if err != nil {
-		return err
-	}
-	openChanges, err := h.change.Count(req.Context(), h.Repo.Spec, change.ListOptions{Filter: change.FilterOpen})
-	if err != nil {
-		return err
-	}
-	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
-
 	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
 	if err != nil {
 		log.Println(err)
@@ -113,6 +102,17 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 			return err
 		}
 	}
+
+	t0 := time.Now()
+	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+	if err != nil {
+		return err
+	}
+	openChanges, err := h.change.Count(req.Context(), h.Repo.Spec, change.ListOptions{Filter: change.FilterOpen})
+	if err != nil {
+		return err
+	}
+	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
 
 	commitHash, err := verifyCommitHash(req.URL.Path[1:])
 	if err != nil {

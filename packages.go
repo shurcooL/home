@@ -49,18 +49,6 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 			}
 		}
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
-		err := packagesHTML.Execute(w, data)
-		if err != nil {
-			return err
-		}
-
-		_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
-		if err != nil {
-			return err
-		}
-
 		authenticatedUser, err := usersService.GetAuthenticated(req.Context())
 		if err != nil {
 			log.Println(err)
@@ -74,6 +62,18 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 			}
 		}
 		returnURL := req.RequestURI
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
+		err = packagesHTML.Execute(w, data)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
+		if err != nil {
+			return err
+		}
 
 		// Render the header.
 		header := component.Header{

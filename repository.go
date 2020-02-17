@@ -52,6 +52,19 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
 
+	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
+	if err != nil {
+		log.Println(err)
+		authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
+	}
+	var nc uint64
+	if authenticatedUser.ID != 0 {
+		nc, err = h.notifications.Count(req.Context(), nil)
+		if err != nil {
+			return err
+		}
+	}
+
 	t0 := time.Now()
 	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
 	if err != nil {
@@ -78,19 +91,6 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
 	if err != nil {
 		return err
-	}
-
-	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
-	if err != nil {
-		log.Println(err)
-		authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
-	}
-	var nc uint64
-	if authenticatedUser.ID != 0 {
-		nc, err = h.notifications.Count(req.Context(), nil)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Render the header.
