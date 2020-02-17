@@ -26,9 +26,9 @@ import (
 	gerritactivity "github.com/shurcooL/home/internal/exp/service/activity/gerrit"
 	githubactivity "github.com/shurcooL/home/internal/exp/service/activity/github"
 	"github.com/shurcooL/home/internal/exp/service/notification"
-	notificationfs "github.com/shurcooL/home/internal/exp/service/notification/fs"
 	"github.com/shurcooL/home/internal/exp/service/notification/httphandler"
 	"github.com/shurcooL/home/internal/exp/service/notification/httproute"
+	notificationmem "github.com/shurcooL/home/internal/exp/service/notification/mem"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
@@ -46,6 +46,28 @@ type router interface {
 	gerrit.Router
 }
 
+func initNotificationsV2Disabled(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	mux *http.ServeMux,
+	fs webdav.FileSystem,
+	githubActivityDir string,
+	gerritActivityDir string,
+	users users.Service,
+	router router,
+) (
+	githubActivity *githubactivity.Service,
+	gerritActivity *gerritactivity.Service,
+	fullNotif notification.FullService,
+	_ error,
+) {
+	dmitshur, err := users.Get(context.Background(), dmitshur)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("users.Get(dmitshur): %v", err)
+	}
+	return nil, nil, notificationmem.NewService(dmitshur, users), nil
+}
+
 func initNotificationsV2(
 	ctx context.Context,
 	wg *sync.WaitGroup,
@@ -58,16 +80,17 @@ func initNotificationsV2(
 ) (
 	githubActivity *githubactivity.Service,
 	gerritActivity *gerritactivity.Service,
+	fullNotif notification.FullService,
 	_ error,
 ) {
 	dmitshur, err := users.Get(context.Background(), dmitshur)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	newGitHubActivity, err := newDirWatcher(ctx, githubActivityDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("newDirWatcher: %v", err)
+		return nil, nil, nil, fmt.Errorf("newDirWatcher: %v", err)
 	}
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_DMITSHUR_NOTIFICATIONS")}),
@@ -85,12 +108,12 @@ func initNotificationsV2(
 		dmitshur, users, router,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	newGerritActivity, err := newDirWatcher(ctx, gerritActivityDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("newDirWatcher: %v", err)
+		return nil, nil, nil, fmt.Errorf("newDirWatcher: %v", err)
 	}
 	// TODO, THINK: reuse client from newChangeService?
 	gerritClient, err := gerritapi.NewClient( // TODO: Auth.
@@ -108,11 +131,13 @@ func initNotificationsV2(
 		dmitshur, users, router,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
+	fullNotif = notificationmem.NewService(dmitshur, users)
+
 	notificationService := dmitshurSeesOwnNotificationsV2{
-		service:                    notificationfs.DevNull{},
+		service:                    fullNotif,
 		dmitshurGitHubNotification: githubActivity,
 		dmitshurGerritNotification: gerritActivity,
 		users:                      users,
@@ -180,7 +205,7 @@ func initNotificationsV2(
 	mux.Handle("/notificationsv2", notificationsHandler)
 	mux.Handle("/notificationsv2/", notificationsHandler)
 
-	return githubActivity, gerritActivity, nil
+	return githubActivity, gerritActivity, fullNotif, nil
 }
 
 func newDirWatcher(ctx context.Context, dir string) (<-chan struct{}, error) {

@@ -8,7 +8,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,6 +58,39 @@ func (s *Service) List() []*Directory {
 	dirs := s.dirs
 	s.mu.RUnlock()
 	return dirs
+}
+
+// CountPackages returns the number of packages
+// that match the import path pattern.
+func (s *Service) CountPackages(pattern string) int {
+	s.mu.RLock()
+	dirs := s.dirs
+	s.mu.RUnlock()
+	var packages int
+	match := matchPattern(pattern)
+	for _, d := range dirs {
+		if d.Package == nil {
+			continue
+		}
+		if !match(d.ImportPath) {
+			continue
+		}
+		packages++
+	}
+	return packages
+}
+
+// matchPattern(pattern)(name) reports whether name matches pattern.
+// Pattern is a limited glob pattern in which '...' means 'any string',
+// foo/... matches foo too, and there is no other special syntax.
+func matchPattern(pattern string) func(name string) bool {
+	re := regexp.QuoteMeta(pattern)
+	re = strings.Replace(re, `\.\.\.`, `.*`, -1)
+	// Special case: foo/... matches foo too.
+	if strings.HasSuffix(re, `/.*`) {
+		re = re[:len(re)-len(`/.*`)] + `(/.*)?`
+	}
+	return regexp.MustCompile(`^` + re + `$`).MatchString
 }
 
 // Lookup looks up a directory by specified import path.

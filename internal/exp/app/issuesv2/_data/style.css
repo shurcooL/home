@@ -1,0 +1,347 @@
+a.black {
+	color: black;
+	text-decoration: none;
+}
+a.black:hover {
+	text-decoration: underline;
+}
+
+.gray {
+	color: #888;
+}
+.lightgray {
+	color: #ddd;
+}
+.tiny {
+	font-size: 12px;
+}
+
+div.list-entry {
+	margin-top: 12px;
+}
+div.list-entry-container {
+	width: 100%;
+	box-sizing: border-box;
+}
+div.list-entry-border {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+div.list-entry-header {
+	font-size: 13px;
+	background-color: #f8f8f8;
+	padding: 10px;
+	border-radius: 4px 4px 0 0;
+	border-bottom: 1px solid #eee;
+}
+.hash-selected div.list-entry-border {
+	border: 1px solid #8ca2d9;
+}
+.hash-selected div.list-entry-header {
+	background-color: #dbe5ff;
+	border-bottom: 1px solid #8ca2d9;
+}
+div.list-entry-header.tabs {
+	padding: 16px 10px 6px 10px;
+}
+div.list-entry-header.tabs-title {
+	padding-bottom: 6px;
+	background-color: #fff;
+}
+div.list-entry-body {
+	padding: 10px;
+}
+
+div.multilist-entry:not(:nth-child(0n+2)) {
+	border: 0px solid #ddd;
+	border-top-width: 1px;
+}
+
+/* Needed in issuesapp only because of something in parent containers... */
+.markdown-body {
+	word-break: break-word;
+}
+
+/* GFM style overrides. */
+.markdown-body {
+	font-size: 14px;
+	line-height: 1.2;
+}
+.markdown-body table {
+	font-size: 14px;
+}
+
+span.content {
+	display: table-cell;
+	width: 100%;
+}
+span.right-icon {
+	display: table-cell;
+	padding-left: 12px;
+	padding-right: 4px;
+}
+span.right-icon a {
+	color: #bbb;
+}
+span.right-icon a:hover {
+	color: black;
+}
+
+img.topbar-avatar {
+	border-radius: 2px;
+	width: 18px;
+	height: 18px;
+	vertical-align: top;
+}
+a.topbar-avatar {
+	margin-right: 6px;
+}
+
+input#title-editor {
+	font-family: inherit;
+	font-size: 14px;
+	background-color: #fafafa;
+	display: block;
+	padding: 6px;
+	width: 100%;
+	border: 1px solid #ddd;
+	margin-bottom: 16px;
+}
+input#title-editor:focus {
+	background-color: #fff;
+}
+
+textarea.comment-editor {
+	font-family: inherit;
+	font-size: 14px;
+	background-color: #fafafa;
+	display: block;
+	padding: 10px;
+	width: 100%;
+	resize: vertical;
+	min-height: 120px;
+	max-height: 500px;
+	border: 1px solid #ddd;
+}
+textarea.comment-editor:focus {
+	background-color: #fff;
+}
+
+.tab-link {
+	padding: 9px 13px 8px 13px;
+}
+.tab-link.active {
+	padding: 8px 12px 8px 12px;
+	background-color: #fff;
+	border: 1px solid #ddd;
+	border-bottom-width: 0;
+}
+
+.event {
+	margin-left: 58px;
+}
+.event-header {
+	padding-top: 6px;
+	padding-bottom: 6px;
+	line-height: 20px;
+}
+.event-icon {
+	float: left;
+	margin-right: 10px;
+	width: 32px;
+	height: 32px;
+	display: flex; justify-content: center; align-items: center;
+	border-radius: 50%;
+}
+
+div.list-entry-header nav a {
+	color: #767676;
+	text-decoration: none;
+}
+div.list-entry-header nav a:hover,
+div.list-entry-header nav a:active,
+div.list-entry-header nav a:focus {
+	color: #000;
+}
+div.list-entry-header nav .selected {
+	color: #000;
+	font-weight: bold;
+}
+
+span.right-icon div.new-reaction {
+	width: 22px;
+}
+span.right-icon div.new-reaction .smiley {
+	width: 16px;
+	height: 16px;
+}
+span.right-icon div.new-reaction .plus {
+	top: -4px;
+	width: 6px;
+	position: relative;
+}
+
+div.reactable-container {
+	vertical-align: top;
+	margin-left: 58px;
+}
+div.reactable-container:hover div.new-reaction {
+	display: inline-block;
+}
+
+span.emoji-inner {
+	display: inline-block;
+	overflow: hidden;
+	width: 100%;
+	height: 100%;
+	background: url(/emojis/emojis.png);
+	background-size: 4100% !important;
+	vertical-align: middle;
+}
+span.emoji-outer {
+	display: inline-block;
+	height: 1em;
+	width: 1em;
+	font-size: 22px;
+	margin-right: 4px;
+}
+.reaction strong {
+	font-family: inherit;
+	font-size: 14px;
+}
+
+div.reaction {
+	cursor: pointer;
+	display: inline-block;
+	box-sizing: border-box;
+	padding: 3px 5px;
+	height: 30px;
+	background-color: #f6fafd;
+	color: #8ec0e6;
+	border: 1px solid #92def9;
+	border-radius: 4px;
+}
+a.reaction {
+	display: inline-block;
+	margin-right: 6px;
+	margin-top: 4px;
+}
+
+div.others {
+	background-color: #fff;
+	color: #aaa;
+	border: 1px solid #e0e0e0;
+}
+div.others:hover {
+	border: 1px solid #92def9;
+}
+
+div.reactable-container div.new-reaction {
+	cursor: pointer;
+	display: none;
+	box-sizing: border-box;
+	padding: 5px 4px;
+	height: 30px;
+	color: #aaa;
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+	margin-top: 4px;
+	vertical-align: top;
+}
+div.reactable-container div.new-reaction .smiley {
+	width: 18px;
+	height: 18px;
+}
+div.reactable-container div.new-reaction .plus {
+	top: -4px;
+	width: 6px;
+	position: relative;
+}
+div.reactable-container div.new-reaction:hover {
+	color: #eda000;
+	border: 1px solid #92def9;
+}
+
+span.rm-emoji {
+	display: inline-block;
+	width: 22px;
+	height: 22px;
+	background: url(/emojis/emojis.png);
+	background-size: 4100%;
+}
+span.rm-large {
+	width: 44px;
+	height: 44px;
+}
+
+div.rm-reaction {
+	display: inline-block;
+	padding: 4px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+div.rm-reaction:hover {
+	background-color: #92def9;
+}
+
+div#rm-reactions-menu {
+	position: absolute;
+	z-index: 1000;
+
+	background-color: white;
+	border: 1px solid lightgray;
+	box-shadow: 0 5px 10px rgba(0, 0, 0, .12);
+	border-radius: 6px;
+	padding: 8px;
+	width: 270px;
+	box-sizing: content-box;
+}
+input.rm-reactions-filter {
+	width: 100%;
+	height: 30px;
+	font-family: inherit;
+	font-size: 14px;
+	padding: 4px 16px;
+	outline: 0;
+	border: 1px solid #ccc;
+	border-radius: 15px;
+	margin-bottom: 8px;
+	box-sizing: border-box;
+}
+div.rm-reactions-results {
+	overflow-y: scroll;
+	height: 300px;
+}
+div.rm-reactions-preview {
+	height: 44px;
+	margin-top: 10px;
+	/*background-color: #eeeeee;*/
+}
+span#rm-reactions-preview-emoji {
+}
+span#rm-reactions-preview-label {
+	margin-left: 10px;
+	vertical-align: top;
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+div.rm-reactions-menu-container {
+	position: relative;
+}
+div.rm-reactions-menu-disabled {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(255, 255, 255, 0.75);
+}
+div.rm-reactions-menu-signin {
+	font-family: inherit;
+	margin-top: 185px;
+	margin-left: auto;
+	margin-right: auto;
+	display: table;
+	background-color: rgba(255, 255, 255, 0.7);
+	box-shadow: 0 0 50px 10px rgba(255, 255, 255, 1.0);
+}

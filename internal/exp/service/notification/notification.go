@@ -33,6 +33,32 @@ type Service interface {
 	MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error
 }
 
+// FullService for notifications.
+type FullService interface {
+	// Subscribe subscribes subscribers to the specified thread.
+	// If threadType and threadID are zero, subscribers are subscribed
+	// to watch the entire repo.
+	// Returns a permission error if no authenticated user.
+	//
+	// THINK: Why is MarkRead and MarkAllRead 2 separate methods instead of 1,
+	//        but this is combined into one method? Maybe there should be:
+	//        SubscribeAll(ctx context.Context, repo RepoSpec, subscribers []users.UserSpec) error
+	//        Or maybe MarkAllRead should be merged into MarkRead?
+	//Subscribe(ctx context.Context, repo RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error
+
+	// MarkRead marks the specified thread as read.
+	// Returns a permission error if no authenticated user.
+	//MarkRead(ctx context.Context, repo RepoSpec, threadType string, threadID uint64) error
+
+	// Notify notifies subscribers of the specified thread of a notification.
+	// Returns a permission error if no authenticated user.
+	//Notify(ctx context.Context, repo RepoSpec, threadType string, threadID uint64, nr NotificationRequest) error
+
+	Service
+
+	Notify(ctx context.Context, n Notification) error
+}
+
 // ListOptions are options for ListNotifications.
 type ListOptions struct {
 	// Namespace is an optional filter. If not empty, only notifications

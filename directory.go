@@ -25,14 +25,35 @@ func pathWithinRepo(d *code.Directory) string {
 	return d.ImportPath[len(d.RepoRoot)+len("/"):]
 }
 
-func directoryTabnav(selected repositoryTab, pkgPath string) htmlg.Component {
+func directoryTabnav(selected repositoryTab, pkgPath string, openIssues, openChanges int) htmlg.Component {
 	return tabnav{
 		Tabs: []tab{
+			{
+				Content:  iconText{Icon: octicon.Package, Text: "Package"},
+				URL:      route.PkgIndex(pkgPath),
+				Selected: selected == packagesTab,
+			},
 			{
 				Content:  iconText{Icon: octicon.History, Text: "History"},
 				URL:      route.PkgHistory(pkgPath),
 				Selected: selected == historyTab,
 			},
+			{
+				Content: contentCounter{
+					Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
+					Count:   openIssues,
+				},
+				URL:      route.PkgIssues(pkgPath),
+				Selected: selected == issuesTab,
+			},
+			/*{
+				Content: contentCounter{
+					Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
+					Count:   openChanges,
+				},
+				URL:      route.PkgChanges(pkgPath),
+				Selected: selected == changesTab,
+			},*/
 		},
 	}
 }

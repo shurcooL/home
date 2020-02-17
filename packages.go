@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -8,13 +9,16 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/issuev2"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
+	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -30,7 +34,7 @@ var packagesHTML = template.Must(template.New("").Parse(`<html>
 	</head>
 	<body>`))
 
-func initPackages(code *code.Service, notifications notifications.Service, usersService users.Service) func(w http.ResponseWriter, req *http.Request) bool {
+func initPackages(code *code.Service, issueV2Service issuev2.Service, notifications notifications.Service, usersService users.Service) func(w http.ResponseWriter, req *http.Request) bool {
 	packagesHandler := cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
@@ -40,12 +44,14 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 			return os.ErrNotExist
 		}
 		importPathPattern := "dmitri.shuralyov.com" + req.URL.Path
+		defaultPackagesPage := false // Whether the user is viewing the default /packages page, with no custom pattern query parameter.
 		if req.URL.Path == "/packages" {
 			switch pattern := req.URL.Query().Get("pattern"); pattern {
-			default:
-				importPathPattern = pattern
 			case "":
 				importPathPattern = "..."
+				defaultPackagesPage = true
+			default:
+				importPathPattern = pattern
 			}
 		}
 
@@ -61,7 +67,17 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 				return err
 			}
 		}
-		returnURL := req.RequestURI
+
+		t0 := time.Now()
+		openIssues, err := issueV2Service.CountIssues(req.Context(), importPathPattern, issuev2.CountOptions{State: issues.StateFilter(issues.OpenState)})
+		if err != nil {
+			return err
+		}
+		fmt.Println("counting open issues took:", time.Since(t0).Nanoseconds(), "for:", importPathPattern)
+
+		// We know that "dmitri.shuralyov.com/..." comes before "github.com/...",
+		// that's why code.List(), githubPackages are guaranteed to be in alphabetical order.
+		packages := expandPattern(code.List(), githubPackages, importPathPattern)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		data := struct{ AnalyticsHTML template.HTML }{analyticsHTML}
@@ -79,28 +95,27 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 		header := component.Header{
 			CurrentUser:       authenticatedUser,
 			NotificationCount: nc,
-			ReturnURL:         returnURL,
+			ReturnURL:         req.RequestURI,
 		}
 		err = htmlg.RenderComponents(w, header)
 		if err != nil {
 			return err
 		}
 
-		if importPathPattern != "..." {
-			err = html.Render(w, htmlg.H2(htmlg.Text(importPathPattern)))
+		if !defaultPackagesPage {
+			err = htmlg.RenderComponents(w, component.PackageSelector{ImportPath: importPathPattern})
 			if err != nil {
 				return err
 			}
 		}
 
-		err = html.Render(w, htmlg.H3(htmlg.Text("Packages")))
+		// Render the tabnav.
+		err = htmlg.RenderComponents(w, patternTabnav(packagesTab, importPathPattern, len(packages), int(openIssues), 1337))
 		if err != nil {
 			return err
 		}
 
-		// We know that "dmitri.shuralyov.com/..." comes before "github.com/...",
-		// that's why code.List(), githubPackages are guaranteed to be in alphabetical order.
-		err = renderPackages(w, expandPattern(code.List(), githubPackages, importPathPattern))
+		err = renderPackages(w, packages)
 		if err != nil {
 			return err
 		}

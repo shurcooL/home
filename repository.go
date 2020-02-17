@@ -19,7 +19,6 @@ import (
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/html"
 )
 
 // repositoryHandler is a handler for a Go repository index page.
@@ -74,7 +73,7 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	if err != nil {
 		return err
 	}
-	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
+	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec+"/...")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = repositoryHTML.Execute(w, struct {
@@ -104,7 +103,7 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		return err
 	}
 
-	err = html.Render(w, htmlg.H2(htmlg.Text(h.Repo.Spec+"/...")))
+	err = htmlg.RenderComponents(w, component.PackageSelector{ImportPath: h.Repo.Spec + "/..."})
 	if err != nil {
 		return err
 	}
@@ -150,7 +149,7 @@ func repositoryTabnav(selected repositoryTab, repo repoInfo, openIssues, openCha
 					Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
 					Count:   int(openIssues),
 				},
-				URL:      route.RepoIssues(repo.Path),
+				URL:      route.RepoIssuesV1(repo.Path),
 				Selected: selected == issuesTab,
 			},
 			{
@@ -158,7 +157,7 @@ func repositoryTabnav(selected repositoryTab, repo repoInfo, openIssues, openCha
 					Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
 					Count:   int(openChanges),
 				},
-				URL:      route.RepoChanges(repo.Path),
+				URL:      route.RepoChangesV1(repo.Path),
 				Selected: selected == changesTab,
 			},
 		},

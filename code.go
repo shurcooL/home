@@ -12,6 +12,7 @@ import (
 
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/issuev2"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/notifications"
@@ -26,6 +27,7 @@ type codeHandler struct {
 	issuesApp     http.Handler
 	changesApp    http.Handler
 	issues        issueCounter
+	issueV2       issuev2.Service
 	change        changeCounter
 	notifications notifications.Service
 	users         users.Service
@@ -100,7 +102,9 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 				DocHTML:    d.Package.DocHTML,
 				LicenseURL: licenseURL,
 			},
+			PkgPath:       pkgPath,
 			issues:        h.issues,
+			issueV2:       h.issueV2,
 			change:        h.change,
 			notifications: h.notifications,
 			users:         h.users,
@@ -126,6 +130,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 			Repo:          repo,
 			PkgPath:       pkgPath,
 			Dir:           d,
+			issueV2:       h.issueV2,
 			notifications: h.notifications,
 			users:         h.users,
 			gitUsers:      h.gitUsers,
@@ -138,6 +143,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 			Repo:          repo,
 			PkgPath:       pkgPath,
 			Dir:           d,
+			issueV2:       h.issueV2,
 			notifications: h.notifications,
 			users:         h.users,
 			gitUsers:      h.gitUsers,
@@ -159,6 +165,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitsHandler{
 			Repo:          repo,
 			issues:        h.issues,
+			issueV2:       h.issueV2,
 			change:        h.change,
 			notifications: h.notifications,
 			users:         h.users,
@@ -171,6 +178,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitHandler{
 			Repo:          repo,
 			issues:        h.issues,
+			issueV2:       h.issueV2,
 			change:        h.change,
 			notifications: h.notifications,
 			users:         h.users,
@@ -178,23 +186,23 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
-	case req.URL.Path == route.RepoIssues(repo.Path) ||
-		strings.HasPrefix(req.URL.Path, route.RepoIssues(repo.Path)+"/"):
+	case req.URL.Path == route.RepoIssuesV1(repo.Path) ||
+		strings.HasPrefix(req.URL.Path, route.RepoIssuesV1(repo.Path)+"/"):
 
 		h := cookieAuth{httputil.ErrorHandler(h.users, issuesHandler{
 			SpecURL:   repo.Spec, // Issues trackers are mapped to repo roots at this time.
-			BaseURL:   route.RepoIssues(repo.Path),
+			BaseURL:   route.RepoIssuesV1(repo.Path),
 			Repo:      repo,
 			issuesApp: h.issuesApp,
 		}.ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
-	case req.URL.Path == route.RepoChanges(repo.Path) ||
-		strings.HasPrefix(req.URL.Path, route.RepoChanges(repo.Path)+"/"):
+	case req.URL.Path == route.RepoChangesV1(repo.Path) ||
+		strings.HasPrefix(req.URL.Path, route.RepoChangesV1(repo.Path)+"/"):
 
 		h := cookieAuth{httputil.ErrorHandler(h.users, changesHandler{
 			SpecURL:    repo.Spec, // Change trackers are mapped to repo roots at this time.
-			BaseURL:    route.RepoChanges(repo.Path),
+			BaseURL:    route.RepoChangesV1(repo.Path),
 			Repo:       repo,
 			changesApp: h.changesApp,
 		}.ServeHTTP)}

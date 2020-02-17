@@ -153,12 +153,9 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec)
+			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec+"/...")
 
-			heading := htmlg.NodeComponent{
-				Type: html.ElementNode, Data: atom.H2.String(),
-				FirstChild: htmlg.Text(repoSpec + "/..."),
-			}
+			heading := component.PackageSelector{ImportPath: repoSpec + "/..."}
 			repo := req.Context().Value(repoInfoContextKey).(repoInfo) // From changesHandler.ServeHTTP.
 			tabnav := repositoryTabnav(changesTab, repo, openIssues, openChanges)
 			return []htmlg.Component{header, heading, tabnav}, nil
@@ -175,7 +172,7 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec)
+			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec+"/...")
 
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),
@@ -227,7 +224,7 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("counting open changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec)
+			fmt.Println("counting open changes took:", time.Since(t0).Nanoseconds(), "for:", repoSpec+"/...")
 
 			heading := &html.Node{
 				Type: html.ElementNode, Data: atom.H2.String(),

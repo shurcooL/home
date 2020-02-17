@@ -28,6 +28,7 @@ import (
 	"github.com/shurcooL/home/internal/exp/service/auth"
 	"github.com/shurcooL/home/internal/exp/service/auth/directfetch"
 	"github.com/shurcooL/home/internal/exp/service/auth/gcpfetch"
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
@@ -156,7 +157,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		return fmt.Errorf("newReactionsService: %v", err)
 	}
 	githubRouter := dmitshurSeesHomeRouter{users: users}
-	githubActivity, gerritActivity, err := initNotificationsV2(
+	githubActivity, gerritActivity, fullNotif, err := initNotificationsV2Disabled(
 		ctx, &wg, http.DefaultServeMux,
 		webdav.Dir(filepath.Join(storeDir, "notificationv2")),
 		filepath.Join(storeDir, "mail", "githubnotif"),
@@ -167,7 +168,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	if err != nil {
 		return fmt.Errorf("initNotificationsV2: %v", err)
 	}
-	notifications := initNotifications(
+	notifications := initNotificationsDisabled(
 		http.DefaultServeMux,
 		webdav.Dir(filepath.Join(storeDir, "notifications")),
 		gerritActivity,
@@ -272,8 +273,26 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	if err != nil {
 		return fmt.Errorf("code.NewGitHandler: %v", err)
 	}
-	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifications, users, gitUsers}
-	servePackagesMaybe := initPackages(code, notifications, users)
+	_ = fullNotif //issueV2Service := newIssueV2Service(issuesService, code, fullNotif)
+	issueV2Service := newIssueV2ServiceMemory(users)
+	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, issueV2Service, changeService, notifications, users, gitUsers}
+	servePackagesMaybe := initPackages(code, issueV2Service, notifications, users)
+
+	issuesAppV2 := initIssuesV2(http.DefaultServeMux, issueV2Service, code, notifications, users)
+	serveIssuesAppV2Maybe := func(w http.ResponseWriter, req *http.Request) (ok bool) {
+		before, after := route.SplitImportPathSeparator(req.URL.Path)
+		if !strings.HasPrefix(after, "$issuesv2/") && after != "$issuesv2" {
+			return false
+		}
+		importPathPattern := "dmitri.shuralyov.com" + before
+		h := cookieAuth{httputil.ErrorHandler(users, issuesV2Handler{
+			Pattern:     importPathPattern,
+			BaseURL:     before + "$issuesv2",
+			issuesAppV2: issuesAppV2,
+		}.ServeHTTP)}
+		h.ServeHTTP(w, req)
+		return true
+	}
 
 	initAction(code, users)
 
@@ -307,6 +326,10 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		}
 		// Serve git protocol requests for existing repos, if the request matches.
 		if ok := gitHandler.ServeGitMaybe(w, req); ok {
+			return
+		}
+		// Serve issues app v2 requests, if the request matches.
+		if ok := serveIssuesAppV2Maybe(w, req); ok {
 			return
 		}
 		// Serve code pages for existing repos/packages, if the request matches.

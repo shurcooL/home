@@ -14,20 +14,22 @@ import (
 	"github.com/shurcooL/home/exp/vec"
 	"github.com/shurcooL/home/exp/vec/attr"
 	"github.com/shurcooL/home/exp/vec/elem"
+	"github.com/shurcooL/home/internal/exp/service/issuev2"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/html"
 )
 
 // packageHandler is a handler for a Go package index page.
 type packageHandler struct {
-	Repo repoInfo
-	Pkg  pkgInfo
+	Repo    repoInfo
+	Pkg     pkgInfo
+	PkgPath string
 
 	issues        issueCounter
+	issueV2       issuev2.Service
 	change        changeCounter
 	notifications notifications.Service
 	users         users.Service
@@ -62,7 +64,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	t0 := time.Now()
-	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+	openIssues, err := h.issueV2.CountIssues(req.Context(), h.Pkg.Spec, issuev2.CountOptions{State: issues.StateFilter(issues.OpenState)})
 	if err != nil {
 		return err
 	}
@@ -70,7 +72,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	if err != nil {
 		return err
 	}
-	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
+	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Pkg.Spec)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	var fullName string
@@ -106,13 +108,13 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	err = html.Render(w, htmlg.H2(htmlg.Text(h.Repo.Spec+"/...")))
+	err = htmlg.RenderComponents(w, component.PackageSelector{ImportPath: h.Pkg.Spec})
 	if err != nil {
 		return err
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, repositoryTabnav(noTab, h.Repo, openIssues, openChanges))
+	err = htmlg.RenderComponents(w, directoryTabnav(packagesTab, h.PkgPath, int(openIssues), int(openChanges)))
 	if err != nil {
 		return err
 	}

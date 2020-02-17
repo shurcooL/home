@@ -153,10 +153,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 			}
 			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repo.URI)
 
-			heading := htmlg.NodeComponent{
-				Type: html.ElementNode, Data: atom.H2.String(),
-				FirstChild: htmlg.Text(repo.URI + "/..."),
-			}
+			heading := homecomponent.PackageSelector{ImportPath: repo.URI + "/..."}
 			repo := req.Context().Value(repoInfoContextKey).(repoInfo) // From issuesHandler.ServeHTTP.
 			tabnav := repositoryTabnav(issuesTab, repo, openIssues, openChanges)
 			return []htmlg.Component{header, heading, tabnav}, nil

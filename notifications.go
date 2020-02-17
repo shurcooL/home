@@ -31,6 +31,25 @@ import (
 	"golang.org/x/oauth2"
 )
 
+func initNotificationsDisabled(
+	mux *http.ServeMux,
+	root webdav.FileSystem,
+	gerritNotification notification.Service,
+	users users.Service,
+	router github.Router,
+) notifications.Service {
+	mem := webdav.NewMemFS()
+	err := mem.Mkdir(context.Background(), "notifications", 0755)
+	if err != nil {
+		panic(err)
+	}
+	err = mem.Mkdir(context.Background(), "read", 0755)
+	if err != nil {
+		panic(err)
+	}
+	return fs.NewService(mem, users)
+}
+
 // initNotifications creates and returns a notification service,
 // registers handlers for its HTTP API,
 // and handlers for the notifications app.

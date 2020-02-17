@@ -3,6 +3,7 @@ package component
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/octicon"
@@ -275,4 +276,123 @@ vertical-align: middle;`}, // THINK: Is this right scope?
 	})
 	a.AppendChild(svg)
 	return []*html.Node{a}
+}
+
+// PackageSelector ...
+type PackageSelector struct {
+	ImportPath string
+}
+
+// Render implements htmlg.Component.
+func (h PackageSelector) Render() []*html.Node {
+	// TODO: Make this much nicer.
+	/*
+		{{if pattern}}
+			<h2>pattern</h2>
+		}} else {{
+			<style type="text/css">...</style>
+			<h2 class="PackageSelector">
+				<span>
+					<a href="/...">dmitri.shuralyov.com/</a>
+					<a href="/service/...">service/</a>
+					<a href="/service/change/...">change/</a>
+					<a href="/service/change/gerritapi/...">gerritapi</a>
+				</span>
+			</h2>
+		{{end}}
+	*/
+
+	/*if strings.Contains(h.ImportPath, "...") {
+		return []*html.Node{htmlg.H2(htmlg.Text(h.ImportPath))}
+	}*/
+	//if strings.HasSuffix(h.ImportPath, "/...") {
+	//	h.ImportPath = h.ImportPath[:len(h.ImportPath)-len("/...")]
+	//}
+
+	switch strings.HasSuffix(h.ImportPath, "...") {
+	case false:
+		style := &html.Node{
+			Type: html.ElementNode, Data: atom.Style.String(),
+			Attr: []html.Attribute{{Key: atom.Type.String(), Val: "text/css"}},
+		}
+		style.AppendChild(htmlg.Text(`
+.PackageSelector a {
+	color: black;
+	text-decoration: none;
+}
+.PackageSelector span:hover a {
+	color: #4183c4;
+}
+.PackageSelector a:hover ~ a {
+	color: black;
+}
+.PackageSelector a:hover::after {
+	content: '...';
+	position: absolute;
+	pointer-events: none;
+	width: 40px;
+	background-image: linear-gradient(to right, rgba(255, 255, 255, 0.95) 40%, transparent);
+}
+.PackageSelector a:last-child:hover::after {
+	content: '/...';
+}`))
+
+		var ns []*html.Node
+		els := strings.SplitAfter(h.ImportPath, "/")
+		for i, el := range els {
+			if i < len(els)-1 {
+				ns = append(ns, htmlg.A(el, strings.TrimPrefix(strings.Join(els[:i+1], ""), "dmitri.shuralyov.com")+"..."))
+			} else {
+				ns = append(ns, htmlg.A(el, strings.TrimPrefix(strings.Join(els[:i+1], ""), "dmitri.shuralyov.com")+"/..."))
+			}
+		}
+		h2 := &html.Node{
+			Type: html.ElementNode, Data: atom.H2.String(),
+			Attr:       []html.Attribute{{Key: atom.Class.String(), Val: "PackageSelector"}},
+			FirstChild: htmlg.Span(ns...),
+		}
+
+		return []*html.Node{style, h2}
+	case true:
+		style := &html.Node{
+			Type: html.ElementNode, Data: atom.Style.String(),
+			Attr: []html.Attribute{{Key: atom.Type.String(), Val: "text/css"}},
+		}
+		style.AppendChild(htmlg.Text(`
+.PackageSelector a {
+	color: black;
+	text-decoration: none;
+}
+.PackageSelector span:hover a {
+	color: #4183c4;
+}
+.PackageSelector a:hover ~ a {
+	color: black;
+}
+.PackageSelector a:hover::after {
+	content: '...';
+	position: absolute;
+	pointer-events: none;
+	width: 40px;
+	background-image: linear-gradient(to right, rgba(255, 255, 255, 0.95) 40%, transparent);
+}`))
+
+		var ns []*html.Node
+		els := strings.SplitAfter(h.ImportPath, "/")
+		for i, el := range els {
+			if i < len(els)-1 {
+				ns = append(ns, htmlg.A(el, strings.TrimPrefix(strings.Join(els[:i+1], ""), "dmitri.shuralyov.com")+"..."))
+			}
+		}
+		h2 := &html.Node{
+			Type: html.ElementNode, Data: atom.H2.String(),
+			Attr: []html.Attribute{{Key: atom.Class.String(), Val: "PackageSelector"}},
+		}
+		h2.AppendChild(htmlg.Span(ns...))
+		h2.AppendChild(htmlg.Span(htmlg.Text(els[len(els)-1])))
+
+		return []*html.Node{style, h2}
+	default:
+		panic("unreachable")
+	}
 }

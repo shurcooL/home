@@ -16,8 +16,10 @@ import (
 
 	"dmitri.shuralyov.com/html/belt"
 	"dmitri.shuralyov.com/service/change"
+	"github.com/shurcooL/home/component"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/issuev2"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
@@ -35,6 +37,7 @@ type commitsHandler struct {
 	Repo repoInfo
 
 	issues        issueCounter
+	issueV2       issuev2.Service
 	change        changeCounter
 	notifications notifications.Service
 	users         users.Service
@@ -71,7 +74,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	t0 := time.Now()
-	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+	openIssues, err := h.issueV2.CountIssues(req.Context(), h.Repo.Spec+"/...", issuev2.CountOptions{State: issues.StateFilter(issues.OpenState)})
 	if err != nil {
 		return err
 	}
@@ -79,7 +82,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	if err != nil {
 		return err
 	}
-	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
+	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec+"/...")
 
 	// TODO: Pagination support.
 	commits, err := listMasterCommits(req.Context(), h.Repo.Dir, ":", h.gitUsers)
@@ -115,13 +118,13 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	err = html.Render(w, htmlg.H2(htmlg.Text(h.Repo.Spec+"/...")))
+	err = htmlg.RenderComponents(w, component.PackageSelector{ImportPath: h.Repo.Spec + "/..."})
 	if err != nil {
 		return err
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, repositoryTabnav(historyTab, h.Repo, openIssues, openChanges))
+	err = htmlg.RenderComponents(w, repositoryTabnav(historyTab, h.Repo, uint64(openIssues), openChanges))
 	if err != nil {
 		return err
 	}
@@ -147,6 +150,7 @@ type commitsHandlerPkg struct {
 	PkgPath string
 	Dir     *code.Directory
 
+	issueV2       issuev2.Service
 	notifications notifications.Service
 	users         users.Service
 	gitUsers      map[string]users.User // Key is lower git author email.
@@ -169,6 +173,13 @@ func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 			return err
 		}
 	}
+
+	t0 := time.Now()
+	openIssues, err := h.issueV2.CountIssues(req.Context(), h.Dir.ImportPath, issuev2.CountOptions{State: issues.StateFilter(issues.OpenState)})
+	if err != nil {
+		return err
+	}
+	fmt.Println("counting open issues took:", time.Since(t0).Nanoseconds(), "for:", h.Dir.ImportPath)
 
 	// TODO: Pagination support.
 	commits, err := listMasterCommits(req.Context(), h.Repo.Dir, directoryGitPathspec(h.Dir), h.gitUsers)
@@ -212,13 +223,13 @@ func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		return err
 	}
 
-	err = html.Render(w, htmlg.H2(htmlg.Text(h.Dir.ImportPath)))
+	err = htmlg.RenderComponents(w, component.PackageSelector{ImportPath: h.Dir.ImportPath})
 	if err != nil {
 		return err
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, directoryTabnav(historyTab, h.PkgPath))
+	err = htmlg.RenderComponents(w, directoryTabnav(historyTab, h.PkgPath, int(openIssues), 1337))
 	if err != nil {
 		return err
 	}
