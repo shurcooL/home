@@ -306,12 +306,12 @@ func verifyHasLICENSE(r vcs.Repository, commitID vcs.CommitID) error {
 	}
 	fi, err := fs.Stat("/LICENSE")
 	if os.IsNotExist(err) {
-		return BadVersionError{fmt.Sprintf("commit does not have a LICENSE file")}
+		return BadVersionError{"commit does not have a LICENSE file"}
 	} else if err != nil {
 		return err
 	}
 	if !fi.Mode().IsRegular() {
-		return BadVersionError{fmt.Sprintf("commit has a LICENSE but it's not a regular file")}
+		return BadVersionError{"commit has a LICENSE but it's not a regular file"}
 	}
 	return nil
 }

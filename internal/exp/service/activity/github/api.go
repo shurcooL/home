@@ -155,7 +155,7 @@ func ghListNotificationsAllPages(ctx context.Context, cl *githubv3.Client, opt *
 // ghListNotifications is like githubv3.Client.Activity.ListNotifications,
 // but gives caller control over whether cache can be used.
 func ghListNotifications(ctx context.Context, cl *githubv3.Client, opt *githubv3.NotificationListOptions, cache bool) ([]*githubv3.Notification, *githubv3.Response, error) {
-	u := fmt.Sprintf("notifications")
+	u := "notifications"
 	u, err := ghAddOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
