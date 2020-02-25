@@ -168,6 +168,11 @@ v0.0.0-20180326031431-f628922a6885
 			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v1.2.4-0.20170912031248-a1d95f8919b5.info",
 			wantNotExist: true,
 		},
+		{
+			name:         "commit on non-master branch",
+			url:          "/api/module/dmitri.shuralyov.com/kebabcase/@v/v0.0.0-20200225024836-c61324d16db7.info",
+			wantNotExist: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)

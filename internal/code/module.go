@@ -107,6 +107,8 @@ func (h ModuleHandler) ServeModule(w http.ResponseWriter, req *http.Request) err
 	commit, err := repo.GetCommit(commitID)
 	if err != nil || commit.Committer == nil || !versionTime.Equal(time.Unix(commit.Committer.Date.Seconds, 0).UTC()) {
 		return os.ErrNotExist
+	} else if !isCommitOnMaster(req.Context(), gitDir, commit) {
+		return os.ErrNotExist
 	}
 
 	// Handle one of "/@v/<version>.<ext>" requests.
@@ -221,6 +223,15 @@ func WriteModuleZip(w io.Writer, m module.Version, r vcs.Repository, id vcs.Comm
 	}
 	err = z.Close()
 	return err
+}
+
+// isCommitOnMaster reports whether commit c is a part of master branch
+// of git repo at gitDir, and no errors occurred while determining that.
+func isCommitOnMaster(ctx context.Context, gitDir string, c *vcs.Commit) bool {
+	cmd := exec.CommandContext(ctx, "git", "merge-base", "--is-ancestor", "--", string(c.ID), "master")
+	cmd.Dir = gitDir
+	err := cmd.Run()
+	return err == nil
 }
 
 // listMasterCommits returns a list of commits in git repo on master branch.
