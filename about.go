@@ -140,7 +140,7 @@ func initAbout(notifications notifications.Service, users users.Service) {
 					elem.P(
 						"Coming from a game development and graphics/UI background where C++ was used predominantly, ",
 						"he discovered and made a full switch to Go ",
-						elem.Abbr(attr.Title("2013."), "six years ago"),
+						elem.Abbr(attr.Title("2013."), "seven years ago"),
 						", which lead to increased developer happiness.",
 					),
 					elem.P(
