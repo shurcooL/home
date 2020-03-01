@@ -161,15 +161,15 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		case "/about/setup":
 			err = vec.RenderHTML(w,
 				elem.Div(
-					attr.Style("margin-top: 24px;"),
+					elem.H3("Work"),
 					elem.Ul(
 						elem.Li(iconText{
 							Icon: faIcon("laptop"),
-							Text: "Apple MacBook Pro (Retina, 15-inch, Mid 2015)",
+							Text: "Apple MacBook Pro (15-inch, 2017)",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("tv"),
-							Text: "Dell 3008WFP",
+							Text: "Apple Pro Display XDR",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("keyboard-o"),
@@ -177,15 +177,45 @@ func initAbout(notifications notifications.Service, users users.Service) {
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("mouse-pointer"),
-							Text: "Logitech G502",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("square"),
-							Text: "SteelSeries QcK",
+							Text: "Logitech G Pro Gaming Mouse",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("square-o"),
 							Text: "Apple Magic Trackpad 2",
+						}),
+						elem.Li(iconText{
+							Icon: faIcon("headphones"),
+							Text: "GID6B",
+						}),
+						elem.Li(iconText{
+							Icon: faIcon("square"),
+							Text: "Rain Design mStand",
+						}),
+					),
+					elem.H3("Home (New York, NY)"),
+					elem.Ul(
+						elem.Li(iconText{
+							Icon: faIcon("laptop"),
+							Text: "Apple MacBook Pro (Retina, 15-inch, Mid 2015)",
+						}),
+						elem.Li(iconText{
+							Icon: faIcon("user"),
+							Text: "IKEA LINNMON (150 cm x 75 cm), IKEA ADILS",
+						}),
+						elem.Li(iconText{
+							Icon: faIcon("user"),
+							Text: "IKEA JÄRVFJÄLLET",
+						}),
+					),
+					elem.H3("Home (Toronto, ON)"),
+					elem.Ul(
+						elem.Li(iconText{
+							Icon: faIcon("tv"),
+							Text: "Dell 3008WFP",
+						}),
+						elem.Li(iconText{
+							Icon: faIcon("mouse-pointer"),
+							Text: "Logitech G9 Laser Mouse",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("volume-off"),
@@ -196,12 +226,27 @@ func initAbout(notifications notifications.Service, users users.Service) {
 							Text: "Bose QuietComfort 25",
 						}),
 						elem.Li(iconText{
+							Icon: faIcon("square"),
+							Text: "SteelSeries QcK",
+						}),
+						elem.Li(iconText{
 							Icon: faIcon("user"),
-							Text: "Fully Jarvis Frame + IKEA LINNMON (150 cm x 75 cm)",
+							Text: "IKEA LINNMON (150 cm x 75 cm), Fully Jarvis Frame",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("user"),
 							Text: "Herman Miller Aeron (2016)",
+						}),
+					),
+					elem.H3("Mobile"),
+					elem.Ul(
+						elem.Li(iconText{
+							Icon: faIcon("mobile"),
+							Text: "Apple iPhone 11 Pro Max",
+						}),
+						elem.Li(iconText{
+							Icon: faIcon("headphones"),
+							Text: "Apple AirPods",
 						}),
 					),
 				),
