@@ -27,7 +27,7 @@ func TestBlogNotFound(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, url := range []string{
+	for _, url := range [...]string{
 		"/blog/1822",
 		"/blog/1822?issuesapp=1",
 	} {

@@ -51,7 +51,7 @@ func init() {
 		http.HandleFunc("/test/modtest2/@v/v0.0.0.zip", func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Content-Type", "application/zip")
 			z := zip.NewWriter(w)
-			for _, file := range []struct {
+			for _, file := range [...]struct {
 				Name, Body string
 			}{
 				{"dmitri.shuralyov.com/test/modtest2@v0.0.0/go.mod", "module dmitri.shuralyov.com/test/modtest2\n"},

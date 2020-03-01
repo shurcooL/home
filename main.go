@@ -117,7 +117,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		}
 
 		// Create store directories if they're missing.
-		for _, storeName := range []string{
+		for _, storeName := range [...]string{
 			"users",
 			"reactions",
 			"notifications",

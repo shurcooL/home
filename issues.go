@@ -223,7 +223,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 	}
 	issuesApp = issuesapp.New(issuesService, users, opt)
 
-	for _, repo := range []struct{ SpecURL, BaseURL string }{
+	for _, repo := range [...]struct{ SpecURL, BaseURL string }{
 		{SpecURL: "github.com/shurcooL/issuesapp", BaseURL: "/issues/github.com/shurcooL/issuesapp"},
 		{SpecURL: "github.com/shurcooL/notificationsapp", BaseURL: "/issues/github.com/shurcooL/notificationsapp"},
 		{SpecURL: "dmitri.shuralyov.com/idiomatic-go", BaseURL: "/idiomatic-go/entries"},

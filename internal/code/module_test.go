@@ -32,7 +32,7 @@ func TestModuleHandler(t *testing.T) {
 		http.NotFound(w, req)
 	})
 
-	for _, tt := range []struct {
+	for _, tt := range [...]struct {
 		name         string
 		url          string
 		wantNotExist bool // If true, expect 404 status code.

@@ -9,7 +9,7 @@ import (
 // Test that the IndieAuth authorization endpoint is
 // advertised on index page in an HTTP Link header.
 func TestIndexAuthzEndpoint(t *testing.T) {
-	for _, tt := range []struct {
+	for _, tt := range [...]struct {
 		name          string
 		authzEndpoint bool
 		want          string
