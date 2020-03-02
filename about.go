@@ -169,7 +169,7 @@ func initAbout(notifications notifications.Service, users users.Service) {
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("tv"),
-							Text: "Apple Pro Display XDR",
+							Text: "Apple Pro Display XDR, Apple VESA Mount Adapter",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("keyboard-o"),
