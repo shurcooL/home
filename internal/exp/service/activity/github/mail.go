@@ -426,7 +426,7 @@ func fetchAndConvert(
 				"issueNumber":     githubv4.Int(e.IssueID),
 			}
 			err := clV4.Query(ctx, &q, variables)
-			if err != nil && strings.HasPrefix(err.Error(), "Could not resolve to a node ") { // E.g., because the repo was deleted.
+			if err != nil && strings.HasPrefix(err.Error(), "Could not resolve ") { // E.g., because the repo or issue was deleted.
 				log.Printf("fetchAndConvert: issue %s/%s/%d was not found: %v\n", e.Owner, e.Repo, e.IssueID, err)
 				continue
 			} else if err != nil {
