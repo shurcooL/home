@@ -1,0 +1,15 @@
+{
+	"Author": {
+		"ID": 1,
+		"Domain": "example.org"
+	},
+	"CreatedAt": "2016-10-02T18:51:14.250725508Z",
+	"Edited": {
+		"By": {
+			"ID": 1,
+			"Domain": "example.org"
+		},
+		"At": "2016-10-02T18:57:47.938813179Z"
+	},
+	"Body": "Sample another reply."
+}

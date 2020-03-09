@@ -1,0 +1,33 @@
+<html>
+	<head>
+		{{template "scriptless-head" .}}
+	</head>
+	<body>
+		{{template "body-pre" .}}
+		{{.BodyTop}}
+		{{template "create-issue" .}}
+		{{render .Issues}}
+	</body>
+</html>
+
+{{define "scriptless-head"}}
+	{{.HeadPre}}
+	<link href="{{.BaseURI}}/assets/gfm/gfm.css" rel="stylesheet" type="text/css" />
+	<link href="{{.BaseURI}}/assets/style.css" rel="stylesheet" type="text/css" />
+	{{.HeadPost}}
+{{end}}
+
+{{define "head"}}
+	{{template "scriptless-head" .}}
+	<script type="text/javascript">
+		var State = {{.State | jsonfmt}};
+		{{/*var State = {{.State}};*/}}
+	</script>
+	<script src="{{.BaseURI}}/assets/script.js" type="text/javascript"></script>
+{{end}}
+
+{{define "create-issue"}}
+	{{if not .DisableUsers}}
+		<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">Create Issue</button></div>
+	{{end}}
+{{end}}
