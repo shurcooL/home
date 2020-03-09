@@ -55,7 +55,8 @@ import (
 // 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 // 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{...}))
 // 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, string(...)))
-// 		issuesApp.ServeHTTP(w, req)
+// 		err := issuesApp.ServeHTTP(w, req)
+// 		// Handle error, if any.
 // 	})
 //
 // An HTTP API must be available (currently, only Create and EditComment endpoints are used):
@@ -67,22 +68,20 @@ import (
 // 	http.Handle(httproute.ListTimeline, errorHandler(apiHandler.ListTimeline))
 // 	http.Handle(httproute.Create, errorHandler(apiHandler.Create))
 // 	http.Handle(httproute.EditComment, errorHandler(apiHandler.EditComment))
-func New(service issues.Service, users users.Service, opt Options) http.Handler {
+func New(service issues.Service, users users.Service, opt Options) interface {
+	ServeHTTP(w http.ResponseWriter, req *http.Request) error
+} {
 	static, err := loadTemplates(common.State{}, opt.BodyPre)
 	if err != nil {
 		log.Fatalln("loadTemplates failed:", err)
 	}
-	h := handler{
+	return &handler{
 		is:               service,
 		us:               users,
 		static:           static,
 		assetsFileServer: httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed}),
 		gfmFileServer:    httpgzip.FileServer(assets.GFMStyle, httpgzip.FileServerOptions{ServeError: httpgzip.Detailed}),
 		Options:          opt,
-	}
-	return &errorHandler{
-		handler: h.ServeHTTP,
-		users:   users,
 	}
 }
 

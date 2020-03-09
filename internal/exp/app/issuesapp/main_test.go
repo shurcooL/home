@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/exp/app/issuesapp"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/issue/fs"
@@ -24,11 +25,11 @@ func TestRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+	mux.Handle("/", httputil.ErrorHandler(nil, func(w http.ResponseWriter, req *http.Request) error {
 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, repo))
 		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "."))
-		issuesApp.ServeHTTP(w, req)
-	})
+		return issuesApp.ServeHTTP(w, req)
+	}))
 
 	tests := []struct {
 		method, url string
@@ -64,7 +65,9 @@ func TestRoutes(t *testing.T) {
 	}
 }
 
-func mockIssuesApp(repo issues.RepoSpec) (http.Handler, error) {
+func mockIssuesApp(repo issues.RepoSpec) (interface {
+	ServeHTTP(w http.ResponseWriter, req *http.Request) error
+}, error) {
 	mem := webdav.NewMemFS()
 	err := vfsutil.MkdirAll(context.Background(), mem, path.Join(repo.URI, "issues"), 0700)
 	if err != nil {
