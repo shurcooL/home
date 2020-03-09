@@ -116,8 +116,27 @@ func (i *Issues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint
 	return tis, err
 }
 
-func (*Issues) Create(_ context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
-	return issues.Issue{}, fmt.Errorf("Create: not implemented")
+func (c *Issues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+	u := url.URL{
+		Path: httproute.Create,
+		RawQuery: url.Values{ // TODO: Automate this conversion process.
+			"RepoURI": {repo.URI},
+			"Title":   {issue.Title},
+			"Body":    {issue.Body},
+		}.Encode(),
+	}
+	resp, err := ctxhttp.Post(ctx, c.client, c.baseURL.ResolveReference(&u).String(), "", nil)
+	if err != nil {
+		return issues.Issue{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return issues.Issue{}, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var i issues.Issue
+	err = json.NewDecoder(resp.Body).Decode(&i)
+	return i, err
 }
 
 func (*Issues) CreateComment(_ context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {

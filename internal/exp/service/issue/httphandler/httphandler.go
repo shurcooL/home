@@ -81,6 +81,25 @@ func (h Issues) ListTimeline(w http.ResponseWriter, req *http.Request) error {
 	return gob.NewEncoder(w).Encode(tis)
 }
 
+func (h Issues) Create(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != http.MethodPost {
+		return httperror.Method{Allowed: []string{http.MethodPost}}
+	}
+	q := req.URL.Query() // TODO: Automate this conversion process.
+	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
+	issue, err := h.Issues.Create(req.Context(), repo, issues.Issue{
+		Title: q.Get("Title"),
+		Comment: issues.Comment{
+			Body: q.Get("Body"),
+		},
+	})
+	if err != nil {
+		// TODO: Return error via JSON.
+		return err
+	}
+	return httperror.JSONResponse{V: issue}
+}
+
 func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "POST" {
 		return httperror.Method{Allowed: []string{"POST"}}

@@ -46,7 +46,7 @@ func main() {
 	js.Global.Set("MarkdownPreview", jsutil.Wrap(MarkdownPreview))
 	js.Global.Set("SwitchWriteTab", jsutil.Wrap(SwitchWriteTab))
 	js.Global.Set("PasteHandler", jsutil.Wrap(PasteHandler))
-	js.Global.Set("CreateNewIssue", CreateNewIssue)
+	js.Global.Set("CreateNewIssue", f.CreateNewIssue)
 	js.Global.Set("ToggleIssueState", ToggleIssueState)
 	js.Global.Set("PostComment", PostComment)
 	js.Global.Set("EditComment", jsutil.Wrap(f.EditComment))
@@ -116,20 +116,7 @@ func setupIssueToggleButton() {
 	}
 }
 
-func postJSON(url string, v interface{}) (*http.Response, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	return http.DefaultClient.Do(req)
-}
-
-func CreateNewIssue() {
+func (f *frontend) CreateNewIssue() {
 	titleEditor := document.GetElementByID("title-editor").(*dom.HTMLInputElement)
 	commentEditor := document.QuerySelector(".comment-editor").(*dom.HTMLTextAreaElement)
 
@@ -147,25 +134,15 @@ func CreateNewIssue() {
 	}
 
 	go func() {
-		resp, err := postJSON("new", newIssue)
+		issue, err := f.is.Create(context.Background(), state.RepoSpec, newIssue)
 		if err != nil {
-			log.Println(err)
-			return
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(err)
+			// TODO: Display error in the UI, so it is more visible.
+			log.Println("creating issue failed:", err)
 			return
 		}
 
-		fmt.Printf("got reply: %v\n%q\n", resp.Status, string(body))
-
-		switch resp.StatusCode {
-		case http.StatusOK:
-			// Redirect.
-			dom.GetWindow().Location().Href = string(body)
-		}
+		// Redirect.
+		dom.GetWindow().Location().Href = fmt.Sprintf("%s/%d", state.BaseURI, issue.ID)
 	}()
 }
 

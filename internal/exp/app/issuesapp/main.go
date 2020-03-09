@@ -58,13 +58,14 @@ import (
 // 		issuesApp.ServeHTTP(w, req)
 // 	})
 //
-// An HTTP API must be available (currently, only EditComment endpoint is used):
+// An HTTP API must be available (currently, only Create and EditComment endpoints are used):
 //
 // 	// Register HTTP API endpoints.
 // 	apiHandler := httphandler.Issues{Issues: service}
 // 	http.Handle(httproute.List, errorHandler(apiHandler.List))
 // 	http.Handle(httproute.Count, errorHandler(apiHandler.Count))
 // 	http.Handle(httproute.ListTimeline, errorHandler(apiHandler.ListTimeline))
+// 	http.Handle(httproute.Create, errorHandler(apiHandler.Create))
 // 	http.Handle(httproute.EditComment, errorHandler(apiHandler.EditComment))
 func New(service issues.Service, users users.Service, opt Options) http.Handler {
 	static, err := loadTemplates(common.State{}, opt.BodyPre)
@@ -166,7 +167,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 
 	// Handle "/new".
 	if req.URL.Path == "/new" {
-		return h.serveNewIssue(w, req)
+		return h.NewIssueHandler(w, req)
 	}
 
 	// Handle "/{issueID}" and "/{issueID}/...".
@@ -339,18 +340,10 @@ func (h *handler) IssueHandler(w http.ResponseWriter, req *http.Request, issueID
 	return nil
 }
 
-func (h *handler) serveNewIssue(w http.ResponseWriter, req *http.Request) error {
-	switch req.Method {
-	case http.MethodGet:
-		return h.CreateIssueHandler(w, req)
-	case http.MethodPost:
-		return h.PostCreateIssueHandler(w, req)
-	default:
-		return httperror.Method{Allowed: []string{http.MethodGet, http.MethodPost}}
+func (h *handler) NewIssueHandler(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != http.MethodGet {
+		return httperror.Method{Allowed: []string{http.MethodGet}}
 	}
-}
-
-func (h *handler) CreateIssueHandler(w http.ResponseWriter, req *http.Request) error {
 	state, err := h.state(req, 0)
 	if err != nil {
 		return err
@@ -363,25 +356,6 @@ func (h *handler) CreateIssueHandler(w http.ResponseWriter, req *http.Request) e
 	if err != nil {
 		return fmt.Errorf("h.static.ExecuteTemplate: %v", err)
 	}
-	return nil
-}
-
-func (h *handler) PostCreateIssueHandler(w http.ResponseWriter, req *http.Request) error {
-	repoSpec := req.Context().Value(RepoSpecContextKey).(issues.RepoSpec)
-	baseURI := req.Context().Value(BaseURIContextKey).(string)
-
-	var issue issues.Issue
-	err := json.NewDecoder(req.Body).Decode(&issue)
-	if err != nil {
-		return httperror.BadRequest{Err: fmt.Errorf("json.Decode: %v", err)}
-	}
-
-	issue, err = h.is.Create(req.Context(), repoSpec, issue)
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintf(w, "%s/%d", baseURI, issue.ID)
 	return nil
 }
 
