@@ -12,6 +12,7 @@ import (
 )
 
 // Change is an API handler for change.Service.
+// It returns errors compatible with httperror package.
 type Change struct {
 	Change change.Service
 }

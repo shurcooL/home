@@ -3,5 +3,5 @@ package httproute
 
 // Route paths.
 const (
-	EditComment = "/api/change/edit-comment"
+	EditComment = "EditComment"
 )

@@ -63,11 +63,11 @@ import (
 //
 // 	// Register HTTP API endpoints.
 // 	apiHandler := httphandler.Issues{Issues: service}
-// 	http.Handle(httproute.List, errorHandler(apiHandler.List))
-// 	http.Handle(httproute.Count, errorHandler(apiHandler.Count))
-// 	http.Handle(httproute.ListTimeline, errorHandler(apiHandler.ListTimeline))
-// 	http.Handle(httproute.Create, errorHandler(apiHandler.Create))
-// 	http.Handle(httproute.EditComment, errorHandler(apiHandler.EditComment))
+// 	http.Handle(path.Join("/api/issue", httproute.List), errorHandler(apiHandler.List))
+// 	http.Handle(path.Join("/api/issue", httproute.Count), errorHandler(apiHandler.Count))
+// 	http.Handle(path.Join("/api/issue", httproute.ListTimeline), errorHandler(apiHandler.ListTimeline))
+// 	http.Handle(path.Join("/api/issue", httproute.Create), errorHandler(apiHandler.Create))
+// 	http.Handle(path.Join("/api/issue", httproute.EditComment), errorHandler(apiHandler.EditComment))
 func New(service issues.Service, users users.Service, opt Options) interface {
 	ServeHTTP(w http.ResponseWriter, req *http.Request) error
 } {

@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/shurcooL/home/internal/exp/service/change"
 	"github.com/shurcooL/home/internal/exp/service/change/httproute"
@@ -17,26 +18,30 @@ import (
 // NewChange creates a client that implements change.Service remotely over HTTP.
 // If a nil httpClient is provided, http.DefaultClient will be used.
 // scheme and host can be empty strings to target local service.
-func NewChange(httpClient *http.Client, scheme, host string) change.Service {
-	return &Change{
+// A trailing "/" is added to path if there isn't one.
+func NewChange(httpClient *http.Client, scheme, host, path string) change.Service {
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+	return &changeClient{
 		client: httpClient,
 		baseURL: &url.URL{
 			Scheme: scheme,
 			Host:   host,
+			Path:   path,
 		},
 	}
 }
 
-// Change implements change.Service remotely over HTTP.
-// Use NewChange for creation; zero value of Change is unfit for use.
-type Change struct {
+// changeClient implements change.Service remotely over HTTP.
+type changeClient struct {
 	client  *http.Client // HTTP client for API requests. If nil, http.DefaultClient should be used.
-	baseURL *url.URL     // Base URL for API requests.
+	baseURL *url.URL     // Base URL for API requests. Path must have a trailing "/".
 
 	change.Service // For the rest of the methods that are not implemented.
 }
 
-func (c *Change) EditComment(ctx context.Context, repo string, id uint64, cr change.CommentRequest) (change.Comment, error) {
+func (cc *changeClient) EditComment(ctx context.Context, repo string, id uint64, cr change.CommentRequest) (change.Comment, error) {
 	u := url.URL{
 		Path: httproute.EditComment,
 		RawQuery: url.Values{
@@ -50,7 +55,7 @@ func (c *Change) EditComment(ctx context.Context, repo string, id uint64, cr cha
 	if cr.Reaction != nil {
 		data.Set("Reaction", string(*cr.Reaction))
 	}
-	resp, err := ctxhttp.PostForm(ctx, c.client, c.baseURL.ResolveReference(&u).String(), data)
+	resp, err := ctxhttp.PostForm(ctx, cc.client, cc.baseURL.ResolveReference(&u).String(), data)
 	if err != nil {
 		return change.Comment{}, err
 	}

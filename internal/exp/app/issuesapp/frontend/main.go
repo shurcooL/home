@@ -41,7 +41,7 @@ func main() {
 
 	httpClient := httpClient()
 
-	f := &frontend{is: httpclient.NewIssues(httpClient, "", "")}
+	f := &frontend{is: httpclient.NewIssues(httpClient, "", "", "/api/issue")}
 
 	js.Global.Set("MarkdownPreview", jsutil.Wrap(MarkdownPreview))
 	js.Global.Set("SwitchWriteTab", jsutil.Wrap(SwitchWriteTab))

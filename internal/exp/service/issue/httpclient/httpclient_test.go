@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/shurcooL/home/httputil"
@@ -65,16 +66,16 @@ func init() {
 
 	// Register the issues API handler.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
-	http.Handle(httproute.List, httputil.ErrorHandler(users, issuesAPIHandler.List))
-	http.Handle(httproute.Count, httputil.ErrorHandler(users, issuesAPIHandler.Count))
-	http.Handle(httproute.ListTimeline, httputil.ErrorHandler(users, issuesAPIHandler.ListTimeline))
-	http.Handle(httproute.EditComment, httputil.ErrorHandler(users, issuesAPIHandler.EditComment))
+	http.Handle(path.Join("/api/issue", httproute.List), httputil.ErrorHandler(users, issuesAPIHandler.List))
+	http.Handle(path.Join("/api/issue", httproute.Count), httputil.ErrorHandler(users, issuesAPIHandler.Count))
+	http.Handle(path.Join("/api/issue", httproute.ListTimeline), httputil.ErrorHandler(users, issuesAPIHandler.ListTimeline))
+	http.Handle(path.Join("/api/issue", httproute.EditComment), httputil.ErrorHandler(users, issuesAPIHandler.EditComment))
 }
 
-var issuesClient = httpclient.NewIssues(nil, "", "")
+var issuesClient = httpclient.NewIssues(nil, "", "", "/api/issue")
 
 func ExampleNewIssues() {
-	issuesClient := httpclient.NewIssues(nil, "http", "localhost:8080")
+	issuesClient := httpclient.NewIssues(nil, "http", "localhost:8080", "/api/issue")
 
 	// Now you can use any of issuesClient methods.
 
@@ -90,7 +91,7 @@ func ExampleNewIssues_authenticated() {
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
 
-	issuesClient := httpclient.NewIssues(httpClient, "http", "localhost:8080")
+	issuesClient := httpclient.NewIssues(httpClient, "http", "localhost:8080", "/api/issue")
 
 	// Now you can use any of issuesClient methods.
 

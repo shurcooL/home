@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/issue/httproute"
@@ -24,24 +25,28 @@ func init() {
 // NewIssues creates a client that implements issues.Service remotely over HTTP.
 // If a nil httpClient is provided, http.DefaultClient will be used.
 // scheme and host can be empty strings to target local service.
-func NewIssues(httpClient *http.Client, scheme, host string) issues.Service {
-	return &Issues{
+// A trailing "/" is added to path if there isn't one.
+func NewIssues(httpClient *http.Client, scheme, host, path string) issues.Service {
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+	return &issueClient{
 		client: httpClient,
 		baseURL: &url.URL{
 			Scheme: scheme,
 			Host:   host,
+			Path:   path,
 		},
 	}
 }
 
-// Issues implements issues.Service remotely over HTTP.
-// Use NewIssues for creation, zero value of Issues is unfit for use.
-type Issues struct {
+// issueClient implements issues.Service remotely over HTTP.
+type issueClient struct {
 	client  *http.Client // HTTP client for API requests. If nil, http.DefaultClient should be used.
-	baseURL *url.URL     // Base URL for API requests.
+	baseURL *url.URL     // Base URL for API requests. Path must have a trailing "/".
 }
 
-func (i *Issues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
+func (ic *issueClient) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
 	u := url.URL{
 		Path: httproute.List,
 		RawQuery: url.Values{
@@ -49,7 +54,7 @@ func (i *Issues) List(ctx context.Context, repo issues.RepoSpec, opt issues.Issu
 			"OptState": {string(opt.State)},
 		}.Encode(),
 	}
-	resp, err := ctxhttp.Get(ctx, i.client, i.baseURL.ResolveReference(&u).String())
+	resp, err := ctxhttp.Get(ctx, ic.client, ic.baseURL.ResolveReference(&u).String())
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +68,7 @@ func (i *Issues) List(ctx context.Context, repo issues.RepoSpec, opt issues.Issu
 	return is, err
 }
 
-func (i *Issues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
+func (ic *issueClient) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
 	u := url.URL{
 		Path: httproute.Count,
 		RawQuery: url.Values{
@@ -71,7 +76,7 @@ func (i *Issues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.Iss
 			"OptState": {string(opt.State)},
 		}.Encode(),
 	}
-	resp, err := ctxhttp.Get(ctx, i.client, i.baseURL.ResolveReference(&u).String())
+	resp, err := ctxhttp.Get(ctx, ic.client, ic.baseURL.ResolveReference(&u).String())
 	if err != nil {
 		return 0, err
 	}
@@ -85,11 +90,11 @@ func (i *Issues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.Iss
 	return count, err
 }
 
-func (*Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
+func (*issueClient) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
 	return issues.Issue{}, fmt.Errorf("Get: not implemented")
 }
 
-func (i *Issues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
+func (ic *issueClient) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
 	q := url.Values{
 		"RepoURI": {repo.URI},
 		"ID":      {fmt.Sprint(id)},
@@ -102,7 +107,7 @@ func (i *Issues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint
 		Path:     httproute.ListTimeline,
 		RawQuery: q.Encode(),
 	}
-	resp, err := ctxhttp.Get(ctx, i.client, i.baseURL.ResolveReference(&u).String())
+	resp, err := ctxhttp.Get(ctx, ic.client, ic.baseURL.ResolveReference(&u).String())
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +121,7 @@ func (i *Issues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint
 	return tis, err
 }
 
-func (c *Issues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+func (ic *issueClient) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
 	u := url.URL{
 		Path: httproute.Create,
 		RawQuery: url.Values{ // TODO: Automate this conversion process.
@@ -125,7 +130,7 @@ func (c *Issues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.
 			"Body":    {issue.Body},
 		}.Encode(),
 	}
-	resp, err := ctxhttp.Post(ctx, c.client, c.baseURL.ResolveReference(&u).String(), "", nil)
+	resp, err := ctxhttp.Post(ctx, ic.client, ic.baseURL.ResolveReference(&u).String(), "", nil)
 	if err != nil {
 		return issues.Issue{}, err
 	}
@@ -139,15 +144,15 @@ func (c *Issues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.
 	return i, err
 }
 
-func (*Issues) CreateComment(_ context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
+func (*issueClient) CreateComment(_ context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
 	return issues.Comment{}, fmt.Errorf("CreateComment: not implemented")
 }
 
-func (*Issues) Edit(_ context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
+func (*issueClient) Edit(_ context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
 	return issues.Issue{}, nil, fmt.Errorf("Edit: not implemented")
 }
 
-func (i *Issues) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
+func (ic *issueClient) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
 	u := url.URL{
 		Path: httproute.EditComment,
 		RawQuery: url.Values{
@@ -164,7 +169,7 @@ func (i *Issues) EditComment(ctx context.Context, repo issues.RepoSpec, id uint6
 	if cr.Reaction != nil {
 		data.Set("Reaction", string(*cr.Reaction))
 	}
-	resp, err := ctxhttp.PostForm(ctx, i.client, i.baseURL.ResolveReference(&u).String(), data)
+	resp, err := ctxhttp.PostForm(ctx, ic.client, ic.baseURL.ResolveReference(&u).String(), data)
 	if err != nil {
 		return issues.Comment{}, err
 	}

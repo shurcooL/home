@@ -3,9 +3,9 @@ package httproute
 
 // Route paths.
 const (
-	List         = "/api/issues/list"
-	Count        = "/api/issues/count"
-	ListTimeline = "/api/issues/list-timeline"
-	Create       = "/api/issues/create"
-	EditComment  = "/api/issues/edit-comment"
+	List         = "List"
+	Count        = "Count"
+	ListTimeline = "ListTimeline"
+	Create       = "Create"
+	EditComment  = "EditComment"
 )

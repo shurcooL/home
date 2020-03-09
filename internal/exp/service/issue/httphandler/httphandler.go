@@ -19,6 +19,7 @@ func init() {
 }
 
 // Issues is an API handler for issues.Service.
+// It returns errors compatible with httperror package.
 type Issues struct {
 	Issues issues.Service
 }

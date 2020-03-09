@@ -66,7 +66,7 @@ import (
 //
 // 	// Register HTTP API endpoints.
 // 	apiHandler := httphandler.Change{Change: service}
-// 	http.Handle(httproute.EditComment, errorHandler(apiHandler.EditComment))
+// 	http.Handle(path.Join("/api/change", httproute.EditComment), errorHandler(apiHandler.EditComment))
 func New(service change.Service, users users.Service, opt Options) interface {
 	ServeHTTP(w http.ResponseWriter, req *http.Request) error
 } {

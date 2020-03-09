@@ -33,7 +33,7 @@ func main() {
 
 	httpClient := httpClient()
 
-	f := &frontend{cs: httpclient.NewChange(httpClient, "", "")}
+	f := &frontend{cs: httpclient.NewChange(httpClient, "", "", "/api/change")}
 
 	js.Global.Set("ToggleDetails", jsutil.Wrap(ToggleDetails))
 
