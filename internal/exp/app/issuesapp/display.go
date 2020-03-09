@@ -45,16 +45,3 @@ func (i issueItem) ID() uint64 {
 		panic(fmt.Errorf("unknown item type %T", i))
 	}
 }
-
-// byCreatedAtID implements sort.Interface.
-type byCreatedAtID []issueItem
-
-func (s byCreatedAtID) Len() int { return len(s) }
-func (s byCreatedAtID) Less(i, j int) bool {
-	if s[i].CreatedAt().Equal(s[j].CreatedAt()) {
-		// If CreatedAt time is equal, fall back to ID as a tiebreaker.
-		return s[i].ID() < s[j].ID()
-	}
-	return s[i].CreatedAt().Before(s[j].CreatedAt())
-}
-func (s byCreatedAtID) Swap(i, j int) { s[i], s[j] = s[j], s[i] }

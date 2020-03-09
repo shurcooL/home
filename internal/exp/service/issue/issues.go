@@ -31,13 +31,9 @@ type Service interface {
 	// Get an issue.
 	Get(ctx context.Context, repo RepoSpec, id uint64) (Issue, error)
 
-	// TODO: After some time, if ListTimeline proves to be a good replacement for ListComments
-	//       and ListEvents, replace them here to simplify things.
-
-	// ListComments lists comments for specified issue id.
-	ListComments(ctx context.Context, repo RepoSpec, id uint64, opt *ListOptions) ([]Comment, error)
-	// ListEvents lists events for specified issue id.
-	ListEvents(ctx context.Context, repo RepoSpec, id uint64, opt *ListOptions) ([]Event, error)
+	// ListTimeline lists timeline items (Comment, Event) for specified issue id
+	// in chronological order. The issue description comes first in a timeline.
+	ListTimeline(ctx context.Context, repo RepoSpec, id uint64, opt *ListOptions) ([]interface{}, error)
 
 	// Create a new issue.
 	Create(ctx context.Context, repo RepoSpec, issue Issue) (Issue, error)
@@ -48,26 +44,6 @@ type Service interface {
 	Edit(ctx context.Context, repo RepoSpec, id uint64, ir IssueRequest) (Issue, []Event, error)
 	// EditComment edits comment of specified issue id.
 	EditComment(ctx context.Context, repo RepoSpec, id uint64, cr CommentRequest) (Comment, error)
-}
-
-// TimelineLister is an optional interface that combines ListComments and ListEvents methods into one
-// that includes both. It's available for situations where this is more efficient to implement.
-type TimelineLister interface {
-	// IsTimelineLister reports whether the underlying service implements TimelineLister
-	// fully for the specified repo.
-	IsTimelineLister(repo RepoSpec) bool
-
-	// ListTimeline lists timeline items (Comment, Event) for specified issue id
-	// in chronological order, if IsTimelineLister(repo) reported positively.
-	// The issue description comes first in a timeline.
-	ListTimeline(ctx context.Context, repo RepoSpec, id uint64, opt *ListOptions) ([]interface{}, error)
-}
-
-// CopierFrom is an optional interface that allows copying issues between services.
-type CopierFrom interface {
-	// CopyFrom copies all issues from src for specified repo.
-	// ctx should provide permission to access all issues in src.
-	CopyFrom(ctx context.Context, src Service, repo RepoSpec) error
 }
 
 // Issue represents an issue on a repository.

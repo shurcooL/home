@@ -5,7 +5,6 @@ package httproute
 const (
 	List         = "/api/issues/list"
 	Count        = "/api/issues/count"
-	ListComments = "/api/issues/list-comments"
-	ListEvents   = "/api/issues/list-events"
+	ListTimeline = "/api/issues/list-timeline"
 	EditComment  = "/api/issues/edit-comment"
 )

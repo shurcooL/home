@@ -3,6 +3,7 @@ package httpclient
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +14,12 @@ import (
 	"github.com/shurcooL/home/internal/exp/service/issue/httproute"
 	"golang.org/x/net/context/ctxhttp"
 )
+
+func init() {
+	// For Issues.ListTimeline.
+	gob.Register(issues.Comment{})
+	gob.Register(issues.Event{})
+}
 
 // NewIssues creates a client that implements issues.Service remotely over HTTP.
 // If a nil httpClient is provided, http.DefaultClient will be used.
@@ -82,7 +89,7 @@ func (*Issues) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.I
 	return issues.Issue{}, fmt.Errorf("Get: not implemented")
 }
 
-func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
+func (i *Issues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
 	q := url.Values{
 		"RepoURI": {repo.URI},
 		"ID":      {fmt.Sprint(id)},
@@ -92,7 +99,7 @@ func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint
 		q.Set("Opt.Length", fmt.Sprint(opt.Length))
 	}
 	u := url.URL{
-		Path:     httproute.ListComments,
+		Path:     httproute.ListTimeline,
 		RawQuery: q.Encode(),
 	}
 	resp, err := ctxhttp.Get(ctx, i.client, i.baseURL.ResolveReference(&u).String())
@@ -104,36 +111,9 @@ func (i *Issues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint
 		body, _ := ioutil.ReadAll(resp.Body)
 		return nil, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
 	}
-	var cs []issues.Comment
-	err = json.NewDecoder(resp.Body).Decode(&cs)
-	return cs, err
-}
-
-func (i *Issues) ListEvents(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
-	q := url.Values{
-		"RepoURI": {repo.URI},
-		"ID":      {fmt.Sprint(id)},
-	}
-	if opt != nil {
-		q.Set("Opt.Start", fmt.Sprint(opt.Start))
-		q.Set("Opt.Length", fmt.Sprint(opt.Length))
-	}
-	u := url.URL{
-		Path:     httproute.ListEvents,
-		RawQuery: q.Encode(),
-	}
-	resp, err := ctxhttp.Get(ctx, i.client, i.baseURL.ResolveReference(&u).String())
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
-	}
-	var es []issues.Event
-	err = json.NewDecoder(resp.Body).Decode(&es)
-	return es, err
+	var tis []interface{}
+	err = gob.NewDecoder(resp.Body).Decode(&tis)
+	return tis, err
 }
 
 func (*Issues) Create(_ context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {

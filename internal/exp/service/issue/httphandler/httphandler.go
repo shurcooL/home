@@ -2,6 +2,7 @@
 package httphandler
 
 import (
+	"encoding/gob"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,12 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/reactions"
 )
+
+func init() {
+	// For Issues.ListTimeline.
+	gob.Register(issues.Comment{})
+	gob.Register(issues.Event{})
+}
 
 // Issues is an API handler for issues.Service.
 type Issues struct {
@@ -44,7 +51,7 @@ func (h Issues) Count(w http.ResponseWriter, req *http.Request) error {
 	return httperror.JSONResponse{V: count}
 }
 
-func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
+func (h Issues) ListTimeline(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != "GET" {
 		return httperror.Method{Allowed: []string{"GET"}}
 	}
@@ -67,41 +74,11 @@ func (h Issues) ListComments(w http.ResponseWriter, req *http.Request) error {
 		}
 		opt.Length = l
 	}
-	is, err := h.Issues.ListComments(req.Context(), repo, id, opt)
+	tis, err := h.Issues.ListTimeline(req.Context(), repo, id, opt)
 	if err != nil {
 		return err
 	}
-	return httperror.JSONResponse{V: is}
-}
-
-func (h Issues) ListEvents(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" {
-		return httperror.Method{Allowed: []string{"GET"}}
-	}
-	q := req.URL.Query() // TODO: Automate this conversion process.
-	repo := issues.RepoSpec{URI: q.Get("RepoURI")}
-	id, err := strconv.ParseUint(q.Get("ID"), 10, 64)
-	if err != nil {
-		return httperror.BadRequest{Err: fmt.Errorf("parsing ID query parameter: %v", err)}
-	}
-	var opt *issues.ListOptions
-	if s, err := strconv.Atoi(q.Get("Opt.Start")); err == nil {
-		if opt == nil {
-			opt = new(issues.ListOptions)
-		}
-		opt.Start = s
-	}
-	if l, err := strconv.Atoi(q.Get("Opt.Length")); err == nil {
-		if opt == nil {
-			opt = new(issues.ListOptions)
-		}
-		opt.Length = l
-	}
-	es, err := h.Issues.ListEvents(req.Context(), repo, id, opt)
-	if err != nil {
-		return err
-	}
-	return httperror.JSONResponse{V: es}
+	return gob.NewEncoder(w).Encode(tis)
 }
 
 func (h Issues) EditComment(w http.ResponseWriter, req *http.Request) error {

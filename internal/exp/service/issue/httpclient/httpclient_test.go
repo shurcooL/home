@@ -67,8 +67,7 @@ func init() {
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	http.Handle(httproute.List, httputil.ErrorHandler(users, issuesAPIHandler.List))
 	http.Handle(httproute.Count, httputil.ErrorHandler(users, issuesAPIHandler.Count))
-	http.Handle(httproute.ListComments, httputil.ErrorHandler(users, issuesAPIHandler.ListComments))
-	http.Handle(httproute.ListEvents, httputil.ErrorHandler(users, issuesAPIHandler.ListEvents))
+	http.Handle(httproute.ListTimeline, httputil.ErrorHandler(users, issuesAPIHandler.ListTimeline))
 	http.Handle(httproute.EditComment, httputil.ErrorHandler(users, issuesAPIHandler.EditComment))
 }
 
@@ -153,8 +152,8 @@ func ExampleIssues_Count() {
 	// 1
 }
 
-func ExampleIssues_ListComments() {
-	is, err := issuesClient.ListComments(context.Background(), issues.RepoSpec{URI: "example.org/repo"}, 1, nil)
+func ExampleIssues_ListTimeline() {
+	is, err := issuesClient.ListTimeline(context.Background(), issues.RepoSpec{URI: "example.org/repo"}, 1, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}

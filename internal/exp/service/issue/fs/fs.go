@@ -191,14 +191,64 @@ func (s *service) Get(ctx context.Context, repo issues.RepoSpec, id uint64) (iss
 	}, nil
 }
 
-func (s *service) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
+func (s *service) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
+	s.fsMu.RLock()
+	defer s.fsMu.RUnlock()
+
+	cs, err := s.listComments(ctx, repo, id)
+	if err != nil {
+		return nil, fmt.Errorf("fs.listComments: %v", err)
+	}
+	es, err := s.listEvents(ctx, repo, id)
+	if err != nil {
+		return nil, fmt.Errorf("fs.listEvents: %v", err)
+	}
+	var tis []interface{}
+Outer:
+	for i, j := 0, 0; i < len(cs) || j < len(es); {
+		switch {
+		case i == len(cs):
+			// Only events left. Add them all and break out.
+			for _, e := range es[j:] {
+				tis = append(tis, e)
+			}
+			break Outer
+		case j == len(es):
+			// Only comments left. Add them all and break out.
+			for _, c := range cs[i:] {
+				tis = append(tis, c)
+			}
+			break Outer
+		case cs[i].CreatedAt.Before(es[j].CreatedAt):
+			// Next comment is before next event.
+			tis, i = append(tis, cs[i]), i+1
+		default:
+			// Next event is before next comment.
+			tis, j = append(tis, es[j]), j+1
+		}
+	}
+
+	// Pagination.
+	if opt != nil {
+		start := opt.Start
+		if start > len(tis) {
+			start = len(tis)
+		}
+		end := opt.Start + opt.Length
+		if end > len(tis) {
+			end = len(tis)
+		}
+		tis = tis[start:end]
+	}
+
+	return tis, nil
+}
+
+func (s *service) listComments(ctx context.Context, repo issues.RepoSpec, id uint64) ([]issues.Comment, error) {
 	currentUser, err := s.users.GetAuthenticated(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	s.fsMu.RLock()
-	defer s.fsMu.RUnlock()
 
 	var comments []issues.Comment
 
@@ -206,7 +256,7 @@ func (s *service) ListComments(ctx context.Context, repo issues.RepoSpec, id uin
 	if err != nil {
 		return comments, err
 	}
-	for _, fi := range paginate(fis, opt) {
+	for _, fi := range fis {
 		var comment comment
 		err = jsonDecodeFile(ctx, s.fs, issueCommentPath(repo, id, fi.ID), &comment)
 		if err != nil {
@@ -247,17 +297,14 @@ func (s *service) ListComments(ctx context.Context, repo issues.RepoSpec, id uin
 	return comments, nil
 }
 
-func (s *service) ListEvents(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
-	s.fsMu.RLock()
-	defer s.fsMu.RUnlock()
-
+func (s *service) listEvents(ctx context.Context, repo issues.RepoSpec, id uint64) ([]issues.Event, error) {
 	var events []issues.Event
 
 	fis, err := readDirIDs(ctx, s.fs, issueEventsDir(repo, id))
 	if err != nil {
 		return events, err
 	}
-	for _, fi := range paginate(fis, opt) {
+	for _, fi := range fis {
 		var event event
 		err = jsonDecodeFile(ctx, s.fs, issueEventPath(repo, id, fi.ID), &event)
 		if err != nil {
@@ -780,21 +827,6 @@ func (s *service) EditComment(ctx context.Context, repo issues.RepoSpec, id uint
 		Reactions: rs,
 		Editable:  true, // You can always edit comments you've edited.
 	}, nil
-}
-
-func paginate(fis []fileInfoID, opt *issues.ListOptions) []fileInfoID {
-	if opt == nil {
-		return fis
-	}
-	start := opt.Start
-	if start > len(fis) {
-		start = len(fis)
-	}
-	end := opt.Start + opt.Length
-	if end > len(fis) {
-		end = len(fis)
-	}
-	return fis[start:end]
 }
 
 // toggleReaction toggles reaction emojiID to comment c for specified user u.

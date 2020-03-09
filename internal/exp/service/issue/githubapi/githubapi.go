@@ -4,7 +4,6 @@ package githubapi
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -203,22 +202,6 @@ func (s service) Get(ctx context.Context, rs issues.RepoSpec, id uint64) (issues
 		},
 	}, nil
 }
-
-// ListComments used to list only comments, but isn't implemented anymore.
-//
-// Deprecated: Use ListTimeline instead.
-func (service) ListComments(ctx context.Context, rs issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
-	return nil, errors.New("ListComments is not implemented, use ListTimeline instead")
-}
-
-// ListEvents used to list only events, but isn't implemented anymore.
-//
-// Deprecated: Use ListTimeline instead.
-func (service) ListEvents(ctx context.Context, rs issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
-	return nil, errors.New("ListEvents is not implemented, use ListTimeline instead")
-}
-
-func (service) IsTimelineLister(issues.RepoSpec) bool { return true }
 
 func (s service) ListTimeline(ctx context.Context, rs issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
 	repo, err := ghRepoSpec(rs)

@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -65,8 +64,7 @@ import (
 // 	apiHandler := httphandler.Issues{Issues: service}
 // 	http.Handle(httproute.List, errorHandler(apiHandler.List))
 // 	http.Handle(httproute.Count, errorHandler(apiHandler.Count))
-// 	http.Handle(httproute.ListComments, errorHandler(apiHandler.ListComments))
-// 	http.Handle(httproute.ListEvents, errorHandler(apiHandler.ListEvents))
+// 	http.Handle(httproute.ListTimeline, errorHandler(apiHandler.ListTimeline))
 // 	http.Handle(httproute.EditComment, errorHandler(apiHandler.EditComment))
 func New(service issues.Service, users users.Service, opt Options) http.Handler {
 	static, err := loadTemplates(common.State{}, opt.BodyPre)
@@ -264,6 +262,7 @@ func stateFilter(query url.Values) (issues.StateFilter, error) {
 	}
 }
 
+// TODO: Switch to notification v2 service.
 func (s state) augmentUnread(ctx context.Context, es []component.IssueEntry, is issues.Service, notificationsService notifications.Service) []component.IssueEntry {
 	if notificationsService == nil {
 		return es
@@ -320,34 +319,13 @@ func (h *handler) IssueHandler(w http.ResponseWriter, req *http.Request, issueID
 	if err != nil {
 		return err
 	}
-	var items []issueItem
-	switch is, ok := h.is.(issues.TimelineLister); ok && is.IsTimelineLister(state.RepoSpec) {
-	case true:
-		tis, err := is.ListTimeline(req.Context(), state.RepoSpec, state.IssueID, nil)
-		if err != nil {
-			return fmt.Errorf("issues.ListTimeline: %v", err)
-		}
-		for _, timelineItem := range tis {
-			items = append(items, issueItem{timelineItem})
-		}
-	case false:
-		cs, err := h.is.ListComments(req.Context(), state.RepoSpec, state.IssueID, nil)
-		if err != nil {
-			return fmt.Errorf("issues.ListComments: %v", err)
-		}
-		es, err := h.is.ListEvents(req.Context(), state.RepoSpec, state.IssueID, nil)
-		if err != nil {
-			return fmt.Errorf("issues.ListEvents: %v", err)
-		}
-		for _, comment := range cs {
-			items = append(items, issueItem{comment})
-		}
-		for _, event := range es {
-			items = append(items, issueItem{event})
-		}
-		sort.Sort(byCreatedAtID(items))
+	tis, err := h.is.ListTimeline(req.Context(), state.RepoSpec, state.IssueID, nil)
+	if err != nil {
+		return fmt.Errorf("issues.ListTimeline: %v", err)
 	}
-	state.Items = items
+	for _, ti := range tis {
+		state.Items = append(state.Items, issueItem{ti})
+	}
 	// Call loadTemplates to set updated reactionsBar, reactableID, etc., template functions.
 	t, err := loadTemplates(state.State, h.Options.BodyPre)
 	if err != nil {
