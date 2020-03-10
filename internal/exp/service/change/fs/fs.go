@@ -37,7 +37,7 @@ var s = struct {
 		"dmitri.shuralyov.com/font/woff2": {{
 			Change: change.Change{
 				ID:           1,
-				State:        change.MergedState,
+				State:        state.ChangeMerged,
 				Title:        "Initial implementation of woff2.",
 				Labels:       nil,
 				Author:       dmitshur,
@@ -144,7 +144,7 @@ spec as is. Addressing this will be a part of future changes.`,
 		"dmitri.shuralyov.com/gpu/mtl": {{
 			Change: change.Change{
 				ID:           1,
-				State:        change.MergedState,
+				State:        state.ChangeMerged,
 				Title:        "Add minimal API to support interactive rendering in a window.",
 				Labels:       nil,
 				Author:       dmitshur,
@@ -257,14 +257,14 @@ Also make minor tweaks to the documentation to make it more accurate.`,
 
 // List changes.
 func (*Service) List(ctx context.Context, repo string, opt change.ListOptions) ([]change.Change, error) {
-	var counts func(s change.State) bool
+	var counts func(s state.Change) bool
 	switch opt.Filter {
 	case change.FilterOpen:
-		counts = func(s change.State) bool { return s == change.OpenState }
+		counts = func(s state.Change) bool { return s == state.ChangeOpen }
 	case change.FilterClosedMerged:
-		counts = func(s change.State) bool { return s == change.ClosedState || s == change.MergedState }
+		counts = func(s state.Change) bool { return s == state.ChangeClosed || s == state.ChangeMerged }
 	case change.FilterAll:
-		counts = func(s change.State) bool { return true }
+		counts = func(s state.Change) bool { return true }
 	default:
 		// TODO: Map to 400 Bad Request HTTP error.
 		return nil, fmt.Errorf("invalid change.ListOptions.Filter value: %q", opt.Filter)
@@ -281,14 +281,14 @@ func (*Service) List(ctx context.Context, repo string, opt change.ListOptions) (
 
 // Count changes.
 func (*Service) Count(ctx context.Context, repo string, opt change.ListOptions) (uint64, error) {
-	var counts func(s change.State) bool
+	var counts func(s state.Change) bool
 	switch opt.Filter {
 	case change.FilterOpen:
-		counts = func(s change.State) bool { return s == change.OpenState }
+		counts = func(s state.Change) bool { return s == state.ChangeOpen }
 	case change.FilterClosedMerged:
-		counts = func(s change.State) bool { return s == change.ClosedState || s == change.MergedState }
+		counts = func(s state.Change) bool { return s == state.ChangeClosed || s == state.ChangeMerged }
 	case change.FilterAll:
-		counts = func(s change.State) bool { return true }
+		counts = func(s state.Change) bool { return true }
 	default:
 		// TODO: Map to 400 Bad Request HTTP error.
 		return 0, fmt.Errorf("invalid change.ListOptions.Filter value: %q", opt.Filter)

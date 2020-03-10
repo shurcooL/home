@@ -56,9 +56,9 @@ func (s service) List(ctx context.Context, rs issues.RepoSpec, opt issues.IssueL
 	}
 	var states *[]githubv4.IssueState
 	switch opt.State {
-	case issues.StateFilter(issues.OpenState):
+	case issues.StateFilter(state.IssueOpen):
 		states = &[]githubv4.IssueState{githubv4.IssueStateOpen}
-	case issues.StateFilter(issues.ClosedState):
+	case issues.StateFilter(state.IssueClosed):
 		states = &[]githubv4.IssueState{githubv4.IssueStateClosed}
 	case issues.AllStates:
 		states = nil // No states to filter the issues by.
@@ -129,9 +129,9 @@ func (s service) Count(ctx context.Context, rs issues.RepoSpec, opt issues.Issue
 	}
 	var states *[]githubv4.IssueState
 	switch opt.State {
-	case issues.StateFilter(issues.OpenState):
+	case issues.StateFilter(state.IssueOpen):
 		states = &[]githubv4.IssueState{githubv4.IssueStateOpen}
-	case issues.StateFilter(issues.ClosedState):
+	case issues.StateFilter(state.IssueClosed):
 		states = &[]githubv4.IssueState{githubv4.IssueStateClosed}
 	case issues.AllStates:
 		states = nil // No states to filter the issues by.
@@ -496,7 +496,7 @@ func (s service) Create(ctx context.Context, rs issues.RepoSpec, i issues.Issue)
 
 	return issues.Issue{
 		ID:    uint64(*issue.Number),
-		State: issues.State(*issue.State),
+		State: state.Issue(*issue.State),
 		Title: *issue.Title,
 		Comment: issues.Comment{
 			ID:        issueDescriptionCommentID,
@@ -562,9 +562,9 @@ func (s service) Edit(ctx context.Context, rs issues.RepoSpec, id uint64, ir iss
 	switch {
 	case ir.State != nil && *ir.State != ghIssueState(beforeEdit.State):
 		switch *ir.State {
-		case issues.OpenState:
+		case state.IssueOpen:
 			event.Type = issues.Reopened
-		case issues.ClosedState:
+		case state.IssueClosed:
 			event.Type = issues.Closed
 		}
 	case ir.Title != nil && *ir.Title != beforeEdit.Title:
@@ -581,7 +581,7 @@ func (s service) Edit(ctx context.Context, rs issues.RepoSpec, id uint64, ir iss
 
 	return issues.Issue{
 		ID:    uint64(*issue.Number),
-		State: issues.State(*issue.State),
+		State: state.Issue(*issue.State),
 		Title: *issue.Title,
 		Comment: issues.Comment{
 			ID:        issueDescriptionCommentID,
@@ -898,13 +898,13 @@ var ghost = users.User{
 	HTMLURL:   "https://github.com/ghost",
 }
 
-// ghIssueState converts a GitHub IssueState to issues.State.
-func ghIssueState(state githubv4.IssueState) issues.State {
-	switch state {
+// ghIssueState converts a GitHub IssueState to state.Issue.
+func ghIssueState(st githubv4.IssueState) state.Issue {
+	switch st {
 	case githubv4.IssueStateOpen:
-		return issues.OpenState
+		return state.IssueOpen
 	case githubv4.IssueStateClosed:
-		return issues.ClosedState
+		return state.IssueClosed
 	default:
 		panic("unreachable")
 	}

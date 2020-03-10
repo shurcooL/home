@@ -47,7 +47,7 @@ func (c rgb) RGB() issues.RGB {
 
 // issue is an on-disk representation of issues.Issue.
 type issue struct {
-	State  issues.State
+	State  state.Issue
 	Title  string
 	Labels []label `json:",omitempty"`
 	comment

@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"dmitri.shuralyov.com/state"
 	"github.com/shurcooL/home/httputil"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/issue/fs"
@@ -102,7 +103,7 @@ func ExampleNewIssues_authenticated() {
 
 func ExampleIssues_List() {
 	is, err := issuesClient.List(context.Background(), issues.RepoSpec{URI: "example.org/repo"}, issues.IssueListOptions{
-		State: issues.StateFilter(issues.OpenState),
+		State: issues.StateFilter(state.IssueOpen),
 	})
 	if err != nil {
 		log.Fatalln(err)

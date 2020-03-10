@@ -1,12 +1,14 @@
 package issues
 
+import "dmitri.shuralyov.com/state"
+
 // IssueListOptions are options for list operations.
 type IssueListOptions struct {
 	State StateFilter
 }
 
 // StateFilter is a filter by state.
-type StateFilter State
+type StateFilter state.Issue
 
 const (
 	// AllStates is a state filter that includes all issues.

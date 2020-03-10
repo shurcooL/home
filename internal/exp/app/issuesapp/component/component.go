@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"dmitri.shuralyov.com/html/belt"
+	"dmitri.shuralyov.com/state"
 	"github.com/dustin/go-humanize"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/htmlg"
@@ -165,7 +166,7 @@ func (i IssueStateBadge) Render() []*html.Node {
 
 // IssueBadge is an issue badge, displaying the issue's state.
 type IssueBadge struct {
-	State issues.State
+	State state.Issue
 }
 
 func (ib IssueBadge) Render() []*html.Node {
@@ -183,11 +184,11 @@ func (ib IssueBadge) Render() []*html.Node {
 		color string
 	)
 	switch ib.State {
-	case issues.OpenState:
+	case state.IssueOpen:
 		icon = octicon.IssueOpened()
 		text = "Open"
 		color = "#6cc644"
-	case issues.ClosedState:
+	case state.IssueClosed:
 		icon = octicon.IssueClosed()
 		text = "Closed"
 		color = "#bd2c00"
@@ -216,7 +217,7 @@ background-color: ` + color + `;`,
 
 // IssueIcon is an issue icon, displaying the issue's state.
 type IssueIcon struct {
-	State issues.State
+	State state.Issue
 }
 
 func (ii IssueIcon) Render() []*html.Node {
@@ -231,10 +232,10 @@ func (ii IssueIcon) Render() []*html.Node {
 		color string
 	)
 	switch ii.State {
-	case issues.OpenState:
+	case state.IssueOpen:
 		icon = octicon.IssueOpened()
 		color = "#6cc644"
-	case issues.ClosedState:
+	case state.IssueClosed:
 		icon = octicon.IssueClosed()
 		color = "#bd2c00"
 	}

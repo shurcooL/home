@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	statepkg "dmitri.shuralyov.com/state"
 	"github.com/dustin/go-humanize"
 	"github.com/shurcooL/github_flavored_markdown"
 	"github.com/shurcooL/home/internal/exp/app/issuesapp/assets"
@@ -209,11 +210,11 @@ func (h *handler) IssuesHandler(w http.ResponseWriter, req *http.Request) error 
 	if err != nil {
 		return err
 	}
-	openCount, err := h.is.Count(req.Context(), state.RepoSpec, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+	openCount, err := h.is.Count(req.Context(), state.RepoSpec, issues.IssueListOptions{State: issues.StateFilter(statepkg.IssueOpen)})
 	if err != nil {
 		return fmt.Errorf("issues.Count(open): %v", err)
 	}
-	closedCount, err := h.is.Count(req.Context(), state.RepoSpec, issues.IssueListOptions{State: issues.StateFilter(issues.ClosedState)})
+	closedCount, err := h.is.Count(req.Context(), state.RepoSpec, issues.IssueListOptions{State: issues.StateFilter(statepkg.IssueClosed)})
 	if err != nil {
 		return fmt.Errorf("issues.Count(closed): %v", err)
 	}
@@ -252,9 +253,9 @@ func stateFilter(query url.Values) (issues.StateFilter, error) {
 	selectedTabName := query.Get(stateQueryKey)
 	switch selectedTabName {
 	case "":
-		return issues.StateFilter(issues.OpenState), nil
+		return issues.StateFilter(statepkg.IssueOpen), nil
 	case "closed":
-		return issues.StateFilter(issues.ClosedState), nil
+		return issues.StateFilter(statepkg.IssueClosed), nil
 	case "all":
 		return issues.AllStates, nil
 	default:

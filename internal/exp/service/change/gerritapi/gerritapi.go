@@ -129,14 +129,14 @@ func (s service) Get(ctx context.Context, repo string, id uint64) (change.Change
 	}, nil
 }
 
-func changeState(status string) change.State {
+func changeState(status string) state.Change {
 	switch status {
 	case "NEW":
-		return change.OpenState
+		return state.ChangeOpen
 	case "ABANDONED":
-		return change.ClosedState
+		return state.ChangeClosed
 	case "MERGED":
-		return change.MergedState
+		return state.ChangeMerged
 	case "DRAFT":
 		panic("not sure how to deal with DRAFT status")
 	default:

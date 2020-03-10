@@ -108,7 +108,7 @@ func (e Event) text() []*html.Node {
 		case change.Change:
 			ns = append(ns, htmlg.Text(" in "))
 			ns = append(ns, belt.Change{
-				State:   state.Change(c.State), // TODO: Make the conversion go away (by making change.State type state.Change).
+				State:   c.State,
 				Title:   c.Title,
 				HTMLURL: p.CloserHTMLURL,
 				Short:   true,
@@ -220,7 +220,7 @@ func (i ChangeStateBadge) Render() []*html.Node {
 
 // ChangeBadge is a change badge, displaying the change's state.
 type ChangeBadge struct {
-	State change.State
+	State state.Change
 }
 
 func (cb ChangeBadge) Render() []*html.Node {
@@ -230,15 +230,15 @@ func (cb ChangeBadge) Render() []*html.Node {
 		color string
 	)
 	switch cb.State {
-	case change.OpenState:
+	case state.ChangeOpen:
 		icon = octicon.GitPullRequest()
 		text = "Open"
 		color = "#6cc644"
-	case change.ClosedState:
+	case state.ChangeClosed:
 		icon = octicon.GitPullRequest()
 		text = "Closed"
 		color = "#bd2c00"
-	case change.MergedState:
+	case state.ChangeMerged:
 		icon = octicon.GitMerge()
 		text = "Merged"
 		color = "#6f42c1"
@@ -267,7 +267,7 @@ background-color: ` + color + `;`,
 
 // ChangeIcon is a change icon, displaying the change's state.
 type ChangeIcon struct {
-	State change.State
+	State state.Change
 }
 
 func (ii ChangeIcon) Render() []*html.Node {
@@ -282,13 +282,13 @@ func (ii ChangeIcon) Render() []*html.Node {
 		color string
 	)
 	switch ii.State {
-	case change.OpenState:
+	case state.ChangeOpen:
 		icon = octicon.GitPullRequest()
 		color = "#6cc644"
-	case change.ClosedState:
+	case state.ChangeClosed:
 		icon = octicon.GitPullRequest()
 		color = "#bd2c00"
-	case change.MergedState:
+	case state.ChangeMerged:
 		icon = octicon.GitMerge()
 		color = "#6f42c1"
 	}

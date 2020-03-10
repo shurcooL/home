@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"dmitri.shuralyov.com/state"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
@@ -93,11 +94,11 @@ func htmlURL(repoURI string, issueID uint64, fragment string) string {
 
 // TODO: This is display/presentation logic; try to factor it out of the backend service implementation.
 //       (Have it be provided to the service, maybe? Or another way.)
-func notificationIcon(state issues.State) notifications.OcticonID {
-	switch state {
-	case issues.OpenState:
+func notificationIcon(st state.Issue) notifications.OcticonID {
+	switch st {
+	case state.IssueOpen:
 		return "issue-opened"
-	case issues.ClosedState:
+	case state.IssueClosed:
 		return "issue-closed"
 	default:
 		return ""
@@ -116,11 +117,11 @@ func (e event) Octicon() string {
 	}
 }*/
 
-func notificationColor(state issues.State) notifications.RGB {
-	switch state {
-	case issues.OpenState: // Open.
+func notificationColor(st state.Issue) notifications.RGB {
+	switch st {
+	case state.IssueOpen: // Open.
 		return notifications.RGB{R: 0x6c, G: 0xc6, B: 0x44}
-	case issues.ClosedState: // Closed.
+	case state.IssueClosed: // Closed.
 		return notifications.RGB{R: 0xbd, G: 0x2c, B: 0x00}
 	default:
 		return notifications.RGB{}

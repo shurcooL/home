@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"dmitri.shuralyov.com/state"
 	eventpkg "github.com/shurcooL/events/event"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/users"
@@ -50,7 +49,7 @@ func (s *service) logIssueComment(ctx context.Context, repo issues.RepoSpec, iss
 
 		Payload: eventpkg.IssueComment{
 			IssueTitle:     issue.Title,
-			IssueState:     state.Issue(issue.State), // TODO: Make the conversion go away (by making issues.State type state.Issue).
+			IssueState:     issue.State,
 			CommentBody:    body,
 			CommentHTMLURL: htmlURL(repo.URI, issueID, fragment),
 		},

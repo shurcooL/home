@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"dmitri.shuralyov.com/state"
 	"github.com/shurcooL/events"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/notifications"
@@ -44,7 +45,7 @@ type service struct {
 }
 
 func (s *service) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
-	if opt.State != issues.StateFilter(issues.OpenState) && opt.State != issues.StateFilter(issues.ClosedState) && opt.State != issues.AllStates {
+	if opt.State != issues.StateFilter(state.IssueOpen) && opt.State != issues.StateFilter(state.IssueClosed) && opt.State != issues.AllStates {
 		return nil, fmt.Errorf("invalid issues.IssueListOptions.State value: %q", opt.State) // TODO: Map to 400 Bad Request HTTP error.
 	}
 
@@ -71,7 +72,7 @@ func (s *service) List(ctx context.Context, repo issues.RepoSpec, opt issues.Iss
 			return is, err
 		}
 
-		if opt.State != issues.AllStates && issue.State != issues.State(opt.State) {
+		if opt.State != issues.AllStates && issue.State != state.Issue(opt.State) {
 			continue
 		}
 
@@ -104,7 +105,7 @@ func (s *service) List(ctx context.Context, repo issues.RepoSpec, opt issues.Iss
 }
 
 func (s *service) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
-	if opt.State != issues.StateFilter(issues.OpenState) && opt.State != issues.StateFilter(issues.ClosedState) && opt.State != issues.AllStates {
+	if opt.State != issues.StateFilter(state.IssueOpen) && opt.State != issues.StateFilter(state.IssueClosed) && opt.State != issues.AllStates {
 		return 0, fmt.Errorf("invalid issues.IssueListOptions.State value: %q", opt.State) // TODO: Map to 400 Bad Request HTTP error.
 	}
 
@@ -130,7 +131,7 @@ func (s *service) Count(ctx context.Context, repo issues.RepoSpec, opt issues.Is
 			return 0, err
 		}
 
-		if opt.State != issues.AllStates && issue.State != issues.State(opt.State) {
+		if opt.State != issues.AllStates && issue.State != state.Issue(opt.State) {
 			continue
 		}
 
@@ -426,7 +427,7 @@ func (s *service) Create(ctx context.Context, repo issues.RepoSpec, i issues.Iss
 		})
 	}
 	issue := issue{
-		State:  issues.OpenState,
+		State:  state.IssueOpen,
 		Title:  i.Title,
 		Labels: labels,
 		comment: comment{
@@ -574,9 +575,9 @@ func (s *service) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir 
 	switch {
 	case ir.State != nil && *ir.State != origState:
 		switch *ir.State {
-		case issues.OpenState:
+		case state.IssueOpen:
 			event.Type = issues.Reopened
-		case issues.ClosedState:
+		case state.IssueClosed:
 			event.Type = issues.Closed
 			event.Close = fromClose(issues.Close{Closer: nil})
 		}

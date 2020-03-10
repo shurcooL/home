@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"dmitri.shuralyov.com/state"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 )
@@ -49,7 +50,7 @@ type Service interface {
 // Issue represents an issue on a repository.
 type Issue struct {
 	ID     uint64
-	State  State
+	State  state.Issue
 	Title  string
 	Labels []Label
 	Comment
@@ -106,7 +107,7 @@ type Edited struct {
 // IssueRequest is a request to edit an issue.
 // To edit the body, use EditComment with comment ID 0.
 type IssueRequest struct {
-	State *State
+	State *state.Issue
 	Title *string
 	// TODO: Labels *[]Label
 }
@@ -117,16 +118,6 @@ type CommentRequest struct {
 	Body     *string            // If not nil, set the body.
 	Reaction *reactions.EmojiID // If not nil, toggle this reaction.
 }
-
-// State represents the issue state.
-type State string
-
-const (
-	// OpenState is when an issue is open.
-	OpenState State = "open"
-	// ClosedState is when an issue is closed.
-	ClosedState State = "closed"
-)
 
 // Validate returns non-nil error if the issue is invalid.
 func (i Issue) Validate() error {
@@ -140,7 +131,7 @@ func (i Issue) Validate() error {
 func (ir IssueRequest) Validate() error {
 	if ir.State != nil {
 		switch *ir.State {
-		case OpenState, ClosedState:
+		case state.IssueOpen, state.IssueClosed:
 		default:
 			return fmt.Errorf("bad state")
 		}

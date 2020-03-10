@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	"dmitri.shuralyov.com/state"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/exp/app/issuesapp"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
@@ -94,7 +95,7 @@ func mockIssuesApp(repo issues.RepoSpec) (interface {
 	if err != nil {
 		return nil, err
 	}
-	for _, reaction := range []reactions.EmojiID{"grinning", "+1", "construction_worker"} {
+	for _, reaction := range [...]reactions.EmojiID{"grinning", "+1", "construction_worker"} {
 		_, err = service.EditComment(context.Background(), repo, 1, issues.CommentRequest{
 			ID:       0,
 			Reaction: &reaction,
@@ -103,7 +104,7 @@ func mockIssuesApp(repo issues.RepoSpec) (interface {
 			return nil, err
 		}
 	}
-	for _, state := range []issues.State{issues.ClosedState, issues.OpenState} {
+	for _, state := range [...]state.Issue{state.IssueClosed, state.IssueOpen} {
 		_, _, err = service.Edit(context.Background(), repo, 1, issues.IssueRequest{
 			State: &state,
 		})

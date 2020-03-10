@@ -863,15 +863,15 @@ var ghost = users.User{
 	HTMLURL:   "https://github.com/ghost",
 }
 
-// ghPRState converts a GitHub PullRequestState to change.State.
-func ghPRState(state githubv4.PullRequestState) change.State {
-	switch state {
+// ghPRState converts a GitHub PullRequestState to state.Change.
+func ghPRState(st githubv4.PullRequestState) state.Change {
+	switch st {
 	case githubv4.PullRequestStateOpen:
-		return change.OpenState
+		return state.ChangeOpen
 	case githubv4.PullRequestStateClosed:
-		return change.ClosedState
+		return state.ChangeClosed
 	case githubv4.PullRequestStateMerged:
-		return change.MergedState
+		return state.ChangeMerged
 	default:
 		panic("unreachable")
 	}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"dmitri.shuralyov.com/state"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
@@ -34,7 +35,7 @@ type Service interface {
 // Change represents a change in a repository.
 type Change struct {
 	ID        uint64
-	State     State
+	State     state.Change
 	Title     string
 	Labels    []issues.Label
 	Author    users.User
@@ -51,18 +52,6 @@ type Commit struct {
 	Author     users.User
 	AuthorTime time.Time
 }
-
-// State represents the change state.
-type State string
-
-const (
-	// OpenState is when a change is open.
-	OpenState State = "open"
-	// ClosedState is when a change is closed.
-	ClosedState State = "closed"
-	// MergedState is when a change is merged.
-	MergedState State = "merged"
-)
 
 // ListOptions are options for list and count operations.
 type ListOptions struct {

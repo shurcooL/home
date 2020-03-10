@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strings"
 
+	statepkg "dmitri.shuralyov.com/state"
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/shurcooL/frontend/reactionsmenu"
 	"github.com/shurcooL/frontend/tabsupport"
@@ -146,11 +147,11 @@ func (f *frontend) CreateNewIssue() {
 	}()
 }
 
-func ToggleIssueState(issueState issues.State) {
+func ToggleIssueState(issueState statepkg.Issue) {
 	go func() {
 		// Post comment first if there's text entered, and we're closing.
 		if strings.TrimSpace(document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement).Value) != "" &&
-			issueState == issues.ClosedState {
+			issueState == statepkg.IssueClosed {
 			err := postComment()
 			if err != nil {
 				log.Println(err)
@@ -204,7 +205,7 @@ func ToggleIssueState(issueState issues.State) {
 
 		// Post comment after if there's text entered, and we're reopening.
 		if strings.TrimSpace(document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement).Value) != "" &&
-			issueState == issues.OpenState {
+			issueState == statepkg.IssueOpen {
 			err := postComment()
 			if err != nil {
 				log.Println(err)
