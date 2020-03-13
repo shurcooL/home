@@ -214,6 +214,10 @@ func initAbout(notifications notifications.Service, users users.Service) {
 							Text: "Dell 3008WFP",
 						}),
 						elem.Li(iconText{
+							Icon: faIcon("keyboard-o"),
+							Text: "Gateway KB-2961",
+						}),
+						elem.Li(iconText{
 							Icon: faIcon("mouse-pointer"),
 							Text: "Logitech G9 Laser Mouse",
 						}),
