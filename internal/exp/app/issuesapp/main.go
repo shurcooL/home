@@ -491,8 +491,6 @@ func (h *handler) state(req *http.Request, issueID uint64) (state, error) {
 		return state{}, fmt.Errorf("h.us.GetAuthenticated: %v", err)
 	}
 
-	b.ForceIssuesApp, _ = strconv.ParseBool(req.URL.Query().Get("issuesapp"))
-
 	return b, nil
 }
 
@@ -506,11 +504,6 @@ type state struct {
 	Issues component.Issues
 	Issue  issues.Issue
 	Items  []issueItem
-
-	// ForceIssuesApp reports whether "issuesapp" query is true.
-	// This is a temporary solution for external users to use when overriding templates.
-	// It's going to go away eventually, so its use is discouraged.
-	ForceIssuesApp bool
 }
 
 func loadTemplates(state common.State, bodyPre string) (*template.Template, error) {
