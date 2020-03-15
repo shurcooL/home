@@ -483,8 +483,6 @@ func (h *handler) state(req *http.Request, changeID uint64) (state, error) {
 		b.BodyTop = template.HTML(buf.String())
 	}
 
-	b.DisableUsers = h.us == nil
-
 	if h.us == nil {
 		// No user service provided, so there can never be an authenticated user.
 		b.CurrentUser = users.User{}

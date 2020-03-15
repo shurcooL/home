@@ -27,7 +27,5 @@
 {{end}}
 
 {{define "create-issue"}}
-	{{if not .DisableUsers}}
-		<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">Create Issue</button></div>
-	{{end}}
+	<div style="text-align: right;"><button class="btn btn-success btn-small" onclick="window.location = '{{.BaseURI}}/new';">Create Issue</button></div>
 {{end}}

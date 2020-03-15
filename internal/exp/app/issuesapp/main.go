@@ -425,7 +425,6 @@ func (h *handler) state(req *http.Request, issueID uint64) (state, error) {
 		b.BodyTop = template.HTML(buf.String())
 	}
 
-	b.DisableUsers = h.us == nil
 	if h.Options.SignIn != nil {
 		returnURL := b.BaseURI + b.ReqPath
 		b.SignIn = h.Options.SignIn(returnURL)
