@@ -27,7 +27,6 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/httpfs/html/vfstemplate"
 	"github.com/shurcooL/httpgzip"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/reactions"
 	reactionscomponent "github.com/shurcooL/reactions/component"
@@ -102,8 +101,6 @@ var StateContextKey = &contextKey{"State"}
 
 // Options for configuring issues app.
 type Options struct {
-	Notifications notifications.Service // If not nil, issues containing unread notifications are highlighted.
-
 	HeadPre, HeadPost template.HTML
 	BodyPre           template.HTML
 
@@ -220,7 +217,6 @@ func (h *handler) IssuesHandler(w http.ResponseWriter, req *http.Request) error 
 	for _, i := range is {
 		es = append(es, component.IssueEntry{Issue: i, BaseURI: state.BaseURI})
 	}
-	es = state.augmentUnread(req.Context(), es, h.is, h.Notifications)
 	state.Issues = component.Issues{
 		IssuesNav: component.IssuesNav{
 			OpenCount:     openCount,
@@ -259,51 +255,6 @@ func stateFilter(query url.Values) (issues.StateFilter, error) {
 	default:
 		return "", fmt.Errorf("unsupported state filter value: %q", selectedTabName)
 	}
-}
-
-// TODO: Switch to notification v2 service.
-func (s state) augmentUnread(ctx context.Context, es []component.IssueEntry, is issues.Service, notificationsService notifications.Service) []component.IssueEntry {
-	if notificationsService == nil {
-		return es
-	}
-
-	tt, ok := is.(interface {
-		ThreadType(issues.RepoSpec) string
-	})
-	if !ok {
-		log.Println("augmentUnread: issues service doesn't implement ThreadType")
-		return es
-	}
-
-	if s.CurrentUser.ID == 0 {
-		// Unauthenticated user cannot have any unread issues.
-		return es
-	}
-
-	// TODO: Consider starting to do this in background in parallel with is.List.
-	ns, err := notificationsService.List(ctx, notifications.ListOptions{
-		Repo: &notifications.RepoSpec{URI: s.RepoSpec.URI},
-	})
-	if err != nil {
-		log.Println("augmentUnread: failed to notifications.List:", err)
-		return es
-	}
-
-	unreadThreads := make(map[uint64]struct{}) // Set of unread thread IDs.
-	for _, n := range ns {
-		// n.RepoSpec == s.RepoSpec is guaranteed because we filtered in notifications.ListOptions,
-		// so we only need to check that n.ThreadType matches.
-		if n.ThreadType != tt.ThreadType(s.RepoSpec) {
-			continue
-		}
-		unreadThreads[n.ThreadID] = struct{}{}
-	}
-
-	for i, e := range es {
-		_, unread := unreadThreads[e.Issue.ID]
-		es[i].Unread = unread
-	}
-	return es
 }
 
 func (h *handler) IssueHandler(w http.ResponseWriter, req *http.Request, issueID uint64) error {

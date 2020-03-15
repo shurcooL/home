@@ -2,7 +2,6 @@ package changesapp
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +27,6 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/httpfs/html/vfstemplate"
 	"github.com/shurcooL/httpgzip"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/reactions"
 	reactionscomponent "github.com/shurcooL/reactions/component"
@@ -95,10 +93,6 @@ var BaseURIContextKey = &contextKey{"BaseURI"}
 
 // Options for configuring changes app.
 type Options struct {
-	// Notifications, if not nil, is used to highlight changes containing
-	// unread notifications, and to mark changes that are viewed as read.
-	Notifications notifications.Service
-
 	HeadPre, HeadPost template.HTML
 	BodyPre           template.HTML
 
@@ -216,9 +210,7 @@ func (h *handler) ChangesHandler(w http.ResponseWriter, req *http.Request) error
 	for _, i := range is {
 		es = append(es, component.ChangeEntry{Change: i, BaseURI: state.BaseURI})
 	}
-	if h.Notifications != nil {
-		es = state.augmentUnread(req.Context(), es, h.Notifications, h.cs)
-	}
+	// TODO: Switch to notification v2 service, and augment unread.
 	state.Changes = component.Changes{
 		ChangesNav: component.ChangesNav{
 			OpenCount:     openCount,
@@ -257,48 +249,6 @@ func stateFilter(query url.Values) (change.StateFilter, error) {
 	default:
 		return "", fmt.Errorf("unsupported state filter value: %q", selectedTabName)
 	}
-}
-
-func (s state) augmentUnread(ctx context.Context, es []component.ChangeEntry, notificationService notifications.Service, changeService change.Service) []component.ChangeEntry {
-	tt, ok := changeService.(interface {
-		ThreadType(repo string) string
-	})
-	if !ok {
-		log.Println("augmentUnread: change service doesn't implement ThreadType")
-		return es
-	}
-	threadType := tt.ThreadType(s.RepoSpec)
-
-	if s.CurrentUser.ID == 0 {
-		// Unauthenticated user cannot have any unread changes.
-		return es
-	}
-
-	// TODO: Consider starting to do this in background in parallel with is.List.
-	ns, err := notificationService.List(ctx, notifications.ListOptions{
-		Repo: &notifications.RepoSpec{URI: s.RepoSpec},
-		All:  false,
-	})
-	if err != nil {
-		log.Println("augmentUnread: failed to notifications.List:", err)
-		return es
-	}
-
-	unreadThreads := make(map[uint64]struct{}) // Set of unread thread IDs.
-	for _, n := range ns {
-		// n.RepoSpec == s.RepoSpec is guaranteed because we filtered in notifications.ListOptions,
-		// so we only need to check that n.ThreadType matches.
-		if n.ThreadType != threadType {
-			continue
-		}
-		unreadThreads[n.ThreadID] = struct{}{}
-	}
-
-	for i, e := range es {
-		_, unread := unreadThreads[e.Change.ID]
-		es[i].Unread = unread
-	}
-	return es
 }
 
 func (h *handler) MockHandler(w http.ResponseWriter, req *http.Request) error {
@@ -364,12 +314,7 @@ func (h *handler) ChangeHandler(w http.ResponseWriter, req *http.Request, change
 	if err != nil {
 		return fmt.Errorf("changes.ListTimeline: %v", err)
 	}
-	if h.Notifications != nil {
-		err := state.markRead(req.Context(), h.Notifications, h.cs)
-		if err != nil {
-			log.Println("ChangeHandler: failed to markRead:", err)
-		}
-	}
+	// TODO: Switch to notification v2 service, and mark read.
 	var timeline []timelineItem
 	for _, item := range ts {
 		timeline = append(timeline, timelineItem{item})
@@ -387,25 +332,6 @@ func (h *handler) ChangeHandler(w http.ResponseWriter, req *http.Request, change
 		return fmt.Errorf("t.ExecuteTemplate: %v", err)
 	}
 	return nil
-}
-
-func (s state) markRead(ctx context.Context, notificationService notifications.Service, changeService change.Service) error {
-	tt, ok := changeService.(interface {
-		ThreadType(repo string) string
-	})
-	if !ok {
-		log.Println("markRead: change service doesn't implement ThreadType")
-		return nil
-	}
-	threadType := tt.ThreadType(s.RepoSpec)
-
-	if s.CurrentUser.ID == 0 {
-		// Unauthenticated user cannot mark anything as read.
-		return nil
-	}
-
-	err := notificationService.MarkRead(ctx, notifications.RepoSpec{URI: s.RepoSpec}, threadType, s.ChangeID)
-	return err
 }
 
 func (h *handler) ChangeCommitsHandler(w http.ResponseWriter, req *http.Request, changeID uint64) error {
