@@ -21,5 +21,17 @@
 	<script type="text/javascript">
 		var State = {{.State | jsonfmt}};
 	</script>
-	<script src="{{.BaseURI}}/assets/script.js" type="text/javascript"></script>
+	<script src="{{.BaseURI}}/assets/wasm_exec_14.js"></script>
+	<script>
+		if (!WebAssembly.instantiateStreaming) { // polyfill for Safari :/
+			WebAssembly.instantiateStreaming = async (resp, importObject) => {
+				const source = await (await resp).arrayBuffer();
+				return await WebAssembly.instantiate(source, importObject);
+			};
+		}
+		const go = new Go();
+		WebAssembly.instantiateStreaming(fetch("{{.BaseURI}}/assets/frontend.wasm"), go.importObject).then((result) => {
+			go.run(result.instance);
+		});
+	</script>
 {{end}}

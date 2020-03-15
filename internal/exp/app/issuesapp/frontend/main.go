@@ -1,6 +1,8 @@
+// +build js,wasm,go1.14
+
 // frontend script for issuesapp.
 //
-// It's a Go package meant to be compiled with GOARCH=js
+// It's a Go package meant to be compiled with GOOS=js and GOARCH=wasm,
 // and executed in a browser, where the DOM is available.
 package main
 
@@ -14,19 +16,19 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"syscall/js"
 
 	statepkg "dmitri.shuralyov.com/state"
-	"github.com/gopherjs/gopherjs/js"
-	"github.com/shurcooL/frontend/reactionsmenu"
-	"github.com/shurcooL/frontend/tabsupport"
+	"github.com/shurcooL/frontend/reactionsmenu/v2"
+	"github.com/shurcooL/frontend/tabsupport/v2"
 	"github.com/shurcooL/github_flavored_markdown"
-	"github.com/shurcooL/go/gopherjs_http/jsutil"
+	"github.com/shurcooL/go/gopherjs_http/jsutil/v2"
 	"github.com/shurcooL/home/internal/exp/app/issuesapp/common"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/issue/httpclient"
 	"github.com/shurcooL/markdownfmt/markdown"
 	"golang.org/x/oauth2"
-	"honnef.co/go/js/dom"
+	"honnef.co/go/js/dom/v2"
 )
 
 var document = dom.GetWindow().Document().(dom.HTMLDocument)
@@ -34,7 +36,7 @@ var document = dom.GetWindow().Document().(dom.HTMLDocument)
 var state common.State
 
 func main() {
-	stateJSON := js.Global.Get("State").String()
+	stateJSON := js.Global().Get("State").String()
 	err := json.Unmarshal([]byte(stateJSON), &state)
 	if err != nil {
 		panic(err)
@@ -44,14 +46,18 @@ func main() {
 
 	f := &frontend{is: httpclient.NewIssues(httpClient, "", "", "/api/issue")}
 
-	js.Global.Set("MarkdownPreview", jsutil.Wrap(MarkdownPreview))
-	js.Global.Set("SwitchWriteTab", jsutil.Wrap(SwitchWriteTab))
-	js.Global.Set("PasteHandler", jsutil.Wrap(PasteHandler))
-	js.Global.Set("CreateNewIssue", f.CreateNewIssue)
-	js.Global.Set("ToggleIssueState", ToggleIssueState)
-	js.Global.Set("PostComment", PostComment)
-	js.Global.Set("EditComment", jsutil.Wrap(f.EditComment))
-	js.Global.Set("TabSupportKeyDownHandler", jsutil.Wrap(tabsupport.KeyDownHandler))
+	js.Global().Set("MarkdownPreview", jsutil.Wrap(MarkdownPreview))
+	js.Global().Set("SwitchWriteTab", jsutil.Wrap(SwitchWriteTab))
+	js.Global().Set("PasteHandler", jsutil.Wrap(PasteHandler))
+	js.Global().Set("CreateNewIssue", funcOf(f.CreateNewIssue))
+	js.Global().Set("ToggleIssueState", js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+		st := statepkg.Issue(args[0].String())
+		ToggleIssueState(st)
+		return nil
+	}))
+	js.Global().Set("PostComment", funcOf(PostComment))
+	js.Global().Set("EditComment", jsutil.Wrap(f.EditComment))
+	js.Global().Set("TabSupportKeyDownHandler", jsutil.Wrap(tabsupport.KeyDownHandler))
 
 	switch readyState := document.ReadyState(); readyState {
 	case "loading":
@@ -63,6 +69,8 @@ func main() {
 	default:
 		panic(fmt.Errorf("internal error: unexpected document.ReadyState value: %v", readyState))
 	}
+
+	select {}
 }
 
 func setup(f *frontend) {
@@ -72,7 +80,7 @@ func setup(f *frontend) {
 	if createIssueButton, ok := document.GetElementByID("create-issue-button").(dom.HTMLElement); ok {
 		titleEditor := document.GetElementByID("title-editor").(*dom.HTMLInputElement)
 		titleEditor.AddEventListener("input", false, func(_ dom.Event) {
-			if strings.TrimSpace(titleEditor.Value) == "" {
+			if strings.TrimSpace(titleEditor.Value()) == "" {
 				createIssueButton.SetAttribute("disabled", "disabled")
 			} else {
 				createIssueButton.RemoveAttribute("disabled")
@@ -106,7 +114,7 @@ func setupIssueToggleButton() {
 	if issueToggleButton := document.GetElementByID("issue-toggle-button"); issueToggleButton != nil {
 		commentEditor := document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement)
 		commentEditor.AddEventListener("input", false, func(_ dom.Event) {
-			if strings.TrimSpace(commentEditor.Value) == "" {
+			if strings.TrimSpace(commentEditor.Value()) == "" {
 				issueToggleButton.SetTextContent(issueToggleButton.GetAttribute("data-1-action"))
 			} else {
 				issueToggleButton.SetTextContent(issueToggleButton.GetAttribute("data-2-actions"))
@@ -119,12 +127,12 @@ func (f *frontend) CreateNewIssue() {
 	titleEditor := document.GetElementByID("title-editor").(*dom.HTMLInputElement)
 	commentEditor := document.QuerySelector(".comment-editor").(*dom.HTMLTextAreaElement)
 
-	title := strings.TrimSpace(titleEditor.Value)
+	title := strings.TrimSpace(titleEditor.Value())
 	if title == "" {
 		log.Println("cannot create issue with empty title")
 		return
 	}
-	fmted, _ := markdown.Process("", []byte(commentEditor.Value), nil)
+	fmted, _ := markdown.Process("", []byte(commentEditor.Value()), nil)
 	newIssue := issues.Issue{
 		Title: title,
 		Comment: issues.Comment{
@@ -141,14 +149,14 @@ func (f *frontend) CreateNewIssue() {
 		}
 
 		// Redirect.
-		dom.GetWindow().Location().Href = fmt.Sprintf("%s/%d", state.BaseURI, issue.ID)
+		dom.GetWindow().Location().SetHref(fmt.Sprintf("%s/%d", state.BaseURI, issue.ID))
 	}()
 }
 
 func ToggleIssueState(issueState statepkg.Issue) {
 	go func() {
 		// Post comment first if there's text entered, and we're closing.
-		if strings.TrimSpace(document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement).Value) != "" &&
+		if strings.TrimSpace(document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement).Value()) != "" &&
 			issueState == statepkg.IssueClosed {
 			err := postComment()
 			if err != nil {
@@ -202,7 +210,7 @@ func ToggleIssueState(issueState statepkg.Issue) {
 		}
 
 		// Post comment after if there's text entered, and we're reopening.
-		if strings.TrimSpace(document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement).Value) != "" &&
+		if strings.TrimSpace(document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement).Value()) != "" &&
 			issueState == statepkg.IssueOpen {
 			err := postComment()
 			if err != nil {
@@ -226,7 +234,7 @@ func PostComment() {
 func postComment() error {
 	commentEditor := document.QuerySelector("#new-comment-container .comment-editor").(*dom.HTMLTextAreaElement)
 
-	fmted, _ := markdown.Process("", []byte(commentEditor.Value), nil)
+	fmted, _ := markdown.Process("", []byte(commentEditor.Value()), nil)
 	if len(fmted) == 0 {
 		return fmt.Errorf("cannot post empty comment")
 	}
@@ -255,8 +263,8 @@ func postComment() error {
 		newComment.SetOuterHTML(string(body))
 
 		// Reset new-comment component.
-		commentEditor.Value = ""
-		commentEditor.Underlying().Call("dispatchEvent", js.Global.Get("CustomEvent").New("input")) // Trigger "input" event listeners.
+		commentEditor.SetValue("")
+		commentEditor.Underlying().Call("dispatchEvent", js.Global().Get("CustomEvent").New("input")) // Trigger "input" event listeners.
 		switchWriteTab(document.GetElementByID("new-comment-container"), commentEditor)
 
 		return nil
@@ -275,7 +283,7 @@ func MarkdownPreview(this dom.HTMLElement) {
 	commentEditor := container.QuerySelector(".comment-editor").(*dom.HTMLTextAreaElement)
 	commentPreview := container.QuerySelector(".comment-preview").(*dom.HTMLDivElement)
 
-	fmted, _ := markdown.Process("", []byte(commentEditor.Value), nil)
+	fmted, _ := markdown.Process("", []byte(commentEditor.Value()), nil)
 	value := bytes.TrimSpace(fmted)
 
 	if len(value) != 0 {
@@ -307,4 +315,8 @@ func switchWriteTab(container dom.Element, commentEditor *dom.HTMLTextAreaElemen
 	}
 
 	commentEditor.Focus()
+}
+
+func funcOf(f func()) js.Func {
+	return js.FuncOf(func(js.Value, []js.Value) interface{} { f(); return nil })
 }

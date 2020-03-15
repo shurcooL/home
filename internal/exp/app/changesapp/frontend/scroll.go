@@ -1,18 +1,20 @@
+// +build js,wasm,go1.14
+
 package main
 
 import (
 	"fmt"
 	"net/url"
 	"strings"
+	"syscall/js"
 	"time"
 
-	"github.com/gopherjs/gopherjs/js"
-	"github.com/shurcooL/go/gopherjs_http/jsutil"
-	"honnef.co/go/js/dom"
+	"github.com/shurcooL/go/gopherjs_http/jsutil/v2"
+	"honnef.co/go/js/dom/v2"
 )
 
 func setupScroll() {
-	js.Global.Set("AnchorScroll", jsutil.Wrap(AnchorScroll))
+	js.Global().Set("AnchorScroll", jsutil.Wrap(AnchorScroll))
 
 	// Start watching for hashchange events.
 	dom.GetWindow().AddEventListener("hashchange", false, func(event dom.Event) {
@@ -28,8 +30,8 @@ func setupScroll() {
 
 		switch ke := event.(*dom.KeyboardEvent); {
 		// Escape.
-		case ke.KeyCode == 27 && !ke.Repeat && !ke.CtrlKey && !ke.AltKey && !ke.MetaKey && !ke.ShiftKey:
-			if strings.TrimPrefix(dom.GetWindow().Location().Hash, "#") == "" {
+		case ke.KeyCode() == 27 && !ke.Repeat() && !ke.CtrlKey() && !ke.AltKey() && !ke.MetaKey() && !ke.ShiftKey():
+			if strings.TrimPrefix(dom.GetWindow().Location().Hash(), "#") == "" {
 				return
 			}
 
@@ -40,18 +42,18 @@ func setupScroll() {
 			ke.PreventDefault()
 
 		// 'p' keyboard shortcut to go to previous commit.
-		case ke.KeyCode == 'P' && !ke.Repeat && !ke.CtrlKey && !ke.AltKey && !ke.MetaKey && !ke.ShiftKey:
+		case ke.KeyCode() == 'P' && !ke.Repeat() && !ke.CtrlKey() && !ke.AltKey() && !ke.MetaKey() && !ke.ShiftKey():
 			if state.PrevSHA == "" {
 				return
 			}
-			dom.GetWindow().Location().Href = state.PrevSHA
+			dom.GetWindow().Location().SetHref(state.PrevSHA)
 			ke.PreventDefault()
 		// 'n' keyboard shortcut to go to next commit.
-		case ke.KeyCode == 'N' && !ke.Repeat && !ke.CtrlKey && !ke.AltKey && !ke.MetaKey && !ke.ShiftKey:
+		case ke.KeyCode() == 'N' && !ke.Repeat() && !ke.CtrlKey() && !ke.AltKey() && !ke.MetaKey() && !ke.ShiftKey():
 			if state.NextSHA == "" {
 				return
 			}
-			dom.GetWindow().Location().Href = state.NextSHA
+			dom.GetWindow().Location().SetHref(state.NextSHA)
 			ke.PreventDefault()
 		}
 	})
@@ -66,7 +68,7 @@ func setupScroll() {
 
 func processHash() {
 	// Scroll to hash target.
-	targetID := strings.TrimPrefix(dom.GetWindow().Location().Hash, "#")
+	targetID := strings.TrimPrefix(dom.GetWindow().Location().Hash(), "#")
 	target, ok := document.GetElementByID(targetID).(dom.HTMLElement)
 	if ok {
 		centerWindowOn(target)
@@ -78,7 +80,7 @@ func processHash() {
 // AnchorScroll scrolls window to target that is pointed by fragment of href of given anchor element.
 // It must point to a valid target.
 func AnchorScroll(anchor dom.HTMLElement, e dom.Event) {
-	url, err := url.Parse(anchor.(*dom.HTMLAnchorElement).Href)
+	url, err := url.Parse(anchor.(*dom.HTMLAnchorElement).Href())
 	if err != nil {
 		// Should never happen if AnchorScroll is used correctly.
 		panic(fmt.Errorf("AnchorScroll: url.Parse: %v", err))
@@ -135,11 +137,11 @@ func setFragment(hash string) {
 	url := windowLocation
 	url.Fragment = hash
 	// TODO: dom.GetWindow().History().ReplaceState(...), blocked on https://github.com/dominikh/go-js-dom/issues/41.
-	js.Global.Get("window").Get("history").Call("replaceState", nil, nil, url.String())
+	js.Global().Get("window").Get("history").Call("replaceState", nil, nil, url.String())
 }
 
 var windowLocation = func() url.URL {
-	url, err := url.Parse(dom.GetWindow().Location().Href)
+	url, err := url.Parse(dom.GetWindow().Location().Href())
 	if err != nil {
 		// We don't expect this can ever happen, so treat it as an internal error if it does.
 		panic(fmt.Errorf("internal error: parsing window.location.href as URL failed: %v", err))

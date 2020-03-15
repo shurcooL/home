@@ -1,6 +1,8 @@
+// +build js,wasm,go1.14
+
 // frontend script for changesapp.
 //
-// It's a Go package meant to be compiled with GOARCH=js
+// It's a Go package meant to be compiled with GOOS=js and GOARCH=wasm,
 // and executed in a browser, where the DOM is available.
 package main
 
@@ -9,15 +11,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"syscall/js"
 
-	"github.com/gopherjs/gopherjs/js"
-	"github.com/shurcooL/frontend/reactionsmenu"
-	"github.com/shurcooL/go/gopherjs_http/jsutil"
+	"github.com/shurcooL/frontend/reactionsmenu/v2"
+	"github.com/shurcooL/go/gopherjs_http/jsutil/v2"
 	"github.com/shurcooL/home/internal/exp/app/changesapp/common"
 	"github.com/shurcooL/home/internal/exp/service/change"
 	"github.com/shurcooL/home/internal/exp/service/change/httpclient"
 	"golang.org/x/oauth2"
-	"honnef.co/go/js/dom"
+	"honnef.co/go/js/dom/v2"
 )
 
 var document = dom.GetWindow().Document().(dom.HTMLDocument)
@@ -25,7 +27,7 @@ var document = dom.GetWindow().Document().(dom.HTMLDocument)
 var state common.State
 
 func main() {
-	stateJSON := js.Global.Get("State").String()
+	stateJSON := js.Global().Get("State").String()
 	err := json.Unmarshal([]byte(stateJSON), &state)
 	if err != nil {
 		panic(err)
@@ -35,7 +37,7 @@ func main() {
 
 	f := &frontend{cs: httpclient.NewChange(httpClient, "", "", "/api/change")}
 
-	js.Global.Set("ToggleDetails", jsutil.Wrap(ToggleDetails))
+	js.Global().Set("ToggleDetails", jsutil.Wrap(ToggleDetails))
 
 	switch readyState := document.ReadyState(); readyState {
 	case "loading":
@@ -47,6 +49,8 @@ func main() {
 	default:
 		panic(fmt.Errorf("internal error: unexpected document.ReadyState value: %v", readyState))
 	}
+
+	select {}
 }
 
 func setup(f *frontend) {

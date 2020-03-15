@@ -142,8 +142,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 		return nil
 	}
 
-	// Handle "/assets/script.js".
-	if req.URL.Path == "/assets/script.js" {
+	// Handle "/assets/frontend.wasm".
+	if req.URL.Path == "/assets/frontend.wasm" {
 		req = stripPrefix(req, len("/assets"))
 		h.assetsFileServer.ServeHTTP(w, req)
 		return nil

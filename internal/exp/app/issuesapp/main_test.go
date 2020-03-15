@@ -36,8 +36,8 @@ func TestRoutes(t *testing.T) {
 		method, url string
 		wantCode    int
 	}{
-		{"GET", "/assets/script.js", http.StatusOK},
-		{"POST", "/assets/script.js", http.StatusMethodNotAllowed},
+		{"GET", "/assets/frontend.wasm", http.StatusOK},
+		{"POST", "/assets/frontend.wasm", http.StatusMethodNotAllowed},
 		{"GET", "/assets/gfm/gfm.css", http.StatusOK},
 
 		{"GET", "/", http.StatusOK},

@@ -1,3 +1,5 @@
+// +build js,wasm,go1.14
+
 package main
 
 import (
@@ -9,7 +11,7 @@ import (
 	"github.com/shurcooL/github_flavored_markdown"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/markdownfmt/markdown"
-	"honnef.co/go/js/dom"
+	"honnef.co/go/js/dom/v2"
 )
 
 func (f *frontend) EditComment(action string, this dom.HTMLElement, evt dom.Event) {
@@ -25,7 +27,7 @@ func (f *frontend) EditComment(action string, this dom.HTMLElement, evt dom.Even
 
 	switch action {
 	case "edit":
-		commentEditor.Value = commentEditor.GetAttribute("data-raw")
+		commentEditor.SetValue(commentEditor.GetAttribute("data-raw"))
 
 		commentView.Style().SetProperty("display", "none", "")
 		editView.Style().SetProperty("display", "block", "")
@@ -34,15 +36,15 @@ func (f *frontend) EditComment(action string, this dom.HTMLElement, evt dom.Even
 	case "cancel", "update":
 		switch action {
 		case "cancel":
-			if commentEditor.Value != commentEditor.GetAttribute("data-raw") {
+			if commentEditor.Value() != commentEditor.GetAttribute("data-raw") {
 				if !dom.GetWindow().Confirm("Are you sure you want to discard your unsaved changes?") {
 					return
 				}
 			}
-			commentEditor.Value = commentEditor.GetAttribute("data-raw")
+			commentEditor.SetValue(commentEditor.GetAttribute("data-raw"))
 		case "update":
-			if commentEditor.Value != commentEditor.GetAttribute("data-raw") {
-				fmted, _ := markdown.Process("", []byte(commentEditor.Value), nil)
+			if commentEditor.Value() != commentEditor.GetAttribute("data-raw") {
+				fmted, _ := markdown.Process("", []byte(commentEditor.Value()), nil)
 				fmted = bytes.TrimSpace(fmted)
 				if len(fmted) == 0 {
 					// Empty body isn't allowed.
