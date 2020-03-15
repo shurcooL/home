@@ -52,10 +52,8 @@ func main() {
 func setup(f *frontend) {
 	setupScroll()
 
-	if !state.DisableReactions {
-		reactionsService := ChangeReactions{Change: f.cs}
-		reactionsmenu.Setup(state.RepoSpec, reactionsService, state.CurrentUser)
-	}
+	reactionsService := ChangeReactions{Change: f.cs}
+	reactionsmenu.Setup(state.RepoSpec, reactionsService, state.CurrentUser)
 }
 
 // httpClient gives an *http.Client for making API requests.

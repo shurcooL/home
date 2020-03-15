@@ -44,8 +44,7 @@ import (
 
 // New returns an issues app http.Handler using given services and options.
 // If usersService is nil, then there is no way to have an authenticated user.
-// Emojis image data is expected to be available at /emojis/emojis.png, unless
-// opt.DisableReactions is true.
+// Emojis image data is expected to be available at /emojis/emojis.png.
 //
 // In order to serve HTTP requests, the returned http.Handler expects each incoming
 // request to have 2 parameters provided to it via RepoSpecContextKey and BaseURIContextKey
@@ -103,8 +102,7 @@ var StateContextKey = &contextKey{"State"}
 
 // Options for configuring issues app.
 type Options struct {
-	Notifications    notifications.Service // If not nil, issues containing unread notifications are highlighted.
-	DisableReactions bool                  // Disable all support for displaying and toggling reactions.
+	Notifications notifications.Service // If not nil, issues containing unread notifications are highlighted.
 
 	HeadPre, HeadPost template.HTML
 	BodyPre           template.HTML
@@ -476,7 +474,6 @@ func (h *handler) state(req *http.Request, issueID uint64) (state, error) {
 		b.BodyTop = template.HTML(buf.String())
 	}
 
-	b.DisableReactions = h.Options.DisableReactions
 	b.DisableUsers = h.us == nil
 	if h.Options.SignIn != nil {
 		returnURL := b.BaseURI + b.ReqPath

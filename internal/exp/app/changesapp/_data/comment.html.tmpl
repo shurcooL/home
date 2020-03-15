@@ -9,9 +9,7 @@
 					<span class="content">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
 						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
 					</span>
-					{{if (not state.DisableReactions)}}
-						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
-					{{end}}
+					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
 					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{`edit` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
 				</header>
 				<div class="list-entry-body">
@@ -25,9 +23,7 @@
 				</div>
 			</div>
 		</div>
-		{{if (not state.DisableReactions)}}
-			{{render (reactionsBar .Reactions (reactableID .ID))}}
-		{{end}}
+		{{render (reactionsBar .Reactions (reactableID .ID))}}
 	</div>
 </div>
 {{end}}
@@ -43,9 +39,7 @@
 					<span class="content"{{if .State}} style="line-height: 28px;"{{end}}>{{template "review-icon" .State}}{{render (user .User)}} {{template "review-action" .State}} <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
 						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
 					</span>
-					{{if and (not state.DisableReactions) .Body}}
-						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
-					{{end}}
+					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
 					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{`edit` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
 				</header>
 				{{with .Body}}
@@ -57,9 +51,7 @@
 				{{end}}
 			</div>
 		</div>
-		{{if (not state.DisableReactions)}}
-			{{render (reactionsBar .Reactions (reactableID .ID))}}
-		{{end}}
+		{{render (reactionsBar .Reactions (reactableID .ID))}}
 	</div>
 	{{with .Comments}}
 		<div style="margin-left: 80px;">
@@ -67,17 +59,13 @@
 			<div class="list-entry list-entry-container list-entry-border">
 				<header class="list-entry-header">
 					<span class="content">{{.File}}:{{.Line}}</span>
-					{{if (not state.DisableReactions)}}
-						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
-					{{end}}
+					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
 				</header>
 				<div class="list-entry-body">
 					<div class="markdown-body">{{.Body | gfm}}</div>
 				</div>
 			</div>
-			{{if (not state.DisableReactions)}}
-				{{render (reactionsBar .Reactions (reactableID .ID))}}
-			{{end}}
+			{{render (reactionsBar .Reactions (reactableID .ID))}}
 		{{end}}
 		</div>
 	{{end}}

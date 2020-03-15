@@ -80,10 +80,8 @@ func setup(f *frontend) {
 		})
 	}
 
-	if !state.DisableReactions {
-		reactionsService := IssuesReactions{Issues: f.is}
-		reactionsmenu.Setup(state.RepoSpec.URI, reactionsService, state.CurrentUser)
-	}
+	reactionsService := IssuesReactions{Issues: f.is}
+	reactionsmenu.Setup(state.RepoSpec.URI, reactionsService, state.CurrentUser)
 }
 
 // httpClient gives an *http.Client for making API requests.

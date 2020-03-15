@@ -46,8 +46,7 @@ import (
 
 // New returns a changes app http.Handler using given services and options.
 // If users is nil, then there is no way to have an authenticated user.
-// Emojis image data is expected to be available at /emojis/emojis.png, unless
-// opt.DisableReactions is true.
+// Emojis image data is expected to be available at /emojis/emojis.png.
 //
 // In order to serve HTTP requests, the returned http.Handler expects each incoming
 // request to have 2 parameters provided to it via RepoSpecContextKey and BaseURIContextKey
@@ -99,8 +98,6 @@ type Options struct {
 	// Notifications, if not nil, is used to highlight changes containing
 	// unread notifications, and to mark changes that are viewed as read.
 	Notifications notifications.Service
-
-	DisableReactions bool // Disable all support for displaying and toggling reactions.
 
 	HeadPre, HeadPost template.HTML
 	BodyPre           template.HTML
@@ -560,7 +557,6 @@ func (h *handler) state(req *http.Request, changeID uint64) (state, error) {
 		b.BodyTop = template.HTML(buf.String())
 	}
 
-	b.DisableReactions = h.Options.DisableReactions
 	b.DisableUsers = h.us == nil
 
 	if h.us == nil {

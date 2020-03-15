@@ -9,9 +9,7 @@
 					<span class="content">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
 						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
 					</span>
-					{{if (not state.DisableReactions)}}
-						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
-					{{end}}
+					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
 					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{`edit` | json}}, this, event);">{{octicon "pencil"}}</a></span>{{end}}
 				</div>
 				<div class="list-entry-body">
@@ -29,8 +27,6 @@
 	<div style="display: none;">
 		{{template "edit-comment" .}}
 	</div>
-	{{if (not state.DisableReactions)}}
-		{{render (reactionsBar .Reactions (reactableID .ID))}}
-	{{end}}
+	{{render (reactionsBar .Reactions (reactableID .ID))}}
 </div>
 {{end}}

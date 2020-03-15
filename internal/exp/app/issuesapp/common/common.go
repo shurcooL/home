@@ -7,11 +7,10 @@ import (
 )
 
 type State struct {
-	BaseURI          string
-	ReqPath          string
-	RepoSpec         issues.RepoSpec
-	IssueID          uint64 `json:",omitempty"` // IssueID is the current issue ID, or 0 if not applicable (e.g., current page is /new).
-	CurrentUser      users.User
-	DisableReactions bool
-	DisableUsers     bool
+	BaseURI      string
+	ReqPath      string
+	RepoSpec     issues.RepoSpec
+	IssueID      uint64 `json:",omitempty"` // IssueID is the current issue ID, or 0 if not applicable (e.g., current page is /new).
+	CurrentUser  users.User
+	DisableUsers bool
 }
