@@ -70,7 +70,7 @@ import (
 func New(service change.Service, users users.Service, opt Options) interface {
 	ServeHTTP(w http.ResponseWriter, req *http.Request) error
 } {
-	static, err := loadTemplates(common.State{}, opt.BodyPre)
+	static, err := loadTemplates(common.State{})
 	if err != nil {
 		log.Fatalln("loadTemplates failed:", err)
 	}
@@ -103,7 +103,7 @@ type Options struct {
 	DisableReactions bool // Disable all support for displaying and toggling reactions.
 
 	HeadPre, HeadPost template.HTML
-	BodyPre           string // An html/template definition of "body-pre" template.
+	BodyPre           template.HTML
 
 	// BodyTop provides components to include on top of <body> of page rendered for req. It can be nil.
 	BodyTop func(*http.Request, common.State) ([]htmlg.Component, error)
@@ -312,7 +312,7 @@ func (h *handler) MockHandler(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	t, err := loadTemplates(st.State, h.Options.BodyPre)
+	t, err := loadTemplates(st.State)
 	if err != nil {
 		return fmt.Errorf("loadTemplates: %v", err)
 	}
@@ -380,7 +380,7 @@ func (h *handler) ChangeHandler(w http.ResponseWriter, req *http.Request, change
 	sort.Sort(byCreatedAtID(timeline))
 	state.Timeline = timeline
 	// Call loadTemplates to set updated reactionsBar, reactableID, etc., template functions.
-	t, err := loadTemplates(state.State, h.Options.BodyPre)
+	t, err := loadTemplates(state.State)
 	if err != nil {
 		return fmt.Errorf("loadTemplates: %v", err)
 	}
@@ -546,6 +546,7 @@ func (h *handler) state(req *http.Request, changeID uint64) (state, error) {
 	}
 	b.HeadPre = h.HeadPre
 	b.HeadPost = h.HeadPost
+	b.BodyPre = h.Options.BodyPre
 	if h.BodyTop != nil {
 		c, err := h.BodyTop(req, b.State)
 		if err != nil {
@@ -576,7 +577,7 @@ func (h *handler) state(req *http.Request, changeID uint64) (state, error) {
 
 type state struct {
 	HeadPre, HeadPost template.HTML
-	BodyTop           template.HTML
+	BodyPre, BodyTop  template.HTML
 
 	common.State
 
@@ -618,7 +619,7 @@ func (s state) Tabnav(selected string) template.HTML {
 	}))
 }
 
-func loadTemplates(state common.State, bodyPre string) (*template.Template, error) {
+func loadTemplates(state common.State) (*template.Template, error) {
 	t := template.New("").Funcs(template.FuncMap{
 		"json": func(v interface{}) (string, error) {
 			b, err := json.Marshal(v)
@@ -673,11 +674,7 @@ func loadTemplates(state common.State, bodyPre string) (*template.Template, erro
 		"user":             func(u users.User) htmlg.Component { return component.User{User: u} },
 		"avatar":           func(u users.User) htmlg.Component { return component.Avatar{User: u, Size: 48} },
 	})
-	t, err := vfstemplate.ParseGlob(assets.Assets, t, "/assets/*.tmpl")
-	if err != nil {
-		return nil, err
-	}
-	return t.New("body-pre").Parse(bodyPre)
+	return vfstemplate.ParseGlob(assets.Assets, t, "/assets/*.tmpl")
 }
 
 // contextKey is a value for use with context.WithValue. It's used as
