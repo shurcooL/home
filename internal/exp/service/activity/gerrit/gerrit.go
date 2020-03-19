@@ -503,6 +503,7 @@ func fetchAndConvert(
 					Payload: event.Change{
 						Action:      "opened",
 						ChangeTitle: changeTitle,
+						ChangeBody:  tis[0].(change.Comment).Body,
 					},
 				}, func(ctx context.Context) string {
 					return rtr.ChangeURL(ctx, n.Server, n.Project, n.ChangeID)
