@@ -89,16 +89,3 @@
 		reviewed {{printf "%+d" .}}
 	{{end}}
 {{end}}
-
-{{define "review-mock"}}
-<html>
-	<head>
-		{{template "head" .}}
-	</head>
-	<body>
-		{{.BodyPre}}
-		{{.BodyTop}}
-		{{template "review" .Review}}
-	</body>
-</html>
-{{end}}

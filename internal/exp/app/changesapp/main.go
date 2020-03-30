@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	statepkg "dmitri.shuralyov.com/state"
 	"github.com/dustin/go-humanize"
 	"github.com/shurcooL/github_flavored_markdown"
 	"github.com/shurcooL/home/internal/exp/app/changesapp/assets"
@@ -148,11 +147,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 		return h.ChangesHandler(w, req)
 	}
 
-	// Handle "/mock".
-	if req.URL.Path == "/mock" {
-		return h.MockHandler(w, req)
-	}
-
 	// Handle "/{changeID}" and "/{changeID}/...".
 	elems := strings.SplitN(req.URL.Path[1:], "/", 3)
 	changeID, err := strconv.ParseUint(elems[0], 10, 64)
@@ -249,53 +243,6 @@ func stateFilter(query url.Values) (change.StateFilter, error) {
 	default:
 		return "", fmt.Errorf("unsupported state filter value: %q", selectedTabName)
 	}
-}
-
-func (h *handler) MockHandler(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != http.MethodGet {
-		return httperror.Method{Allowed: []string{http.MethodGet}}
-	}
-	st, err := h.state(req, 0)
-	if err != nil {
-		return err
-	}
-	t, err := loadTemplates(st.State)
-	if err != nil {
-		return fmt.Errorf("loadTemplates: %v", err)
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err = t.ExecuteTemplate(w, "review-mock", struct {
-		state
-		Review change.Review
-	}{
-		state: st,
-		Review: change.Review{
-			ID:        "0",
-			User:      users.User{Login: "Eric Grosse", AvatarURL: "https://lh6.googleusercontent.com/-_sdEtv2PRxk/AAAAAAAAAAI/AAAAAAAAAAA/aE1Q66Cuvb4/s100-p/photo.jpg"},
-			CreatedAt: time.Now().UTC(),
-			Edited:    nil,
-			State:     statepkg.ReviewPlus2,
-			Body:      "",
-			Reactions: []reactions.Reaction{},
-			Editable:  true,
-			Comments: []change.InlineComment{
-				{
-					File: "rpc/keyserver/server.go",
-					Line: 26,
-					Body: "Ok by me, but how was this chosen?",
-				},
-				{
-					File: "rpc/keyserver/server.go",
-					Line: 31,
-					Body: "As someone who reads the server logs, my gut feeling is that 1 QPS of Lookup logs will give me sufficient data to tell me the system is working, without creating a big mess.",
-				},
-			},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("t.ExecuteTemplate: %v", err)
-	}
-	return nil
 }
 
 func (h *handler) ChangeHandler(w http.ResponseWriter, req *http.Request, changeID uint64) error {
