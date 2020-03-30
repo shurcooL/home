@@ -1,0 +1,29 @@
+<html>
+	<head>
+		{{template "head" .}}
+	</head>
+	<body>
+		{{template "body-pre" .}}
+		{{.BodyTop}}
+		{{template "change" .}}
+	</body>
+</html>
+
+{{define "change"}}
+	<h1>{{.Change.Title}} <span class="gray">#{{.Change.ID}}</span></h1>
+	<div id="change-state-badge" style="margin-bottom: 20px;">{{render (changeStateBadge .Change)}}</div>
+	{{.Tabnav "Discussion"}}
+	{{range .Timeline}}
+		{{template "timeline-item" .}}
+	{{end}}
+{{end}}
+
+{{define "timeline-item"}}
+	{{if eq .TemplateName "comment"}}
+		{{template "comment" .TimelineItem}}
+	{{else if eq .TemplateName "review"}}
+		{{template "review" .TimelineItem}}
+	{{else if eq .TemplateName "event"}}
+		{{render (event .TimelineItem)}}
+	{{end}}
+{{end}}

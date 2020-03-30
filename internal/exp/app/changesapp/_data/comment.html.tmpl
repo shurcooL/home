@@ -1,0 +1,116 @@
+{{/* Dot is a changes.Comment. */}}
+{{define "comment"}}
+<div class="list-entry">
+	<div style="float: left; margin-right: 10px;">{{render (avatar .User)}}</div>
+	<div style="display: flex; flex-direction: column;">
+		<div id="comment-{{.ID}}">
+			<div class="list-entry-container list-entry-border">
+				<header class="list-entry-header" style="display: flex;">
+					<span class="content">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
+						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
+					</span>
+					{{if (not state.DisableReactions)}}
+						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
+					{{end}}
+					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{`edit` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
+				</header>
+				<div class="list-entry-body">
+					<div class="markdown-body">
+						{{with .Body}}
+							{{. | gfm}}
+						{{else}}
+							<i class="gray">No description.</i>
+						{{end}}
+					</div>
+				</div>
+			</div>
+		</div>
+		{{if (not state.DisableReactions)}}
+			{{render (reactionsBar .Reactions (reactableID .ID))}}
+		{{end}}
+	</div>
+</div>
+{{end}}
+
+{{/* Dot is a changes.Review. */}}
+{{define "review"}}
+<div class="list-entry">
+	<div style="float: left; margin-right: 10px;">{{render (avatar .User)}}</div>
+	<div style="display: flex; flex-direction: column;">
+		<div id="comment-{{.ID}}">
+			<div class="list-entry-container list-entry-border">
+				<header class="list-entry-header" style="display: flex;{{if ne .State 0}} padding: 4px;{{end}}{{if not .Body}} border: none;{{end}}">
+					<span class="content"{{if .State}} style="line-height: 28px;"{{end}}>{{template "review-icon" .State}}{{render (user .User)}} {{template "review-action" .State}} <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
+						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
+					</span>
+					{{if and (not state.DisableReactions) .Body}}
+						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
+					{{end}}
+					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{`edit` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
+				</header>
+				{{with .Body}}
+				<div class="list-entry-body">
+					<div class="markdown-body">
+						{{. | gfm}}
+					</div>
+				</div>
+				{{end}}
+			</div>
+		</div>
+		{{if (not state.DisableReactions)}}
+			{{render (reactionsBar .Reactions (reactableID .ID))}}
+		{{end}}
+	</div>
+	{{with .Comments}}
+		<div style="margin-left: 80px;">
+		{{range .}}
+			<div class="list-entry list-entry-container list-entry-border">
+				<header class="list-entry-header">
+					<span class="content">{{.File}}:{{.Line}}</span>
+					{{if (not state.DisableReactions)}}
+						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
+					{{end}}
+				</header>
+				<div class="list-entry-body">
+					<div class="markdown-body">{{.Body | gfm}}</div>
+				</div>
+			</div>
+			{{if (not state.DisableReactions)}}
+				{{render (reactionsBar .Reactions (reactableID .ID))}}
+			{{end}}
+		{{end}}
+		</div>
+	{{end}}
+</div>
+{{end}}
+
+{{/* Dot is state.Review. */}}
+{{define "review-icon" }}
+	{{if gt . 0}}
+		<span class="event-icon" style="color: #fff; background-color: #6cc644;">{{octicon "check"}}</span>
+	{{else if lt . 0}}
+		<span class="event-icon" style="color: #fff; background-color: #bd2c00;">{{octicon "x"}}</span>
+	{{end}}
+{{end}}
+
+{{/* Dot is state.Review. */}}
+{{define "review-action" }}
+	{{if eq . 0}}
+		commented
+	{{else}}
+		reviewed {{printf "%+d" .}}
+	{{end}}
+{{end}}
+
+{{define "review-mock"}}
+<html>
+	<head>
+		{{template "head" .}}
+	</head>
+	<body>
+		{{template "body-pre" .}}
+		{{.BodyTop}}
+		{{template "review" .Review}}
+	</body>
+</html>
+{{end}}
