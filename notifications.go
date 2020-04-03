@@ -55,8 +55,8 @@ func initNotifications(
 		router,
 	)
 
-	notificationsService := dmitshurSeesOwnNotifications{
-		service:                     fs.NewService(root, users),
+	notificationsService := dmitshurSeesExternalNotifications{
+		local:                       fs.NewService(root, users),
 		dmitshurGitHubNotifications: dmitshurGitHubNotifications,
 		dmitshurGerritNotifications: v2tov1.Service{V2: gerritNotification},
 		users:                       users,
@@ -151,18 +151,18 @@ func initNotifications(
 	return notificationsService
 }
 
-// dmitshurSeesOwnNotifications lets dmitshur see own notifications on GitHub and Gerrit,
+// dmitshurSeesExternalNotifications gives dmitshur access to notifications on GitHub and Gerrit,
 // in addition to local ones.
-type dmitshurSeesOwnNotifications struct {
-	service                     notifications.Service
+type dmitshurSeesExternalNotifications struct {
+	local                       notifications.Service
 	dmitshurGitHubNotifications notifications.Service
 	dmitshurGerritNotifications notifications.Service
 	users                       users.Service
 }
 
-func (s dmitshurSeesOwnNotifications) List(ctx context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
+func (s dmitshurSeesExternalNotifications) List(ctx context.Context, opt notifications.ListOptions) (notifications.Notifications, error) {
 	var nss notifications.Notifications
-	ns, err := s.service.List(ctx, opt)
+	ns, err := s.local.List(ctx, opt)
 	if err != nil {
 		return nss, err
 	}
@@ -201,9 +201,9 @@ func (s dmitshurSeesOwnNotifications) List(ctx context.Context, opt notification
 	return nss, nil
 }
 
-func (s dmitshurSeesOwnNotifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
+func (s dmitshurSeesExternalNotifications) Count(ctx context.Context, opt interface{}) (uint64, error) {
 	var count uint64
-	n, err := s.service.Count(ctx, opt)
+	n, err := s.local.Count(ctx, opt)
 	if err != nil {
 		return count, err
 	}
@@ -230,8 +230,10 @@ func (s dmitshurSeesOwnNotifications) Count(ctx context.Context, opt interface{}
 	return count, nil
 }
 
-func (s dmitshurSeesOwnNotifications) MarkRead(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64) error {
+func (s dmitshurSeesExternalNotifications) MarkRead(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64) error {
 	switch {
+	default:
+		return s.local.MarkRead(ctx, repo, threadType, threadID)
 	case strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
@@ -252,12 +254,12 @@ func (s dmitshurSeesOwnNotifications) MarkRead(ctx context.Context, repo notific
 		}
 		return s.dmitshurGerritNotifications.MarkRead(ctx, repo, threadType, threadID)
 	}
-
-	return s.service.MarkRead(ctx, repo, threadType, threadID)
 }
 
-func (s dmitshurSeesOwnNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
+func (s dmitshurSeesExternalNotifications) MarkAllRead(ctx context.Context, repo notifications.RepoSpec) error {
 	switch {
+	default:
+		return s.local.MarkAllRead(ctx, repo)
 	case strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
@@ -278,12 +280,12 @@ func (s dmitshurSeesOwnNotifications) MarkAllRead(ctx context.Context, repo noti
 		}
 		return s.dmitshurGerritNotifications.MarkAllRead(ctx, repo)
 	}
-
-	return s.service.MarkAllRead(ctx, repo)
 }
 
-func (s dmitshurSeesOwnNotifications) Subscribe(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+func (s dmitshurSeesExternalNotifications) Subscribe(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
 	switch {
+	default:
+		return s.local.Subscribe(ctx, repo, threadType, threadID, subscribers)
 	case strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
@@ -304,12 +306,12 @@ func (s dmitshurSeesOwnNotifications) Subscribe(ctx context.Context, repo notifi
 		}
 		return s.dmitshurGerritNotifications.Subscribe(ctx, repo, threadType, threadID, subscribers)
 	}
-
-	return s.service.Subscribe(ctx, repo, threadType, threadID, subscribers)
 }
 
-func (s dmitshurSeesOwnNotifications) Notify(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, nr notifications.NotificationRequest) error {
+func (s dmitshurSeesExternalNotifications) Notify(ctx context.Context, repo notifications.RepoSpec, threadType string, threadID uint64, nr notifications.NotificationRequest) error {
 	switch {
+	default:
+		return s.local.Notify(ctx, repo, threadType, threadID, nr)
 	case strings.HasPrefix(repo.URI, "github.com/") &&
 		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
@@ -330,6 +332,4 @@ func (s dmitshurSeesOwnNotifications) Notify(ctx context.Context, repo notificat
 		}
 		return s.dmitshurGerritNotifications.Notify(ctx, repo, threadType, threadID, nr)
 	}
-
-	return s.service.Notify(ctx, repo, threadType, threadID, nr)
 }

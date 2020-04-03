@@ -111,8 +111,8 @@ func initNotificationsV2(
 		return nil, nil, err
 	}
 
-	notificationService := dmitshurSeesOwnNotificationsV2{
-		service:                    notificationfs.DevNull{},
+	notificationService := dmitshurSeesExternalNotificationsV2{
+		local:                      notificationfs.DevNull{},
 		dmitshurGitHubNotification: githubActivity,
 		dmitshurGerritNotification: gerritActivity,
 		users:                      users,
@@ -217,18 +217,18 @@ func newDirWatcher(ctx context.Context, dir string) (<-chan struct{}, error) {
 	return ch, nil
 }
 
-// dmitshurSeesOwnNotificationsV2 lets dmitshur see own notifications on GitHub and Gerrit,
+// dmitshurSeesExternalNotificationsV2 gives dmitshur access to notifications on GitHub and Gerrit,
 // in addition to local ones.
-type dmitshurSeesOwnNotificationsV2 struct {
-	service                    notification.Service
+type dmitshurSeesExternalNotificationsV2 struct {
+	local                      notification.Service
 	dmitshurGitHubNotification notification.Service
 	dmitshurGerritNotification notification.Service
 	users                      users.Service
 }
 
-func (s dmitshurSeesOwnNotificationsV2) ListNotifications(ctx context.Context, opt notification.ListOptions) ([]notification.Notification, error) {
+func (s dmitshurSeesExternalNotificationsV2) ListNotifications(ctx context.Context, opt notification.ListOptions) ([]notification.Notification, error) {
 	var nss []notification.Notification
-	ns, err := s.service.ListNotifications(ctx, opt)
+	ns, err := s.local.ListNotifications(ctx, opt)
 	if err != nil {
 		return nss, err
 	}
@@ -272,8 +272,8 @@ func (s dmitshurSeesOwnNotificationsV2) ListNotifications(ctx context.Context, o
 	return nss, nil
 }
 
-func (s dmitshurSeesOwnNotificationsV2) StreamNotifications(ctx context.Context, ch chan<- []notification.Notification) error {
-	err := s.service.StreamNotifications(ctx, ch)
+func (s dmitshurSeesExternalNotificationsV2) StreamNotifications(ctx context.Context, ch chan<- []notification.Notification) error {
+	err := s.local.StreamNotifications(ctx, ch)
 	if err != nil {
 		return err
 	}
@@ -297,9 +297,9 @@ func (s dmitshurSeesOwnNotificationsV2) StreamNotifications(ctx context.Context,
 	return nil
 }
 
-func (s dmitshurSeesOwnNotificationsV2) CountNotifications(ctx context.Context) (uint64, error) {
+func (s dmitshurSeesExternalNotificationsV2) CountNotifications(ctx context.Context) (uint64, error) {
 	var count uint64
-	n, err := s.service.CountNotifications(ctx)
+	n, err := s.local.CountNotifications(ctx)
 	if err != nil {
 		return count, err
 	}
@@ -326,8 +326,10 @@ func (s dmitshurSeesOwnNotificationsV2) CountNotifications(ctx context.Context) 
 	return count, nil
 }
 
-func (s dmitshurSeesOwnNotificationsV2) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+func (s dmitshurSeesExternalNotificationsV2) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
 	switch {
+	default:
+		return s.local.MarkNotificationRead(ctx, namespace, threadType, threadID)
 	case strings.HasPrefix(namespace, "github.com/") &&
 		namespace != "github.com/shurcooL/issuesapp" && namespace != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
@@ -348,6 +350,4 @@ func (s dmitshurSeesOwnNotificationsV2) MarkNotificationRead(ctx context.Context
 		}
 		return s.dmitshurGerritNotification.MarkNotificationRead(ctx, namespace, threadType, threadID)
 	}
-
-	return s.service.MarkNotificationRead(ctx, namespace, threadType, threadID)
 }

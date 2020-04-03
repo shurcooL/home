@@ -50,8 +50,8 @@ func newChangeService(reactions reactions.Service, users users.Service, router g
 		panic(fmt.Errorf("internal error: gerrit.NewClient returned non-nil error: %v", err))
 	}
 	gerritChange := gerritapi.NewService(gerritClient)
-	return dmitshurSeesOwnChanges{
-		service:              local,
+	return dmitshurSeesExternalChanges{
+		local:                local,
 		dmitshurGitHubChange: dmitshurGitHubChange,
 		dmitshurGerritChange: gerritChange,
 		users:                users,
@@ -397,126 +397,87 @@ func (h changesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	return err
 }
 
-// dmitshurSeesOwnChanges lets dmitshur see own changes on GitHub and Gerrit,
+// dmitshurSeesExternalChanges gives dmitshur access to changes on GitHub and Gerrit,
 // in addition to local ones.
-type dmitshurSeesOwnChanges struct {
-	service              change.Service
+type dmitshurSeesExternalChanges struct {
+	local                change.Service
 	dmitshurGitHubChange change.Service
 	dmitshurGerritChange change.Service
 	users                users.Service
 }
 
-func (s dmitshurSeesOwnChanges) List(ctx context.Context, repo string, opt change.ListOptions) ([]change.Change, error) {
-	switch {
-	case strings.HasPrefix(repo, "github.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubChange.List(ctx, repo, opt)
-	case strings.HasPrefix(repo, "go.googlesource.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGerritChange.List(ctx, repo, opt)
+func (s dmitshurSeesExternalChanges) List(ctx context.Context, repo string, opt change.ListOptions) ([]change.Change, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
 	}
-
-	return s.service.List(ctx, repo, opt)
+	return service.List(ctx, repo, opt)
 }
 
-func (s dmitshurSeesOwnChanges) Count(ctx context.Context, repo string, opt change.ListOptions) (uint64, error) {
-	switch {
-	case strings.HasPrefix(repo, "github.com/"):
-		dmitshurRequired := true
-		if repo == "github.com/shurcooL/issuesapp" || repo == "github.com/shurcooL/notificationsapp" {
-			// Let everyone count changes in the gh+ds hybrid packages
-			// using the dmitshur-authenticated GitHub change service.
-			// This is needed to show the number of open changes in the tabnav.
-			dmitshurRequired = false
-		}
-		if dmitshurRequired {
-			currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-			if err != nil {
-				return 0, err
-			}
-			if currentUser != dmitshur {
-				return 0, os.ErrPermission
-			}
-		}
+func (s dmitshurSeesExternalChanges) Count(ctx context.Context, repo string, opt change.ListOptions) (uint64, error) {
+	if repo == "github.com/shurcooL/issuesapp" || repo == "github.com/shurcooL/notificationsapp" {
+		// For the gh+ds hybrid packages specifically,
+		// don't do an authorization check and allow unauthenticated users
+		// to use the dmitshur-authenticated GitHub change service.
+		//
+		// It's safe to do so because counting changes is a read-only operation.
+		//
+		// This is needed to display the number of open changes in the tabnav
+		// when viewing the gh+ds hybrid packages.
 		return s.dmitshurGitHubChange.Count(ctx, repo, opt)
-	case strings.HasPrefix(repo, "go.googlesource.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return 0, err
-		}
-		if currentUser != dmitshur {
-			return 0, os.ErrPermission
-		}
-		return s.dmitshurGerritChange.Count(ctx, repo, opt)
 	}
 
-	return s.service.Count(ctx, repo, opt)
-}
-
-func (s dmitshurSeesOwnChanges) Get(ctx context.Context, repo string, id uint64) (change.Change, error) {
-	switch {
-	case strings.HasPrefix(repo, "github.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return change.Change{}, err
-		}
-		if currentUser != dmitshur {
-			return change.Change{}, os.ErrPermission
-		}
-		return s.dmitshurGitHubChange.Get(ctx, repo, id)
-	case strings.HasPrefix(repo, "go.googlesource.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return change.Change{}, err
-		}
-		if currentUser != dmitshur {
-			return change.Change{}, os.ErrPermission
-		}
-		return s.dmitshurGerritChange.Get(ctx, repo, id)
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return 0, err
 	}
-
-	return s.service.Get(ctx, repo, id)
+	return service.Count(ctx, repo, opt)
 }
 
-func (s dmitshurSeesOwnChanges) ListTimeline(ctx context.Context, repo string, id uint64, opt *change.ListTimelineOptions) ([]interface{}, error) {
-	switch {
-	case strings.HasPrefix(repo, "github.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubChange.ListTimeline(ctx, repo, id, opt)
-	case strings.HasPrefix(repo, "go.googlesource.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGerritChange.ListTimeline(ctx, repo, id, opt)
+func (s dmitshurSeesExternalChanges) Get(ctx context.Context, repo string, id uint64) (change.Change, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return change.Change{}, err
 	}
-
-	return s.service.ListTimeline(ctx, repo, id, opt)
+	return service.Get(ctx, repo, id)
 }
 
-func (s dmitshurSeesOwnChanges) ListCommits(ctx context.Context, repo string, id uint64) ([]change.Commit, error) {
+func (s dmitshurSeesExternalChanges) ListTimeline(ctx context.Context, repo string, id uint64, opt *change.ListTimelineOptions) ([]interface{}, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
+	}
+	return service.ListTimeline(ctx, repo, id, opt)
+}
+
+func (s dmitshurSeesExternalChanges) ListCommits(ctx context.Context, repo string, id uint64) ([]change.Commit, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
+	}
+	return service.ListCommits(ctx, repo, id)
+}
+
+func (s dmitshurSeesExternalChanges) GetDiff(ctx context.Context, repo string, id uint64, opt *change.GetDiffOptions) ([]byte, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
+	}
+	return service.GetDiff(ctx, repo, id, opt)
+}
+
+func (s dmitshurSeesExternalChanges) EditComment(ctx context.Context, repo string, id uint64, cr change.CommentRequest) (change.Comment, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return change.Comment{}, err
+	}
+	return service.EditComment(ctx, repo, id, cr)
+}
+
+func (s dmitshurSeesExternalChanges) service(ctx context.Context, repo string) (change.Service, error) {
 	switch {
+	default:
+		return s.local, nil
 	case strings.HasPrefix(repo, "github.com/"):
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
@@ -525,7 +486,7 @@ func (s dmitshurSeesOwnChanges) ListCommits(ctx context.Context, repo string, id
 		if currentUser != dmitshur {
 			return nil, os.ErrPermission
 		}
-		return s.dmitshurGitHubChange.ListCommits(ctx, repo, id)
+		return s.dmitshurGitHubChange, nil
 	case strings.HasPrefix(repo, "go.googlesource.com/"):
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
@@ -534,64 +495,16 @@ func (s dmitshurSeesOwnChanges) ListCommits(ctx context.Context, repo string, id
 		if currentUser != dmitshur {
 			return nil, os.ErrPermission
 		}
-		return s.dmitshurGerritChange.ListCommits(ctx, repo, id)
+		return s.dmitshurGerritChange, nil
 	}
-
-	return s.service.ListCommits(ctx, repo, id)
 }
 
-func (s dmitshurSeesOwnChanges) GetDiff(ctx context.Context, repo string, id uint64, opt *change.GetDiffOptions) ([]byte, error) {
+func (s dmitshurSeesExternalChanges) ThreadType(repo string) string {
 	switch {
-	case strings.HasPrefix(repo, "github.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubChange.GetDiff(ctx, repo, id, opt)
-	case strings.HasPrefix(repo, "go.googlesource.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGerritChange.GetDiff(ctx, repo, id, opt)
-	}
-
-	return s.service.GetDiff(ctx, repo, id, opt)
-}
-
-func (s dmitshurSeesOwnChanges) EditComment(ctx context.Context, repo string, id uint64, cr change.CommentRequest) (change.Comment, error) {
-	switch {
-	case strings.HasPrefix(repo, "github.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return change.Comment{}, err
-		}
-		if currentUser != dmitshur {
-			return change.Comment{}, os.ErrPermission
-		}
-		return s.dmitshurGitHubChange.EditComment(ctx, repo, id, cr)
-	case strings.HasPrefix(repo, "go.googlesource.com/"):
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return change.Comment{}, err
-		}
-		if currentUser != dmitshur {
-			return change.Comment{}, os.ErrPermission
-		}
-		return s.dmitshurGerritChange.EditComment(ctx, repo, id, cr)
-	}
-
-	return s.service.EditComment(ctx, repo, id, cr)
-}
-
-func (s dmitshurSeesOwnChanges) ThreadType(repo string) string {
-	switch {
+	default:
+		return s.local.(interface {
+			ThreadType(string) string
+		}).ThreadType(repo)
 	case strings.HasPrefix(repo, "github.com/"):
 		return s.dmitshurGitHubChange.(interface {
 			ThreadType(string) string
@@ -601,8 +514,4 @@ func (s dmitshurSeesOwnChanges) ThreadType(repo string) string {
 			ThreadType(string) string
 		}).ThreadType(repo)
 	}
-
-	return s.service.(interface {
-		ThreadType(string) string
-	}).ThreadType(repo)
 }

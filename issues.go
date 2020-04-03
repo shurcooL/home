@@ -45,8 +45,8 @@ func newIssuesService(root webdav.FileSystem, notifications notifications.Extern
 		notifications,
 		router,
 	)
-	return dmitshurSeesGitHubIssues{
-		service:              local,
+	return dmitshurSeesExternalIssues{
+		local:                local,
 		dmitshurGitHubIssues: dmitshurGitHubIssues,
 		users:                users,
 	}, nil
@@ -340,202 +340,143 @@ func (h issuesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	return err
 }
 
-// dmitshurSeesGitHubIssues lets dmitshur also see issues on GitHub,
+// dmitshurSeesExternalIssues gives dmitshur access to issues on GitHub,
 // in addition to local ones.
-type dmitshurSeesGitHubIssues struct {
-	service              issues.Service
+type dmitshurSeesExternalIssues struct {
+	local                issues.Service
 	dmitshurGitHubIssues issues.Service
 	users                users.Service
 }
 
-func (s dmitshurSeesGitHubIssues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.List(ctx, repo, opt)
+func (s dmitshurSeesExternalIssues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
 	}
-
-	return s.service.List(ctx, repo, opt)
+	return service.List(ctx, repo, opt)
 }
 
-func (s dmitshurSeesGitHubIssues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return 0, err
-		}
-		if currentUser != dmitshur {
-			return 0, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.Count(ctx, repo, opt)
+func (s dmitshurSeesExternalIssues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return 0, err
 	}
-
-	return s.service.Count(ctx, repo, opt)
+	return service.Count(ctx, repo, opt)
 }
 
-func (s dmitshurSeesGitHubIssues) Get(ctx context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return issues.Issue{}, err
-		}
-		if currentUser != dmitshur {
-			return issues.Issue{}, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.Get(ctx, repo, id)
+func (s dmitshurSeesExternalIssues) Get(ctx context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return issues.Issue{}, err
 	}
-
-	return s.service.Get(ctx, repo, id)
+	return service.Get(ctx, repo, id)
 }
 
-func (s dmitshurSeesGitHubIssues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.ListComments(ctx, repo, id, opt)
+func (s dmitshurSeesExternalIssues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
 	}
-
-	return s.service.ListComments(ctx, repo, id, opt)
+	return service.ListComments(ctx, repo, id, opt)
 }
 
-func (s dmitshurSeesGitHubIssues) ListEvents(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.ListEvents(ctx, repo, id, opt)
+func (s dmitshurSeesExternalIssues) ListEvents(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
 	}
-
-	return s.service.ListEvents(ctx, repo, id, opt)
+	return service.ListEvents(ctx, repo, id, opt)
 }
 
-func (s dmitshurSeesGitHubIssues) IsTimelineLister(repo issues.RepoSpec) bool {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		tl, ok := s.dmitshurGitHubIssues.(issues.TimelineLister)
-		return ok && tl.IsTimelineLister(repo)
+func (s dmitshurSeesExternalIssues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return nil, err
 	}
-
-	tl, ok := s.service.(issues.TimelineLister)
-	return ok && tl.IsTimelineLister(repo)
-}
-
-func (s dmitshurSeesGitHubIssues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		tl, ok := s.dmitshurGitHubIssues.(issues.TimelineLister)
-		if !ok {
-			return nil, fmt.Errorf("s.dmitshurGitHubIssues doesn't implement issues.TimelineLister")
-		}
-		return tl.ListTimeline(ctx, repo, id, opt)
-	}
-
-	tl, ok := s.service.(issues.TimelineLister)
+	tl, ok := service.(issues.TimelineLister)
 	if !ok {
-		return nil, fmt.Errorf("s.service doesn't implement issues.TimelineLister")
+		return nil, fmt.Errorf("service doesn't implement issues.TimelineLister")
 	}
 	return tl.ListTimeline(ctx, repo, id, opt)
 }
 
-func (s dmitshurSeesGitHubIssues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return issues.Issue{}, err
-		}
-		if currentUser != dmitshur {
-			return issues.Issue{}, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.Create(ctx, repo, issue)
+func (s dmitshurSeesExternalIssues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return issues.Issue{}, err
 	}
-
-	return s.service.Create(ctx, repo, issue)
+	return service.Create(ctx, repo, issue)
 }
 
-func (s dmitshurSeesGitHubIssues) CreateComment(ctx context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return issues.Comment{}, err
-		}
-		if currentUser != dmitshur {
-			return issues.Comment{}, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.CreateComment(ctx, repo, id, comment)
+func (s dmitshurSeesExternalIssues) CreateComment(ctx context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return issues.Comment{}, err
 	}
-
-	return s.service.CreateComment(ctx, repo, id, comment)
+	return service.CreateComment(ctx, repo, id, comment)
 }
 
-func (s dmitshurSeesGitHubIssues) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return issues.Issue{}, nil, err
-		}
-		if currentUser != dmitshur {
-			return issues.Issue{}, nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.Edit(ctx, repo, id, ir)
+func (s dmitshurSeesExternalIssues) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return issues.Issue{}, nil, err
 	}
-
-	return s.service.Edit(ctx, repo, id, ir)
+	return service.Edit(ctx, repo, id, ir)
 }
 
-func (s dmitshurSeesGitHubIssues) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return issues.Comment{}, err
-		}
-		if currentUser != dmitshur {
-			return issues.Comment{}, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues.EditComment(ctx, repo, id, cr)
+func (s dmitshurSeesExternalIssues) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
+	service, err := s.service(ctx, repo)
+	if err != nil {
+		return issues.Comment{}, err
 	}
-
-	return s.service.EditComment(ctx, repo, id, cr)
+	return service.EditComment(ctx, repo, id, cr)
 }
 
-func (s dmitshurSeesGitHubIssues) ThreadType(repo issues.RepoSpec) string {
-	if strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" {
+func (s dmitshurSeesExternalIssues) service(ctx context.Context, repo issues.RepoSpec) (issues.Service, error) {
+	switch {
+	default:
+		return s.local, nil
+	case strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" &&
+		repo.URI != "github.com/shurcooL/notificationsapp":
+
+		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if currentUser != dmitshur {
+			return nil, os.ErrPermission
+		}
+		return s.dmitshurGitHubIssues, nil
+	}
+}
+
+func (s dmitshurSeesExternalIssues) IsTimelineLister(repo issues.RepoSpec) bool {
+	switch {
+	default:
+		tl, ok := s.local.(issues.TimelineLister)
+		return ok && tl.IsTimelineLister(repo)
+	case strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" &&
+		repo.URI != "github.com/shurcooL/notificationsapp":
+
+		tl, ok := s.dmitshurGitHubIssues.(issues.TimelineLister)
+		return ok && tl.IsTimelineLister(repo)
+	}
+}
+
+func (s dmitshurSeesExternalIssues) ThreadType(repo issues.RepoSpec) string {
+	switch {
+	default:
+		return s.local.(interface {
+			ThreadType(issues.RepoSpec) string
+		}).ThreadType(repo)
+	case strings.HasPrefix(repo.URI, "github.com/") &&
+		repo.URI != "github.com/shurcooL/issuesapp" &&
+		repo.URI != "github.com/shurcooL/notificationsapp":
+
 		return s.dmitshurGitHubIssues.(interface {
 			ThreadType(issues.RepoSpec) string
 		}).ThreadType(repo)
 	}
-
-	return s.service.(interface {
-		ThreadType(issues.RepoSpec) string
-	}).ThreadType(repo)
 }
