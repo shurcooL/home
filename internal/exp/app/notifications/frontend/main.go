@@ -234,7 +234,7 @@ func markThreadRead(el js.Value) {
 }
 
 func getAncestorByClassName(el js.Value, class string) js.Value {
-	for ; el != js.Null() && !el.Get("classList").Call("contains", class).Bool(); el = el.Get("parentElement") {
+	for ; !el.IsNull() && !el.Get("classList").Call("contains", class).Bool(); el = el.Get("parentElement") {
 	}
 	return el
 }
