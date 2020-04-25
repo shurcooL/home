@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/url"
 
 	homecomponent "github.com/shurcooL/home/component"
@@ -19,14 +20,18 @@ import (
 // the <body> element of the notifications stream view.
 // It's safe for concurrent use.
 func renderStreamBodyInnerHTML(ctx context.Context, w io.Writer, reqURL *url.URL, gopherbot bool, notificationService notification.Service, authenticatedUser users.User) error {
-	notifs, err := notificationService.ListNotifications(ctx, notification.ListOptions{
+	notifs, notifsError := notificationService.ListNotifications(ctx, notification.ListOptions{
 		All: true,
 	})
-	if err != nil {
-		return fmt.Errorf("notificationService.ListNotifications: %v", err)
+	var error string
+	if notifsError != nil {
+		error = "There was a problem getting latest notifications."
+		if authenticatedUser.SiteAdmin {
+			error += "\n\n" + notifsError.Error()
+		}
 	}
 
-	_, err = io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
+	_, err := io.WriteString(w, `<div style="max-width: 800px; margin: 0 auto 100px auto;">`)
 	if err != nil {
 		return err
 	}
@@ -35,7 +40,7 @@ func renderStreamBodyInnerHTML(ctx context.Context, w io.Writer, reqURL *url.URL
 	if authenticatedUser.UserSpec != (users.UserSpec{}) {
 		nc, err = notificationService.CountNotifications(ctx)
 		if err != nil {
-			return err
+			log.Println("notificationService.CountNotifications:", err)
 		}
 	}
 
@@ -64,6 +69,7 @@ func renderStreamBodyInnerHTML(ctx context.Context, w io.Writer, reqURL *url.URL
 	// Render the notification stream.
 	err = htmlg.RenderComponents(w, notifcomponent.Stream{
 		Notifications: notifs,
+		Error:         error,
 		GopherBot:     gopherbot,
 	})
 	if err != nil {

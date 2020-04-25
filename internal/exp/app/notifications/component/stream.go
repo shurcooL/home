@@ -26,11 +26,22 @@ import (
 // Stream component for display purposes.
 type Stream struct {
 	Notifications []notification.Notification
+	Error         string
 	GopherBot     bool // Controls whether to show all bot comments.
 }
 
 func (s Stream) Render() []*html.Node {
 	var nodes []*html.Node
+
+	if s.Error != "" {
+		nodes = append(nodes,
+			&html.Node{
+				Type: html.ElementNode, Data: atom.P.String(),
+				Attr:       []html.Attribute{{Key: atom.Style.String(), Val: "white-space: pre;"}},
+				FirstChild: htmlg.Text(s.Error),
+			},
+		)
+	}
 
 	if len(s.Notifications) == 0 {
 		nodes = append(nodes,
