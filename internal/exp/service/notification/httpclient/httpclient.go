@@ -4,6 +4,7 @@ package httpclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -42,14 +43,14 @@ type notificationClient struct {
 }
 
 func (n *notificationClient) ListNotifications(ctx context.Context, opt notification.ListOptions) ([]notification.Notification, error) {
-	v := url.Values{} // TODO: Automate this conversion process.
-	v.Set("Namespace", opt.Namespace)
+	q := url.Values{} // TODO: Automate this conversion process.
+	q.Set("Namespace", opt.Namespace)
 	if opt.All {
-		v.Set("All", "1")
+		q.Set("All", "1")
 	}
 	u := url.URL{
 		Path:     httproute.ListNotifications,
-		RawQuery: v.Encode(),
+		RawQuery: q.Encode(),
 	}
 	resp, err := ctxhttp.Get(ctx, n.client, n.baseURL.ResolveReference(&u).String())
 	if err != nil {
@@ -60,9 +61,18 @@ func (n *notificationClient) ListNotifications(ctx context.Context, opt notifica
 		body, _ := ioutil.ReadAll(resp.Body)
 		return nil, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
 	}
-	var notifs []notification.Notification
-	err = json.NewDecoder(resp.Body).Decode(&notifs)
-	return notifs, err
+	var v struct {
+		Notifs []notification.Notification
+		Error  *string
+	}
+	err = json.NewDecoder(resp.Body).Decode(&v)
+	if err != nil {
+		return nil, err
+	}
+	if e := v.Error; e != nil {
+		return v.Notifs, errors.New(*e)
+	}
+	return v.Notifs, nil
 }
 
 func (n *notificationClient) StreamNotifications(ctx context.Context, ch chan<- []notification.Notification) error {
@@ -111,9 +121,18 @@ func (n *notificationClient) CountNotifications(ctx context.Context) (uint64, er
 		body, _ := ioutil.ReadAll(resp.Body)
 		return 0, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
 	}
-	var c uint64
-	err = json.NewDecoder(resp.Body).Decode(&c)
-	return c, err
+	var v struct {
+		Count uint64
+		Error *string
+	}
+	err = json.NewDecoder(resp.Body).Decode(&v)
+	if err != nil {
+		return 0, err
+	}
+	if e := v.Error; e != nil {
+		return v.Count, errors.New(*e)
+	}
+	return v.Count, nil
 }
 
 func (n *notificationClient) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {

@@ -228,9 +228,10 @@ type dmitshurSeesExternalNotificationsV2 struct {
 
 func (s dmitshurSeesExternalNotificationsV2) ListNotifications(ctx context.Context, opt notification.ListOptions) ([]notification.Notification, error) {
 	var nss []notification.Notification
+	var errors []error
 	ns, err := s.local.ListNotifications(ctx, opt)
 	if err != nil {
-		return nss, err
+		errors = append(errors, err)
 	}
 	nss = append(nss, ns...)
 
@@ -244,7 +245,7 @@ func (s dmitshurSeesExternalNotificationsV2) ListNotifications(ctx context.Conte
 		if currentUser == dmitshur {
 			ns, err := s.dmitshurGitHubNotification.ListNotifications(ctx, opt)
 			if err != nil {
-				return nss, fmt.Errorf("dmitshurGitHubNotification.ListNotifications: %v", err)
+				errors = append(errors, fmt.Errorf("dmitshurGitHubNotification.ListNotifications: %v", err))
 			}
 			nss = append(nss, ns...)
 		}
@@ -258,7 +259,7 @@ func (s dmitshurSeesExternalNotificationsV2) ListNotifications(ctx context.Conte
 		if currentUser == dmitshur {
 			ns, err := s.dmitshurGerritNotification.ListNotifications(ctx, opt)
 			if err != nil {
-				return nss, fmt.Errorf("dmitshurGerritNotification.ListNotifications: %v", err)
+				errors = append(errors, fmt.Errorf("dmitshurGerritNotification.ListNotifications: %v", err))
 			}
 			nss = append(nss, ns...)
 		}
@@ -269,6 +270,9 @@ func (s dmitshurSeesExternalNotificationsV2) ListNotifications(ctx context.Conte
 		nss = nss[:100]
 	}
 
+	if len(errors) > 0 {
+		return nss, fmt.Errorf("%d errors, including: %v", len(errors), errors[0])
+	}
 	return nss, nil
 }
 
@@ -299,9 +303,10 @@ func (s dmitshurSeesExternalNotificationsV2) StreamNotifications(ctx context.Con
 
 func (s dmitshurSeesExternalNotificationsV2) CountNotifications(ctx context.Context) (uint64, error) {
 	var count uint64
+	var errors []error
 	n, err := s.local.CountNotifications(ctx)
 	if err != nil {
-		return count, err
+		errors = append(errors, err)
 	}
 	count += n
 
@@ -312,17 +317,20 @@ func (s dmitshurSeesExternalNotificationsV2) CountNotifications(ctx context.Cont
 	if currentUser == dmitshur {
 		n, err := s.dmitshurGitHubNotification.CountNotifications(ctx)
 		if err != nil {
-			return count, err
+			errors = append(errors, fmt.Errorf("dmitshurGitHubNotification.CountNotifications: %v", err))
 		}
 		count += n
 
 		n, err = s.dmitshurGerritNotification.CountNotifications(ctx)
 		if err != nil {
-			return count, err
+			errors = append(errors, fmt.Errorf("dmitshurGerritNotification.CountNotifications: %v", err))
 		}
 		count += n
 	}
 
+	if len(errors) > 0 {
+		return count, fmt.Errorf("%d errors, including: %v", len(errors), errors[0])
+	}
 	return count, nil
 }
 

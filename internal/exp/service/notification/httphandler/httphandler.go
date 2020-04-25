@@ -25,10 +25,10 @@ func (h Notification) ListNotifications(w http.ResponseWriter, req *http.Request
 	opt.Namespace = req.URL.Query().Get("Namespace")
 	opt.All, _ = strconv.ParseBool(req.URL.Query().Get("All"))
 	notifs, err := h.Notification.ListNotifications(req.Context(), opt)
-	if err != nil {
-		return err
-	}
-	return httperror.JSONResponse{V: notifs}
+	return httperror.JSONResponse{V: struct {
+		Notifs []notification.Notification
+		Error  errorJSON
+	}{notifs, errorJSON{err}}}
 }
 
 func (h Notification) StreamNotifications(w http.ResponseWriter, req *http.Request) error {
@@ -67,10 +67,10 @@ func (h Notification) CountNotifications(w http.ResponseWriter, req *http.Reques
 		return httperror.Method{Allowed: []string{http.MethodGet}}
 	}
 	c, err := h.Notification.CountNotifications(req.Context())
-	if err != nil {
-		return err
-	}
-	return httperror.JSONResponse{V: c}
+	return httperror.JSONResponse{V: struct {
+		Count uint64
+		Error errorJSON
+	}{c, errorJSON{err}}}
 }
 
 func (h Notification) MarkNotificationRead(w http.ResponseWriter, req *http.Request) error {
@@ -86,4 +86,20 @@ func (h Notification) MarkNotificationRead(w http.ResponseWriter, req *http.Requ
 	}
 	err = h.Notification.MarkNotificationRead(req.Context(), namespace, threadType, threadID)
 	return err
+}
+
+// errorJSON marshals an error value into JSON.
+//
+// A nil Err value is encoded as the null JSON value, otherwise
+// the string returned by the Error method is encoded as a JSON string.
+type errorJSON struct {
+	Err error
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (e errorJSON) MarshalJSON() ([]byte, error) {
+	if e.Err == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(e.Err.Error())
 }
