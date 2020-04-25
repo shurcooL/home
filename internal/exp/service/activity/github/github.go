@@ -58,6 +58,7 @@ func NewService(
 		rtr:         router,
 	}
 	s.mail.chs = make(map[context.Context]chan<- []notification.Notification)
+	s.notifs.lastReadAt = make(map[thread]time.Time)
 	go func() {
 		err := s.loadAndPoll()
 		if err != nil {
