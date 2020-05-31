@@ -122,6 +122,7 @@ func handleError(
 		w.Header().Set("Content-Type", "application/json")
 		jw := json.NewEncoder(w)
 		jw.SetIndent("", "\t")
+		jw.SetEscapeHTML(false)
 		err := jw.Encode(err.V)
 		if err != nil {
 			log.Println("error encoding JSONResponse:", err)
