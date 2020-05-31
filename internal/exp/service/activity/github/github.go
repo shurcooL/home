@@ -220,6 +220,9 @@ func (s *Service) ListNotifications(ctx context.Context, opt notification.ListOp
 	case false:
 		s.mail.mu.Lock()
 		for _, n := range s.mail.notifs {
+			if opt.Namespace != "" && n.Namespace != opt.Namespace {
+				continue
+			}
 			lastReadAt, ok := lastReadAt[thread{n.Namespace, n.ThreadType, n.ThreadID}]
 			unread := ok && n.Time.After(lastReadAt)
 			if !unread {
