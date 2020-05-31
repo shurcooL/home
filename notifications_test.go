@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/shurcooL/notifications/fs"
 	"golang.org/x/net/webdav"
 )
 
@@ -17,7 +18,7 @@ func TestNotificationsRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	initNotifications(mux, webdav.NewMemFS(), nil, users, nil)
+	initNotifications(mux, fs.NewService(webdav.NewMemFS(), users), nil, users, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
 	rr := httptest.NewRecorder()

@@ -46,28 +46,23 @@ type router interface {
 	gerrit.Router
 }
 
-func initNotificationsV2(
+func newNotificationServiceV2(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	mux *http.ServeMux,
 	fs webdav.FileSystem,
 	githubActivityDir string,
 	gerritActivityDir string,
 	users users.Service,
 	router router,
-) (
-	githubActivity *githubactivity.Service,
-	gerritActivity *gerritactivity.Service,
-	_ error,
-) {
+) (notification.Service, *githubactivity.Service, *gerritactivity.Service, error) {
 	dmitshur, err := users.Get(context.Background(), dmitshur)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	newGitHubActivity, err := newDirWatcher(ctx, githubActivityDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("newDirWatcher: %v", err)
+		return nil, nil, nil, fmt.Errorf("newDirWatcher: %v", err)
 	}
 	authTransport := &oauth2.Transport{
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("HOME_GH_DMITSHUR_NOTIFICATIONS")}),
@@ -77,7 +72,7 @@ func initNotificationsV2(
 		Cache:               httpcache.NewMemoryCache(),
 		MarkCachedResponses: true,
 	}
-	githubActivity, err = githubactivity.NewService(
+	githubActivity, err := githubactivity.NewService(
 		fs,
 		http.Dir(githubActivityDir), newGitHubActivity,
 		githubv3.NewClient(&http.Client{Transport: cacheTransport, Timeout: 10 * time.Second}),
@@ -85,12 +80,12 @@ func initNotificationsV2(
 		dmitshur, users, router,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	newGerritActivity, err := newDirWatcher(ctx, gerritActivityDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("newDirWatcher: %v", err)
+		return nil, nil, nil, fmt.Errorf("newDirWatcher: %v", err)
 	}
 	// TODO, THINK: reuse client from newChangeService?
 	gerritClient, err := gerritapi.NewClient( // TODO: Auth.
@@ -101,25 +96,35 @@ func initNotificationsV2(
 		panic(fmt.Errorf("internal error: gerrit.NewClient returned non-nil error: %v", err))
 	}
 	gerritChange := gerritapichange.NewService(gerritClient)
-	gerritActivity, err = gerritactivity.NewService(
+	gerritActivity, err := gerritactivity.NewService(
 		ctx, wg, fs,
 		http.Dir(gerritActivityDir), newGerritActivity,
 		gerritChange,
 		dmitshur, users, router,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	notificationService := dmitshurSeesExternalNotificationsV2{
-		local:                      notificationfs.DevNull{},
+	notifService := dmitshurSeesExternalNotificationsV2{
+		local:                      notificationfs.NewService(fs, users),
 		dmitshurGitHubNotification: githubActivity,
 		dmitshurGerritNotification: gerritActivity,
 		users:                      users,
 	}
 
+	return notifService, githubActivity, gerritActivity, nil
+}
+
+func initNotificationsV2(
+	mux *http.ServeMux,
+	notifService notification.Service,
+	githubActivity interface{ Status() string },
+	gerritActivity interface{ Status() string },
+	users users.Service,
+) {
 	// Register HTTP API endpoints.
-	notificationAPIHandler := httphandler.Notification{Notification: notificationService}
+	notificationAPIHandler := httphandler.Notification{Notification: notifService}
 	mux.Handle(path.Join("/api/notificationv2", httproute.ListNotifications), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.ListNotifications)})
 	mux.Handle(path.Join("/api/notificationv2", httproute.StreamNotifications), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.StreamNotifications)})
 	mux.Handle(path.Join("/api/notificationv2", httproute.CountNotifications), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.CountNotifications)})
@@ -144,7 +149,7 @@ func initNotificationsV2(
 </style>`,
 	}
 	notificationsApp := notificationsv2.New(
-		notificationService,
+		notifService,
 		githubActivity, gerritActivity,
 		users,
 		opt,
@@ -179,8 +184,6 @@ func initNotificationsV2(
 	})}
 	mux.Handle("/notificationsv2", notificationsHandler)
 	mux.Handle("/notificationsv2/", notificationsHandler)
-
-	return githubActivity, gerritActivity, nil
 }
 
 func newDirWatcher(ctx context.Context, dir string) (<-chan struct{}, error) {

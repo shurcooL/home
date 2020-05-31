@@ -16,18 +16,14 @@ import (
 	"github.com/shurcooL/githubv4"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
-	"github.com/shurcooL/home/internal/exp/service/notification"
-	"github.com/shurcooL/home/internal/exp/service/notification/v2tov1"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/notifications/fs"
 	"github.com/shurcooL/notifications/githubapi"
 	"github.com/shurcooL/notificationsapp"
 	"github.com/shurcooL/notificationsapp/httphandler"
 	"github.com/shurcooL/notificationsapp/httproute"
 	"github.com/shurcooL/users"
-	"golang.org/x/net/webdav"
 	"golang.org/x/oauth2"
 )
 
@@ -36,8 +32,8 @@ import (
 // and handlers for the notifications app.
 func initNotifications(
 	mux *http.ServeMux,
-	root webdav.FileSystem,
-	gerritNotification notification.Service,
+	localNotifications notifications.Service,
+	gerritNotifications notifications.Service,
 	users users.Service,
 	router github.Router,
 ) notifications.Service {
@@ -56,9 +52,9 @@ func initNotifications(
 	)
 
 	notificationsService := dmitshurSeesExternalNotifications{
-		local:                       fs.NewService(root, users),
+		local:                       localNotifications,
 		dmitshurGitHubNotifications: dmitshurGitHubNotifications,
-		dmitshurGerritNotifications: v2tov1.Service{V2: gerritNotification},
+		dmitshurGerritNotifications: gerritNotifications,
 		users:                       users,
 	}
 

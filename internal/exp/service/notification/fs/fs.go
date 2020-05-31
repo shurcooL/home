@@ -14,35 +14,6 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-// TODO: Delete DevNull when it's no longer used.
-
-// DevNull is an empty placeholder notification.Service implementation.
-type DevNull struct{}
-
-func (DevNull) ListNotifications(ctx context.Context, opt notification.ListOptions) ([]notification.Notification, error) {
-	return nil, nil
-}
-
-func (DevNull) StreamNotifications(ctx context.Context, ch chan<- []notification.Notification) error {
-	return nil
-}
-
-func (DevNull) CountNotifications(ctx context.Context) (uint64, error) {
-	return 0, nil
-}
-
-func (DevNull) MarkThreadRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
-	return nil
-}
-
-func (DevNull) SubscribeThread(ctx context.Context, namespace, threadType string, threadID uint64, subscribers []users.UserSpec) error {
-	return nil
-}
-
-func (DevNull) NotifyThread(ctx context.Context, namespace, threadType string, threadID uint64, nr notification.NotificationRequest) error {
-	return nil
-}
-
 // NewService creates a virtual filesystem-backed notification.Service,
 // using root for storage.
 func NewService(root webdav.FileSystem, us users.Service) notification.Service {

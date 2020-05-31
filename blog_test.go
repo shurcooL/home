@@ -17,12 +17,11 @@ func TestBlogNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	notifications := initNotifications(mux, webdav.NewMemFS(), nil, users, nil)
-	issuesService, err := newIssuesService(webdav.NewMemFS(), notifications, nil, users, nil)
+	issuesService, err := newIssuesService(webdav.NewMemFS(), nil, nil, users, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = initBlog(mux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
+	err = initBlog(mux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, nil, users)
 	if err != nil {
 		t.Fatal(err)
 	}

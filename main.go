@@ -31,6 +31,7 @@ import (
 	"github.com/shurcooL/home/internal/exp/service/auth"
 	"github.com/shurcooL/home/internal/exp/service/auth/directfetch"
 	"github.com/shurcooL/home/internal/exp/service/auth/gcpfetch"
+	"github.com/shurcooL/home/internal/exp/service/notification/v2tov1"
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
@@ -159,8 +160,8 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		return fmt.Errorf("newReactionsService: %v", err)
 	}
 	githubRouter := dmitshurSeesHomeRouter{users: users}
-	githubActivity, gerritActivity, err := initNotificationsV2(
-		ctx, &wg, http.DefaultServeMux,
+	notifServiceV2, githubActivity, gerritActivity, err := newNotificationServiceV2(
+		ctx, &wg,
 		webdav.Dir(filepath.Join(storeDir, "notificationv2")),
 		filepath.Join(storeDir, "mail", "githubnotif"),
 		filepath.Join(storeDir, "mail", "gerritnotif"),
@@ -168,12 +169,16 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		githubRouter,
 	)
 	if err != nil {
-		return fmt.Errorf("initNotificationsV2: %v", err)
+		return fmt.Errorf("newNotificationServiceV2: %v", err)
+	}
+	localNotifications := v2tov1.Service{
+		V2:                  notifServiceV2.(dmitshurSeesExternalNotificationsV2).local,
+		NotifyPayloadSource: v2tov1.NewNotifyPayloadSource(),
 	}
 	notifications := initNotifications(
 		http.DefaultServeMux,
-		webdav.Dir(filepath.Join(storeDir, "notifications")),
-		gerritActivity,
+		localNotifications,
+		v2tov1.Service{V2: gerritActivity},
 		users,
 		githubRouter,
 	)
@@ -188,7 +193,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	}
 	issuesService, err := newIssuesService(
 		webdav.Dir(filepath.Join(storeDir, "issues")),
-		notifications, events, users, githubRouter,
+		notifications, multiEvents{events, localNotifications.NotifyPayloadSource}, users, githubRouter,
 	)
 	if err != nil {
 		return fmt.Errorf("newIssuesService: %v", err)
@@ -251,6 +256,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 
 	issuesApp := initIssues(http.DefaultServeMux, issuesService, changeService, notifications, users)
 	changesApp := initChanges(http.DefaultServeMux, changeService, issuesService, notifications, users)
+	initNotificationsV2(http.DefaultServeMux, notifServiceV2, githubActivity, gerritActivity, users)
 
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))

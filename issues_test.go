@@ -19,12 +19,11 @@ func TestNewIssueRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	notifications := initNotifications(mux, webdav.NewMemFS(), nil, users, nil)
-	issues, err := newIssuesService(webdav.NewMemFS(), notifications, nil, users, nil)
+	issues, err := newIssuesService(webdav.NewMemFS(), nil, nil, users, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	initIssues(mux, issues, zeroCounter{}, notifications, users)
+	initIssues(mux, issues, zeroCounter{}, nil, users)
 
 	req := httptest.NewRequest(http.MethodGet, "/issues/github.com/shurcooL/issuesapp/new", nil)
 	rr := httptest.NewRecorder()
@@ -47,12 +46,11 @@ func TestIssueNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	notifications := initNotifications(mux, webdav.NewMemFS(), nil, users, nil)
-	issues, err := newIssuesService(webdav.NewMemFS(), notifications, nil, users, nil)
+	issues, err := newIssuesService(webdav.NewMemFS(), nil, nil, users, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	initIssues(mux, issues, zeroCounter{}, notifications, users)
+	initIssues(mux, issues, zeroCounter{}, nil, users)
 
 	req := httptest.NewRequest(http.MethodGet, "/issues/github.com/shurcooL/issuesapp/1822", nil)
 	rr := httptest.NewRecorder()
