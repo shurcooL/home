@@ -3,8 +3,8 @@ package httproute
 
 // Route paths.
 const (
-	ListNotifications    = "list"
-	StreamNotifications  = "stream"
-	CountNotifications   = "count"
-	MarkNotificationRead = "mark-read"
+	ListNotifications   = "list"
+	StreamNotifications = "stream"
+	CountNotifications  = "count"
+	MarkThreadRead      = "mark-read"
 )

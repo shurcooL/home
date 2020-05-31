@@ -73,7 +73,7 @@ func (h Notification) CountNotifications(w http.ResponseWriter, req *http.Reques
 	}{c, errorJSON{err}}}
 }
 
-func (h Notification) MarkNotificationRead(w http.ResponseWriter, req *http.Request) error {
+func (h Notification) MarkThreadRead(w http.ResponseWriter, req *http.Request) error {
 	if req.Method != http.MethodPost {
 		return httperror.Method{Allowed: []string{http.MethodPost}}
 	}
@@ -84,7 +84,7 @@ func (h Notification) MarkNotificationRead(w http.ResponseWriter, req *http.Requ
 	if err != nil {
 		return httperror.BadRequest{Err: fmt.Errorf("parsing ThreadID query parameter: %v", err)}
 	}
-	err = h.Notification.MarkNotificationRead(req.Context(), namespace, threadType, threadID)
+	err = h.Notification.MarkThreadRead(req.Context(), namespace, threadType, threadID)
 	return err
 }
 

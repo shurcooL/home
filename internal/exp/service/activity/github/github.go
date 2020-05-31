@@ -272,11 +272,11 @@ func (s *Service) CountNotifications(ctx context.Context) (uint64, error) {
 	}
 }
 
-// MarkNotificationRead implements notification.Service.
+// MarkThreadRead implements notification.Service.
 //
 // Namespace must be of the form "github.com/{owner}/{repo}".
 // E.g., "github.com/google/go-cmp".
-func (s *Service) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+func (s *Service) MarkThreadRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
 	if u, err := s.users.GetAuthenticatedSpec(ctx); err != nil {
 		return err
 	} else if u != s.user.UserSpec {
@@ -421,6 +421,18 @@ func findNotification(ns []*githubv3.Notification, threadType string, threadID u
 		return n, nil
 	}
 	return nil, nil
+}
+
+// SubscribeThread implements notification.Service.
+func (*Service) SubscribeThread(_ context.Context, namespace, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+	// Nothing to do. GitHub takes care of this on their end, even when creating comments/issues via API.
+	return nil
+}
+
+// NotifyThread implements notification.Service.
+func (*Service) NotifyThread(_ context.Context, namespace, threadType string, threadID uint64, nr notification.NotificationRequest) error {
+	// Nothing to do. GitHub takes care of this on their end, even when creating comments/issues via API.
+	return nil
 }
 
 // List lists events.

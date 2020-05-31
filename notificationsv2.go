@@ -123,7 +123,7 @@ func initNotificationsV2(
 	mux.Handle(path.Join("/api/notificationv2", httproute.ListNotifications), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.ListNotifications)})
 	mux.Handle(path.Join("/api/notificationv2", httproute.StreamNotifications), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.StreamNotifications)})
 	mux.Handle(path.Join("/api/notificationv2", httproute.CountNotifications), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.CountNotifications)})
-	mux.Handle(path.Join("/api/notificationv2", httproute.MarkNotificationRead), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.MarkNotificationRead)})
+	mux.Handle(path.Join("/api/notificationv2", httproute.MarkThreadRead), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.MarkThreadRead)})
 
 	// Register notifications app endpoints.
 	opt := notificationsv2.Options{
@@ -334,28 +334,52 @@ func (s dmitshurSeesExternalNotificationsV2) CountNotifications(ctx context.Cont
 	return count, nil
 }
 
-func (s dmitshurSeesExternalNotificationsV2) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+func (s dmitshurSeesExternalNotificationsV2) MarkThreadRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+	service, err := s.service(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	return service.MarkThreadRead(ctx, namespace, threadType, threadID)
+}
+
+func (s dmitshurSeesExternalNotificationsV2) SubscribeThread(ctx context.Context, namespace, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+	service, err := s.service(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	return service.SubscribeThread(ctx, namespace, threadType, threadID, subscribers)
+}
+
+func (s dmitshurSeesExternalNotificationsV2) NotifyThread(ctx context.Context, namespace, threadType string, threadID uint64, nr notification.NotificationRequest) error {
+	service, err := s.service(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	return service.NotifyThread(ctx, namespace, threadType, threadID, nr)
+}
+
+func (s dmitshurSeesExternalNotificationsV2) service(ctx context.Context, namespace string) (notification.Service, error) {
 	switch {
 	default:
-		return s.local.MarkNotificationRead(ctx, namespace, threadType, threadID)
+		return s.local, nil
 	case strings.HasPrefix(namespace, "github.com/") &&
 		namespace != "github.com/shurcooL/issuesapp" && namespace != "github.com/shurcooL/notificationsapp":
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if currentUser != dmitshur {
-			return os.ErrPermission
+			return nil, os.ErrPermission
 		}
-		return s.dmitshurGitHubNotification.MarkNotificationRead(ctx, namespace, threadType, threadID)
+		return s.dmitshurGitHubNotification, nil
 	case strings.HasPrefix(namespace, "go.googlesource.com/"):
 		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if currentUser != dmitshur {
-			return os.ErrPermission
+			return nil, os.ErrPermission
 		}
-		return s.dmitshurGerritNotification.MarkNotificationRead(ctx, namespace, threadType, threadID)
+		return s.dmitshurGerritNotification, nil
 	}
 }

@@ -175,9 +175,9 @@ type frontend struct {
 
 func (f frontend) MarkStreamRead(namespace string, threadType string, threadID uint64) {
 	go func() {
-		err := f.ns.MarkNotificationRead(context.Background(), namespace, threadType, threadID)
+		err := f.ns.MarkThreadRead(context.Background(), namespace, threadType, threadID)
 		if err != nil {
-			log.Println("MarkNotificationRead:", err)
+			log.Println("MarkThreadRead:", err)
 			return
 		}
 		markStreamRead(namespace, threadType, threadID)
@@ -210,9 +210,9 @@ func (f frontend) MarkThreadRead(el js.Value, namespace string, threadType strin
 	}
 
 	go func() {
-		err := f.ns.MarkNotificationRead(context.Background(), namespace, threadType, threadID)
+		err := f.ns.MarkThreadRead(context.Background(), namespace, threadType, threadID)
 		if err != nil {
-			log.Println("MarkNotificationRead:", err)
+			log.Println("MarkThreadRead:", err)
 			return
 		}
 		markThreadRead(el)

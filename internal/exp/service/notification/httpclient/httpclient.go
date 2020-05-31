@@ -15,6 +15,7 @@ import (
 
 	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/exp/service/notification/httproute"
+	"github.com/shurcooL/users"
 	"golang.org/x/net/context/ctxhttp"
 )
 
@@ -135,9 +136,9 @@ func (n *notificationClient) CountNotifications(ctx context.Context) (uint64, er
 	return v.Count, nil
 }
 
-func (n *notificationClient) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+func (n *notificationClient) MarkThreadRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
 	u := url.URL{
-		Path: httproute.MarkNotificationRead,
+		Path: httproute.MarkThreadRead,
 		RawQuery: url.Values{ // TODO: Automate this conversion process.
 			"Namespace":  {namespace},
 			"ThreadType": {threadType},
@@ -154,4 +155,12 @@ func (n *notificationClient) MarkNotificationRead(ctx context.Context, namespace
 		return fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
 	}
 	return nil
+}
+
+func (*notificationClient) SubscribeThread(_ context.Context, namespace, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+	return fmt.Errorf("notificationClient.SubscribeThread: not implemented")
+}
+
+func (*notificationClient) NotifyThread(_ context.Context, namespace, threadType string, threadID uint64, nr notification.NotificationRequest) error {
+	return fmt.Errorf("notificationClient.NotifyThread: not implemented")
 }

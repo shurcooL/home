@@ -230,11 +230,11 @@ func (*Service) Log(_ context.Context, event event.Event) error {
 // gerritChangeThreadType is the notification thread type for Gerrit changes.
 const gerritChangeThreadType = "Change"
 
-// MarkNotificationRead implements notification.Service.
+// MarkThreadRead implements notification.Service.
 //
 // Namespace must be of the form "{server}/{project}".
 // E.g., "go.googlesource.com/image".
-func (s *Service) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+func (s *Service) MarkThreadRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
 	if u, err := s.users.GetAuthenticatedSpec(ctx); err != nil {
 		return err
 	} else if u != s.user.UserSpec {
@@ -274,6 +274,18 @@ func (s *Service) MarkNotificationRead(ctx context.Context, namespace, threadTyp
 	s.chsMu.Unlock()
 
 	return nil
+}
+
+// SubscribeThread implements notification.Service.
+func (*Service) SubscribeThread(_ context.Context, namespace, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+	// TODO: Do anything? Or not needed?
+	return fmt.Errorf("Service.SubscribeThread: not implemented")
+}
+
+// NotifyThread implements notification.Service.
+func (*Service) NotifyThread(_ context.Context, namespace, threadType string, threadID uint64, nr notification.NotificationRequest) error {
+	// TODO: Do anything? Or not needed?
+	return fmt.Errorf("Service.NotifyThread: not implemented")
 }
 
 type gerritNotif struct {

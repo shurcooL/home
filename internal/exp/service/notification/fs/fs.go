@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/shurcooL/home/internal/exp/service/notification"
+	"github.com/shurcooL/users"
 )
 
 // TODO: implement an actual filesystem-based (or otherwise) notification service
@@ -24,6 +25,14 @@ func (DevNull) CountNotifications(ctx context.Context) (uint64, error) {
 	return 0, nil
 }
 
-func (DevNull) MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+func (DevNull) MarkThreadRead(ctx context.Context, namespace, threadType string, threadID uint64) error {
+	return nil
+}
+
+func (DevNull) SubscribeThread(ctx context.Context, namespace, threadType string, threadID uint64, subscribers []users.UserSpec) error {
+	return nil
+}
+
+func (DevNull) NotifyThread(ctx context.Context, namespace, threadType string, threadID uint64, nr notification.NotificationRequest) error {
 	return nil
 }

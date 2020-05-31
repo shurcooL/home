@@ -5,9 +5,11 @@ package v2tov1
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"dmitri.shuralyov.com/state"
+	"github.com/shurcooL/events/event"
 	notifv2 "github.com/shurcooL/home/internal/exp/service/notification"
 	notifv1 "github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
@@ -16,6 +18,9 @@ import (
 // Service implements notifv1.Service using V2.
 type Service struct {
 	V2 notifv2.Service
+
+	// NotifyPayloadSource, if non-nil, enables Notify to work.
+	NotifyPayloadSource *eventsService
 }
 
 // List notifications for authenticated user.
@@ -161,7 +166,7 @@ func (s Service) Count(ctx context.Context, opt interface{}) (uint64, error) {
 // MarkRead marks the specified thread as read.
 // Returns a permission error if no authenticated user.
 func (s Service) MarkRead(ctx context.Context, repo notifv1.RepoSpec, threadType string, threadID uint64) error {
-	return s.V2.MarkNotificationRead(ctx, repo.URI, threadType, threadID)
+	return s.V2.MarkThreadRead(ctx, repo.URI, threadType, threadID)
 }
 
 // MarkAllRead marks all notifications in the specified repository as read.
@@ -175,11 +180,57 @@ func (s Service) MarkAllRead(ctx context.Context, repo notifv1.RepoSpec) error {
 // to watch the entire repo.
 // Returns a permission error if no authenticated user.
 func (s Service) Subscribe(ctx context.Context, repo notifv1.RepoSpec, threadType string, threadID uint64, subscribers []users.UserSpec) error {
-	return fmt.Errorf("Subscribe: not implemented")
+	return s.V2.SubscribeThread(ctx, repo.URI, threadType, threadID, subscribers)
 }
 
 // Notify notifies subscribers of the specified thread of a notification.
 // Returns a permission error if no authenticated user.
 func (s Service) Notify(ctx context.Context, repo notifv1.RepoSpec, threadType string, threadID uint64, nr notifv1.NotificationRequest) error {
-	return fmt.Errorf("Notify: not implemented")
+	if s.NotifyPayloadSource == nil {
+		return fmt.Errorf("Notify: support for s.NotifyPayloadSource == nil is not implemented")
+	}
+	// TODO: Add user service and use it to check if current user doesn't match nr.Actor, then return error.
+	go func() {
+		err := s.V2.NotifyThread(ctx, repo.URI, threadType, threadID, notifv2.NotificationRequest{
+			ImportPaths: []string{repo.URI},
+			Time:        nr.UpdatedAt,
+			Payload:     <-s.NotifyPayloadSource.payload,
+		})
+		if err != nil {
+			log.Println("v2tov1.Service.Notify: V2.NotifyThread:", err)
+		}
+	}()
+	return nil
+}
+
+// NewNotifyPayloadSource creates a NotifyPayloadSource for use in Service.
+// Its return value implements events.Service and it should be passed to
+// issue tracker v1 alongside with the Service. It's used to capture the
+// notification payload to implement Service.Notify without losing information.
+func NewNotifyPayloadSource() *eventsService {
+	return &eventsService{
+		payload: make(chan interface{}, 1),
+	}
+}
+
+type eventsService struct {
+	payload chan interface{} // Value is notifv2 payload.
+}
+
+// List implements events.Service.
+func (eventsService) List(context.Context) ([]event.Event, error) { return nil, nil }
+
+// List implements events.Service.
+func (s eventsService) Log(ctx context.Context, e event.Event) error {
+	switch p := e.Payload.(type) {
+	case event.Issue:
+		s.payload <- notifv2.Issue(p)
+	case event.Change:
+		s.payload <- notifv2.Change(p)
+	case event.IssueComment:
+		s.payload <- notifv2.IssueComment(p)
+	case event.ChangeComment:
+		s.payload <- notifv2.ChangeComment(p)
+	}
+	return nil
 }

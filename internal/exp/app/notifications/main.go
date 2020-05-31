@@ -28,7 +28,7 @@ import (
 // 	mux.Handle(path.Join("/api/notificationv2", httproute.ListNotifications), errorHandler(apiHandler.ListNotifications))
 // 	mux.Handle(path.Join("/api/notificationv2", httproute.StreamNotifications), errorHandler(apiHandler.StreamNotifications))
 // 	mux.Handle(path.Join("/api/notificationv2", httproute.CountNotifications), errorHandler(apiHandler.CountNotifications))
-// 	mux.Handle(path.Join("/api/notificationv2", httproute.MarkNotificationRead), errorHandler(apiHandler.MarkNotificationRead))
+// 	mux.Handle(path.Join("/api/notificationv2", httproute.MarkThreadRead), errorHandler(apiHandler.MarkThreadRead))
 //
 func New(
 	service notification.Service,

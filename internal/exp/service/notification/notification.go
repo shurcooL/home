@@ -22,15 +22,32 @@ type Service interface {
 	// StreamNotifications streams notifications for authenticated user,
 	// sending them to ch until context is canceled or an error occurs.
 	// A permission error is returned if no authenticated user.
+	// TODO: Consider changing signature to single Notification rather than slice, if slice isn't helpful.
 	StreamNotifications(ctx context.Context, ch chan<- []Notification) error
 
 	// CountNotifications counts unread notifications for authenticated user.
 	// A permission error is returned if no authenticated user.
 	CountNotifications(ctx context.Context) (uint64, error)
 
-	// MarkNotificationRead marks the specified notification thread as read.
+	// MarkThreadRead marks the specified notification thread as read.
 	// A permission error is returned if no authenticated user.
-	MarkNotificationRead(ctx context.Context, namespace, threadType string, threadID uint64) error
+	MarkThreadRead(ctx context.Context, namespace, threadType string, threadID uint64) error
+
+	// SubscribeThread subscribes subscribers to the specified thread.
+	// If threadType and threadID are zero, subscribers are subscribed
+	// to watch the entire namespace.
+	// Returns a permission error if no authenticated user.
+	//
+	// THINK: Why is MarkRead and MarkAllRead 2 separate methods instead of 1,
+	//        but this is combined into one method? Maybe there should be:
+	//        SubscribeAll(ctx context.Context, namespace string, subscribers []users.UserSpec) error
+	//        Or maybe MarkAllRead should be merged into MarkRead?
+	SubscribeThread(ctx context.Context, namespace, threadType string, threadID uint64, subscribers []users.UserSpec) error
+
+	// NotifyThread notifies subscribers of the specified thread of a notification.
+	// The authenticated user will be the notification actor.
+	// Returns a permission error if no authenticated user.
+	NotifyThread(ctx context.Context, namespace, threadType string, threadID uint64, nr NotificationRequest) error
 }
 
 // ListOptions are options for ListNotifications.
@@ -42,6 +59,20 @@ type ListOptions struct {
 	// All specifies whether to include read notifications in addition to
 	// unread ones.
 	All bool
+}
+
+// NotificationRequest represents a request to create a notification.
+type NotificationRequest struct {
+	ImportPaths []string  // 1 or more.
+	Time        time.Time // Canonical initial time of the notification request.
+
+	// Payload specifies the event type. It's one of
+	// Issue, Change, IssueComment, or ChangeComment.
+	Payload interface{}
+
+	// TODO: Need these?
+	//Participating bool // Whether user is participating in the thread, or just watching.
+	//Mentioned     bool // Whether user was specifically @mentioned in the content.
 }
 
 // Notification represents a notification.
@@ -128,7 +159,7 @@ func (n *Notification) UnmarshalJSON(b []byte) error {
 		Payload json.RawMessage
 
 		Unread        bool
-		Participating bool // Whether user is participating in the thread, or just watching.
+		Participating bool
 		Mentioned     bool
 	}
 	err := json.Unmarshal(b, &v)
