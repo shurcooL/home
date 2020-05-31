@@ -10,9 +10,9 @@ import (
 	"github.com/shurcooL/home/exp/vec/attr"
 	"github.com/shurcooL/home/exp/vec/elem"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -31,7 +31,7 @@ var aboutHTML = template.Must(template.New("").Parse(`<html>
 	<body>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
-func initAbout(notifications notifications.Service, users users.Service) {
+func initAbout(notification notification.Service, users users.Service) {
 	aboutHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
@@ -50,7 +50,7 @@ func initAbout(notifications notifications.Service, users users.Service) {
 		}
 		var nc uint64
 		if authenticatedUser.ID != 0 {
-			nc, err = notifications.Count(req.Context(), nil)
+			nc, err = notification.CountNotifications(req.Context())
 			if err != nil {
 				return err
 			}

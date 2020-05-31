@@ -7,10 +7,10 @@ import (
 	"net/http"
 
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/page/idiomaticgo"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 )
 
@@ -30,7 +30,7 @@ var idiomaticGoHTML = template.Must(template.New("").Parse(`<html>
 	</head>
 	<body>`))
 
-func initIdiomaticGo(issues issues.Service, notifications notifications.Service, usersService users.Service) {
+func initIdiomaticGo(issues issues.Service, notification notification.Service, usersService users.Service) {
 	http.Handle("/idiomatic-go", cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
@@ -50,7 +50,7 @@ func initIdiomaticGo(issues issues.Service, notifications notifications.Service,
 			authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 		}
 		returnURL := req.RequestURI
-		err = idiomaticgo.RenderBodyInnerHTML(req.Context(), w, issues, notifications, authenticatedUser, returnURL)
+		err = idiomaticgo.RenderBodyInnerHTML(req.Context(), w, issues, notification, authenticatedUser, returnURL)
 		if err != nil {
 			return err
 		}

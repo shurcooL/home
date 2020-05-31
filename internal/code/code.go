@@ -14,7 +14,7 @@ import (
 
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/events/event"
-	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/users"
 )
 
@@ -26,14 +26,14 @@ type Service struct {
 	dirs         []*Directory          // Sorted.
 	byImportPath map[string]*Directory // Key is import path.
 
-	notifications notifications.ExternalService
-	events        events.ExternalService
-	users         users.Service
+	notification notification.Service
+	events       events.ExternalService
+	users        users.Service
 }
 
 // NewService discovers Go code inside the repository store at reposDir,
 // and returns a code service that uses said repository store.
-func NewService(reposDir string, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (*Service, error) {
+func NewService(reposDir string, notification notification.Service, events events.ExternalService, users users.Service) (*Service, error) {
 	dirs, byImportPath, err := discover(reposDir)
 	if err != nil {
 		return nil, err
@@ -44,9 +44,9 @@ func NewService(reposDir string, notifications notifications.ExternalService, ev
 		dirs:         dirs,
 		byImportPath: byImportPath,
 
-		notifications: notifications,
-		events:        events,
-		users:         users,
+		notification: notification,
+		events:       events,
+		users:        users,
 	}, nil
 }
 
@@ -112,7 +112,7 @@ func (s *Service) CreateRepo(ctx context.Context, repoSpec, description string) 
 	s.mu.Unlock()
 
 	// Watch the newly created repository.
-	err = s.notifications.Subscribe(ctx, notifications.RepoSpec{URI: repoSpec}, "", 0, []users.UserSpec{currentUser.UserSpec})
+	err = s.notification.SubscribeThread(ctx, repoSpec, "", 0, []users.UserSpec{currentUser.UserSpec})
 	if err != nil {
 		return err
 	}

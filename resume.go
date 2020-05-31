@@ -10,9 +10,9 @@ import (
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/page/resume"
 	"github.com/shurcooL/httperror"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 )
@@ -31,7 +31,7 @@ var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape
 	</head>
 	<body>`))
 
-func initResume(reactions reactions.Service, notifications notifications.Service, usersService users.Service) {
+func initResume(reactions reactions.Service, notification notification.Service, usersService users.Service) {
 	http.Handle("/resume", cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
@@ -56,7 +56,7 @@ func initResume(reactions reactions.Service, notifications notifications.Service
 				authenticatedUser = users.User{} // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 			}
 			returnURL := req.RequestURI
-			err = resume.RenderBodyInnerHTML(req.Context(), w, reactions, notifications, usersService, time.Now(), authenticatedUser, returnURL)
+			err = resume.RenderBodyInnerHTML(req.Context(), w, reactions, notification, usersService, time.Now(), authenticatedUser, returnURL)
 			if err != nil {
 				return err
 			}

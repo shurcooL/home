@@ -235,18 +235,18 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	http.Handle("/api/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Upload)})
 	http.Handle("/usercontent/", http.StripPrefix("/usercontent", cookieAuth{httputil.ErrorHandler(users, userContentHandler.Serve)}))
 
-	indexHandler := initIndex(events, notifications, users)
+	indexHandler := initIndex(events, notifServiceV2, users)
 
-	initAbout(notifications, users)
+	initAbout(notifServiceV2, users)
 
-	err = initBlog(http.DefaultServeMux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifications, users)
+	err = initBlog(http.DefaultServeMux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifServiceV2, users)
 	if err != nil {
 		return fmt.Errorf("initBlog: %v", err)
 	}
 
 	// Code repositories (part 1 of 2).
 	reposDir := filepath.Join(storeDir, "repositories")
-	code, err := codepkg.NewService(reposDir, notifications, events, users)
+	code, err := codepkg.NewService(reposDir, notifServiceV2, events, users)
 	if err != nil {
 		return fmt.Errorf("code.NewService: %v", err)
 	}
@@ -267,9 +267,9 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	fontsHandler := cookieAuth{httpgzip.FileServer(assets.Fonts, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/fonts/", http.StripPrefix("/assets/fonts", fontsHandler))
 
-	initResume(reactions, notifications, users)
+	initResume(reactions, notifServiceV2, users)
 
-	initIdiomaticGo(issuesService, notifications, users)
+	initIdiomaticGo(issuesService, notifServiceV2, users)
 
 	// Code repositories (part 2 of 2).
 	moduleHandler := codepkg.ModuleHandler{Code: code}
@@ -286,19 +286,19 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	if err != nil {
 		return fmt.Errorf("code.NewGitHandler: %v", err)
 	}
-	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifications, users, gitUsers}
-	servePackagesMaybe := initPackages(code, notifications, users)
+	codeHandler := codeHandler{code, reposDir, issuesApp, changesApp, issuesService, changeService, notifServiceV2, users, gitUsers}
+	servePackagesMaybe := initPackages(code, notifServiceV2, users)
 
 	initAction(code, users)
 
 	initTalks(
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "talks"))),
-		notifications, users)
+		notifServiceV2, users)
 
 	initProjects(
 		http.DefaultServeMux,
 		skipDot(http.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "projects"))),
-		notifications, users)
+		notifServiceV2, users)
 
 	if *metricsHTTPFlag != "" {
 		initMetrics(cancel, *metricsHTTPFlag)

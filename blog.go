@@ -11,12 +11,13 @@ import (
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
+	"github.com/shurcooL/home/internal/exp/service/notification/v2tov1"
 	blogpkg "github.com/shurcooL/home/internal/page/blog"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issuesapp"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 )
 
@@ -37,14 +38,14 @@ var blogHTML = template.Must(template.New("").Parse(`<html>
 	<body>`))
 
 // initBlog registers a blog handler with blog URI as blog content source.
-func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.RepoSpec, notifications notifications.Service, users users.Service) error {
+func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.RepoSpec, notification notification.Service, users users.Service) error {
 	dmitshurBlogService := dmitshurBlogService{
 		Service: issuesService,
 		users:   users,
 	}
 
 	opt := issuesapp.Options{
-		Notifications: notifications,
+		Notifications: v2tov1.Service{V2: notification},
 
 		HeadPre: analyticsHTML + `<title>Dmitri Shuralyov - Blog</title>
 <link href="/icon.png" rel="icon" type="image/png">
@@ -144,7 +145,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 		}
 		var nc uint64
 		if authenticatedUser.ID != 0 {
-			nc, err = notifications.Count(req.Context(), nil)
+			nc, err = notification.CountNotifications(req.Context())
 			if err != nil {
 				return nil, err
 			}
@@ -216,7 +217,7 @@ func initBlog(mux *http.ServeMux, issuesService issues.Service, blog issues.Repo
 				return err // THINK: Should it be a fatal error or not? What about on frontend vs backend?
 			}
 			returnURL := req.RequestURI
-			err = blogpkg.RenderBodyInnerHTML(req.Context(), w, issuesService, blog, notifications, authenticatedUser, returnURL)
+			err = blogpkg.RenderBodyInnerHTML(req.Context(), w, issuesService, blog, notification, authenticatedUser, returnURL)
 			if err != nil {
 				return err
 			}

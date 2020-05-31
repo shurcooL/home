@@ -21,8 +21,8 @@ import (
 	"github.com/shurcooL/go/timeutil"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
@@ -42,11 +42,11 @@ var indexHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 	<body>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
-func initIndex(events events.Service, notifications notifications.Service, users users.Service) http.Handler {
+func initIndex(events events.Service, notification notification.Service, users users.Service) http.Handler {
 	h := &indexHandler{
 		AuthzEndpoint: indieauthMeFlag.Me != nil,
 		events:        events,
-		notifications: notifications,
+		notification:  notification,
 		users:         users,
 	}
 	return cookieAuth{httputil.ErrorHandler(users, h.ServeHTTP)}
@@ -55,7 +55,7 @@ func initIndex(events events.Service, notifications notifications.Service, users
 type indexHandler struct {
 	AuthzEndpoint bool // Whether to advertise the IndieAuth authorization endpoint.
 	events        events.Service
-	notifications notifications.Service
+	notification  notification.Service
 	users         users.Service
 }
 
@@ -88,7 +88,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	}
 	var nc uint64
 	if authenticatedUser.ID != 0 {
-		nc, err = h.notifications.Count(req.Context(), nil)
+		nc, err = h.notification.CountNotifications(req.Context())
 		if err != nil {
 			return err
 		}

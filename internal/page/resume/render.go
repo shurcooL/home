@@ -8,8 +8,8 @@ import (
 	"time"
 
 	homecomponent "github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/resume"
 	"github.com/shurcooL/users"
@@ -22,11 +22,11 @@ const ReactableURL = "dmitri.shuralyov.com/resume"
 
 // RenderBodyInnerHTML renders the inner HTML of the <body> element of the page that displays the resume.
 // It's safe for concurrent use.
-func RenderBodyInnerHTML(ctx context.Context, w io.Writer, reactionsService reactions.Service, notifications notifications.Service, users users.Service, now time.Time, authenticatedUser users.User, returnURL string) error {
+func RenderBodyInnerHTML(ctx context.Context, w io.Writer, reactionsService reactions.Service, notification notification.Service, users users.Service, now time.Time, authenticatedUser users.User, returnURL string) error {
 	var nc uint64
 	if authenticatedUser.ID != 0 {
 		var err error
-		nc, err = notifications.Count(ctx, nil)
+		nc, err = notification.CountNotifications(ctx)
 		if err != nil {
 			// THINK: Should it be a fatal error or not? What about on frontend vs backend?
 			log.Println(err)

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/page/idiomaticgo"
 	"github.com/shurcooL/issues/fs"
 	"github.com/shurcooL/notifications"
@@ -27,10 +28,9 @@ var updateFlag = flag.Bool("update", false, "Update golden files.")
 // TestBodyInnerHTML verifies that idiomaticgo.RenderBodyInnerHTML renders the body inner HTML as expected.
 func TestBodyInnerHTML(t *testing.T) {
 	users := mockUsers{}
-	notifications := mockNotifications{}
 	issues, err := fs.NewService(
 		webdavfs.New(issuesFS),
-		notifications, nil, users)
+		mockNotifications{}, nil, users)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestBodyInnerHTML(t *testing.T) {
 	returnURL := "http://localhost:8080/idiomatic-go"
 
 	var buf bytes.Buffer
-	err = idiomaticgo.RenderBodyInnerHTML(context.Background(), &buf, issues, notifications, authenticatedUser, returnURL)
+	err = idiomaticgo.RenderBodyInnerHTML(context.Background(), &buf, issues, mockNotification{}, authenticatedUser, returnURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,10 +65,9 @@ func TestBodyInnerHTML(t *testing.T) {
 
 func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 	users := mockUsers{}
-	notifications := mockNotifications{}
 	issues, err := fs.NewService(
 		webdav.Dir(filepath.Join(os.Getenv("HOME"), "Dropbox", "Store", "issues")),
-		notifications, nil, users)
+		mockNotifications{}, nil, users)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -81,7 +80,7 @@ func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := idiomaticgo.RenderBodyInnerHTML(context.Background(), ioutil.Discard, issues, notifications, authenticatedUser, returnURL)
+		err := idiomaticgo.RenderBodyInnerHTML(context.Background(), ioutil.Discard, issues, mockNotification{}, authenticatedUser, returnURL)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -120,3 +119,7 @@ func (m mockUsers) GetAuthenticated(ctx context.Context) (users.User, error) {
 type mockNotifications struct{ notifications.Service }
 
 func (mockNotifications) Count(_ context.Context, opt interface{}) (uint64, error) { return 0, nil }
+
+type mockNotification struct{ notification.Service }
+
+func (mockNotification) CountNotifications(_ context.Context) (uint64, error) { return 0, nil }

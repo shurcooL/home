@@ -15,7 +15,7 @@ import (
 
 	"github.com/shurcooL/events/event"
 	"github.com/shurcooL/home/internal/code"
-	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/users"
 )
 
@@ -34,10 +34,10 @@ func TestCode(t *testing.T) {
 		t.Fatal("cp -R failed:", err)
 	}
 
-	notifications := mockNotifications{}
+	notification := mockNotification{}
 	events := &mockEvents{}
 	users := mockUsers{}
-	service, err := code.NewService(filepath.Join(tempDir, "repositories"), notifications, events, users)
+	service, err := code.NewService(filepath.Join(tempDir, "repositories"), notification, events, users)
 	if err != nil {
 		t.Fatal("code.NewService:", err)
 	}
@@ -495,9 +495,9 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 	}
 }
 
-type mockNotifications struct{ notifications.Service }
+type mockNotification struct{ notification.Service }
 
-func (mockNotifications) Subscribe(context.Context, notifications.RepoSpec, string, uint64, []users.UserSpec) error {
+func (mockNotification) SubscribeThread(context.Context, string, string, uint64, []users.UserSpec) error {
 	return nil
 }
 

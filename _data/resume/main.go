@@ -18,8 +18,8 @@ import (
 	"github.com/shurcooL/frontend/reactionsmenu"
 	homecomponent "github.com/shurcooL/home/component"
 	homehttp "github.com/shurcooL/home/http"
+	"github.com/shurcooL/home/internal/exp/service/notification/httpclient"
 	"github.com/shurcooL/home/internal/page/resume"
-	"github.com/shurcooL/notificationsapp/httpclient"
 	"github.com/shurcooL/users"
 	"golang.org/x/oauth2"
 	"honnef.co/go/js/dom"
@@ -56,10 +56,10 @@ func setup(ctx context.Context) {
 
 		httpClient := httpClient()
 
-		notificationsService := httpclient.NewNotifications(httpClient, "", "")
+		notificationService := httpclient.NewNotification(httpClient, "", "", "/api/notificationv2")
 		returnURL := dom.GetWindow().Location().Pathname + dom.GetWindow().Location().Search
 		var buf bytes.Buffer
-		err = resume.RenderBodyInnerHTML(ctx, &buf, reactionsService, notificationsService, usersService, time.Now(), authenticatedUser, returnURL)
+		err = resume.RenderBodyInnerHTML(ctx, &buf, reactionsService, notificationService, usersService, time.Now(), authenticatedUser, returnURL)
 		if err != nil {
 			log.Println(err)
 			return

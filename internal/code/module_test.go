@@ -16,10 +16,10 @@ import (
 )
 
 func TestModuleHandler(t *testing.T) {
-	notifications := mockNotifications{}
+	notification := mockNotification{}
 	events := &mockEvents{}
 	users := mockUsers{}
-	service, err := code.NewService(filepath.Join("testdata", "repositories"), notifications, events, users)
+	service, err := code.NewService(filepath.Join("testdata", "repositories"), notification, events, users)
 	if err != nil {
 		t.Fatal("code.NewService:", err)
 	}

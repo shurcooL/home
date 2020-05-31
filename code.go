@@ -12,24 +12,24 @@ import (
 
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/httpgzip"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/tools/godoc/vfs"
 	"sourcegraph.com/sourcegraph/go-vcs/vcs/git"
 )
 
 type codeHandler struct {
-	code          *code.Service
-	reposDir      string
-	issuesApp     http.Handler
-	changesApp    http.Handler
-	issues        issueCounter
-	change        changeCounter
-	notifications notifications.Service
-	users         users.Service
-	gitUsers      map[string]users.User // Key is lower git author email.
+	code         *code.Service
+	reposDir     string
+	issuesApp    http.Handler
+	changesApp   http.Handler
+	issues       issueCounter
+	change       changeCounter
+	notification notification.Service
+	users        users.Service
+	gitUsers     map[string]users.User // Key is lower git author email.
 }
 
 func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (ok bool) {
@@ -100,10 +100,10 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 				DocHTML:    d.Package.DocHTML,
 				LicenseURL: licenseURL,
 			},
-			issues:        h.issues,
-			change:        h.change,
-			notifications: h.notifications,
-			users:         h.users,
+			issues:       h.issues,
+			change:       h.change,
+			notification: h.notification,
+			users:        h.users,
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
@@ -123,58 +123,58 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 		return true
 	case req.URL.Path == route.PkgHistory(pkgPath):
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitsHandlerPkg{
-			Repo:          repo,
-			PkgPath:       pkgPath,
-			Dir:           d,
-			notifications: h.notifications,
-			users:         h.users,
-			gitUsers:      h.gitUsers,
+			Repo:         repo,
+			PkgPath:      pkgPath,
+			Dir:          d,
+			notification: h.notification,
+			users:        h.users,
+			gitUsers:     h.gitUsers,
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
 	case strings.HasPrefix(req.URL.Path, route.PkgCommit(pkgPath)+"/"):
 		req = stripPrefix(req, len(route.PkgCommit(pkgPath)))
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitHandlerPkg{
-			Repo:          repo,
-			PkgPath:       pkgPath,
-			Dir:           d,
-			notifications: h.notifications,
-			users:         h.users,
-			gitUsers:      h.gitUsers,
+			Repo:         repo,
+			PkgPath:      pkgPath,
+			Dir:          d,
+			notification: h.notification,
+			users:        h.users,
+			gitUsers:     h.gitUsers,
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
 	case req.URL.Path == route.RepoIndex(repo.Path):
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&repositoryHandler{
-			Repo:          repo,
-			code:          h.code,
-			issues:        h.issues,
-			change:        h.change,
-			notifications: h.notifications,
-			users:         h.users,
+			Repo:         repo,
+			code:         h.code,
+			issues:       h.issues,
+			change:       h.change,
+			notification: h.notification,
+			users:        h.users,
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
 	case req.URL.Path == route.RepoHistory(repo.Path):
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitsHandler{
-			Repo:          repo,
-			issues:        h.issues,
-			change:        h.change,
-			notifications: h.notifications,
-			users:         h.users,
-			gitUsers:      h.gitUsers,
+			Repo:         repo,
+			issues:       h.issues,
+			change:       h.change,
+			notification: h.notification,
+			users:        h.users,
+			gitUsers:     h.gitUsers,
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
 	case strings.HasPrefix(req.URL.Path, route.RepoCommit(repo.Path)+"/"):
 		req = stripPrefix(req, len(route.RepoCommit(repo.Path)))
 		h := cookieAuth{httputil.ErrorHandler(h.users, (&commitHandler{
-			Repo:          repo,
-			issues:        h.issues,
-			change:        h.change,
-			notifications: h.notifications,
-			users:         h.users,
-			gitUsers:      h.gitUsers,
+			Repo:         repo,
+			issues:       h.issues,
+			change:       h.change,
+			notification: h.notification,
+			users:        h.users,
+			gitUsers:     h.gitUsers,
 		}).ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true

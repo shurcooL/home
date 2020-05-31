@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/page/resume"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/reactions/fs"
 	"github.com/shurcooL/users"
@@ -24,7 +24,7 @@ var updateFlag = flag.Bool("update", false, "Update golden files.")
 // TestBodyInnerHTML validates that resume.RenderBodyInnerHTML renders the body inner HTML as expected.
 func TestBodyInnerHTML(t *testing.T) {
 	var buf bytes.Buffer
-	err := resume.RenderBodyInnerHTML(context.TODO(), &buf, mockReactions{}, mockNotifications{}, mockUsers{}, mockTime, alice, "/")
+	err := resume.RenderBodyInnerHTML(context.TODO(), &buf, mockReactions{}, mockNotification{}, mockUsers{}, mockTime, alice, "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	notifications := mockNotifications{}
+	notification := mockNotification{}
 	authenticatedUser, err := users.GetAuthenticated(context.Background())
 	if err != nil {
 		b.Fatal(err)
@@ -64,7 +64,7 @@ func BenchmarkRenderBodyInnerHTML(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := resume.RenderBodyInnerHTML(context.Background(), ioutil.Discard, reactions, notifications, users, mockTime, authenticatedUser, returnURL)
+		err := resume.RenderBodyInnerHTML(context.Background(), ioutil.Discard, reactions, notification, users, mockTime, authenticatedUser, returnURL)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -101,9 +101,9 @@ func (mockReactions) List(_ context.Context, uri string) (map[string][]reactions
 	}, nil
 }
 
-type mockNotifications struct{ notifications.Service }
+type mockNotification struct{ notification.Service }
 
-func (mockNotifications) Count(_ context.Context, opt interface{}) (uint64, error) { return 0, nil }
+func (mockNotification) CountNotifications(_ context.Context) (uint64, error) { return 0, nil }
 
 type mockUsers struct{ users.Service }
 

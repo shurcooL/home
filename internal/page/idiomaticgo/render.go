@@ -9,9 +9,9 @@ import (
 
 	"github.com/shurcooL/github_flavored_markdown"
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/issues"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octicon"
 	reactionscomponent "github.com/shurcooL/reactions/component"
 	"github.com/shurcooL/sanitized_anchor_name"
@@ -27,11 +27,11 @@ const ReactableURL = idiomaticGoURI
 
 // RenderBodyInnerHTML renders the inner HTML of the <body> element of the Idiomatic Go page.
 // It's safe for concurrent use.
-func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.Service, notifications notifications.Service, authenticatedUser users.User, returnURL string) error {
+func RenderBodyInnerHTML(ctx context.Context, w io.Writer, issuesService issues.Service, notification notification.Service, authenticatedUser users.User, returnURL string) error {
 	var nc uint64
 	if authenticatedUser.ID != 0 {
 		var err error
-		nc, err = notifications.Count(ctx, nil)
+		nc, err = notification.CountNotifications(ctx)
 		if err != nil {
 			return err
 		}

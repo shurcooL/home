@@ -13,10 +13,10 @@ import (
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/httpgzip"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -33,12 +33,12 @@ var projectsHTML = template.Must(template.New("").Parse(`<html>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
 // initProjects registers a projects handler with root as projects content source.
-func initProjects(mux *http.ServeMux, root http.FileSystem, notifications notifications.Service, users users.Service) {
+func initProjects(mux *http.ServeMux, root http.FileSystem, notification notification.Service, users users.Service) {
 	projectsHandler := http.StripPrefix("/projects", cookieAuth{httputil.ErrorHandler(users, (&projectsHandler{
 		fs: root,
 
-		notifications: notifications,
-		users:         users,
+		notification: notification,
+		users:        users,
 	}).ServeHTTP)})
 	// Register "/projects/" but not "/projects", we need it to redirect to /projects/.
 	mux.Handle("/projects/", projectsHandler)
@@ -47,8 +47,8 @@ func initProjects(mux *http.ServeMux, root http.FileSystem, notifications notifi
 type projectsHandler struct {
 	fs http.FileSystem
 
-	notifications notifications.Service
-	users         users.Service
+	notification notification.Service
+	users        users.Service
 }
 
 func (h *projectsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
@@ -122,7 +122,7 @@ func (h *projectsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) er
 		}
 		var nc uint64
 		if authenticatedUser.ID != 0 {
-			nc, err = h.notifications.Count(req.Context(), nil)
+			nc, err = h.notification.CountNotifications(req.Context())
 			if err != nil {
 				return err
 			}

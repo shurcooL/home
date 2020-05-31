@@ -12,10 +12,10 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -30,7 +30,7 @@ var packagesHTML = template.Must(template.New("").Parse(`<html>
 	</head>
 	<body>`))
 
-func initPackages(code *code.Service, notifications notifications.Service, usersService users.Service) func(w http.ResponseWriter, req *http.Request) bool {
+func initPackages(code *code.Service, notification notification.Service, usersService users.Service) func(w http.ResponseWriter, req *http.Request) bool {
 	packagesHandler := cookieAuth{httputil.ErrorHandler(usersService, func(w http.ResponseWriter, req *http.Request) error {
 		if req.Method != "GET" {
 			return httperror.Method{Allowed: []string{"GET"}}
@@ -56,7 +56,7 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 		}
 		var nc uint64
 		if authenticatedUser.ID != 0 {
-			nc, err = notifications.Count(req.Context(), nil)
+			nc, err = notification.CountNotifications(req.Context())
 			if err != nil {
 				return err
 			}

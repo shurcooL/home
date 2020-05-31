@@ -20,12 +20,12 @@ import (
 	"github.com/shurcooL/highlight_diff"
 	homecomponent "github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	issuescomponent "github.com/shurcooL/issuesapp/component"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"github.com/sourcegraph/annotate"
@@ -38,11 +38,11 @@ import (
 type commitHandler struct {
 	Repo repoInfo
 
-	issues        issueCounter
-	change        changeCounter
-	notifications notifications.Service
-	users         users.Service
-	gitUsers      map[string]users.User // Key is lower git author email.
+	issues       issueCounter
+	change       changeCounter
+	notification notification.Service
+	users        users.Service
+	gitUsers     map[string]users.User // Key is lower git author email.
 }
 
 var commitHTML = template.Must(template.New("").Parse(`<html>
@@ -97,7 +97,7 @@ func (h *commitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) erro
 	}
 	var nc uint64
 	if authenticatedUser.ID != 0 {
-		nc, err = h.notifications.Count(req.Context(), nil)
+		nc, err = h.notification.CountNotifications(req.Context())
 		if err != nil {
 			return err
 		}
@@ -212,9 +212,9 @@ type commitHandlerPkg struct {
 	PkgPath string
 	Dir     *code.Directory
 
-	notifications notifications.Service
-	users         users.Service
-	gitUsers      map[string]users.User // Key is lower git author email.
+	notification notification.Service
+	users        users.Service
+	gitUsers     map[string]users.User // Key is lower git author email.
 }
 
 func (h *commitHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
@@ -229,7 +229,7 @@ func (h *commitHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) e
 	}
 	var nc uint64
 	if authenticatedUser.ID != 0 {
-		nc, err = h.notifications.Count(req.Context(), nil)
+		nc, err = h.notification.CountNotifications(req.Context())
 		if err != nil {
 			return err
 		}

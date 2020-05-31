@@ -12,13 +12,13 @@ import (
 
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/presentdata"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/httpfs/html/vfstemplate"
 	"github.com/shurcooL/httpfs/vfsutil"
 	"github.com/shurcooL/httpgzip"
-	"github.com/shurcooL/notifications"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/tools/present"
@@ -36,7 +36,7 @@ var talksHTML = template.Must(template.New("").Parse(`<html>
 		<div style="max-width: 800px; margin: 0 auto 100px auto;">`))
 
 // initTalks registers a talks handler with root as talks content source.
-func initTalks(root http.FileSystem, notifications notifications.Service, users users.Service) {
+func initTalks(root http.FileSystem, notification notification.Service, users users.Service) {
 	// Host static files that slides need.
 	http.Handle("/static/", cookieAuth{httpgzip.FileServer(presentdata.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})})
 
@@ -50,8 +50,8 @@ func initTalks(root http.FileSystem, notifications notifications.Service, users 
 		fs:     root,
 		slides: tmpl,
 
-		notifications: notifications,
-		users:         users,
+		notification: notification,
+		users:        users,
 	}).ServeHTTP)})
 	http.Handle("/talks", talksHandler)
 	http.Handle("/talks/", talksHandler)
@@ -62,8 +62,8 @@ type talksHandler struct {
 	fs     http.FileSystem
 	slides *template.Template
 
-	notifications notifications.Service
-	users         users.Service
+	notification notification.Service
+	users        users.Service
 }
 
 func (h *talksHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
@@ -106,7 +106,7 @@ func (h *talksHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		}
 		var nc uint64
 		if authenticatedUser.ID != 0 {
-			nc, err = h.notifications.Count(req.Context(), nil)
+			nc, err = h.notification.CountNotifications(req.Context())
 			if err != nil {
 				return err
 			}
