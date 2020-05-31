@@ -73,8 +73,8 @@ func (h ModuleHandler) ServeModule(w http.ResponseWriter, req *http.Request) err
 	modulePath, typ, version := unesc.Module, unesc.Type, unesc.Version
 
 	// Look up code directory by module path.
-	d, ok := h.Code.Lookup(modulePath)
-	if !ok || !d.IsRepoRoot() {
+	d, err := h.Code.GetDirectory(req.Context(), modulePath)
+	if err != nil || !d.IsRepoRoot() {
 		return os.ErrNotExist
 	}
 	gitDir := filepath.Join(h.Code.reposDir, filepath.FromSlash(d.RepoRoot))

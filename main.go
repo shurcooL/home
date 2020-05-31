@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -25,6 +26,8 @@ import (
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/indieauth"
 	codepkg "github.com/shurcooL/home/internal/code"
+	codehttphandler "github.com/shurcooL/home/internal/code/httphandler"
+	codehttproute "github.com/shurcooL/home/internal/code/httproute"
 	"github.com/shurcooL/home/internal/exp/service/auth"
 	"github.com/shurcooL/home/internal/exp/service/auth/directfetch"
 	"github.com/shurcooL/home/internal/exp/service/auth/gcpfetch"
@@ -236,6 +239,16 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		return fmt.Errorf("initBlog: %v", err)
 	}
 
+	// Code repositories (part 1 of 2).
+	reposDir := filepath.Join(storeDir, "repositories")
+	code, err := codepkg.NewService(reposDir, notifications, events, users)
+	if err != nil {
+		return fmt.Errorf("code.NewService: %v", err)
+	}
+	codeAPIHandler := codehttphandler.Code{Code: code}
+	http.Handle(path.Join("/api/code", codehttproute.ListDirectories), httputil.ErrorHandler(nil, codeAPIHandler.ListDirectories))
+	http.Handle(path.Join("/api/code", codehttproute.GetDirectory), httputil.ErrorHandler(nil, codeAPIHandler.GetDirectory))
+
 	issuesApp := initIssues(http.DefaultServeMux, issuesService, changeService, notifications, users)
 	changesApp := initChanges(http.DefaultServeMux, changeService, issuesService, notifications, users)
 
@@ -252,12 +265,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 
 	initIdiomaticGo(issuesService, notifications, users)
 
-	// Code repositories.
-	reposDir := filepath.Join(storeDir, "repositories")
-	code, err := codepkg.NewService(reposDir, notifications, events, users)
-	if err != nil {
-		return fmt.Errorf("code.NewService: %v", err)
-	}
+	// Code repositories (part 2 of 2).
 	moduleHandler := codepkg.ModuleHandler{Code: code}
 	http.Handle("/api/module/", http.StripPrefix("/api/module/", httputil.ErrorHandler(nil, moduleHandler.ServeModule)))
 	gitUsers, err := initGitUsers(users)

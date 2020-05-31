@@ -50,21 +50,24 @@ func NewService(reposDir string, notifications notifications.ExternalService, ev
 	}, nil
 }
 
-// List lists directories in sorted order.
-func (s *Service) List() []*Directory {
+// ListDirectories lists directories in sorted order.
+func (s *Service) ListDirectories(context.Context) ([]*Directory, error) {
 	s.mu.RLock()
 	dirs := s.dirs
 	s.mu.RUnlock()
-	return dirs
+	return dirs, nil
 }
 
-// Lookup looks up a directory by specified import path.
-// Returned directory is nil if and only if ok is false.
-func (s *Service) Lookup(importPath string) (_ *Directory, ok bool) {
+// GetDirectory looks up a directory by specified import path.
+// If the directory doesn't exist, os.ErrNotExist is returned.
+func (s *Service) GetDirectory(_ context.Context, importPath string) (*Directory, error) {
 	s.mu.RLock()
 	dir, ok := s.byImportPath[importPath]
 	s.mu.RUnlock()
-	return dir, ok
+	if !ok {
+		return nil, os.ErrNotExist
+	}
+	return dir, nil
 }
 
 // CreateRepo creates an empty repository with the specified repoSpec and description.

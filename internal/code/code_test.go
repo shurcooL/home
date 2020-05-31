@@ -147,7 +147,10 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 		}
 		wantEvents := []event.Event(nil)
 
-		got := service.List()
+		got, err := service.ListDirectories(context.Background())
+		if err != nil {
+			t.Fatalf("service.ListDirectories: %v", err)
+		}
 		if !reflect.DeepEqual(got, want) {
 			t.Error("initial state: not equal")
 		}
@@ -268,7 +271,10 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 			},
 		}
 
-		got := service.List()
+		got, err := service.ListDirectories(context.Background())
+		if err != nil {
+			t.Fatalf("service.ListDirectories: %v", err)
+		}
 		if !reflect.DeepEqual(got, want) {
 			t.Error("after empty repository created: not equal")
 		}
@@ -476,7 +482,10 @@ The PNG specification is at <a href="http://www.w3.org/TR/PNG/">http://www.w3.or
 			},
 		}
 
-		got := service.List()
+		got, err := service.ListDirectories(context.Background())
+		if err != nil {
+			t.Fatalf("service.ListDirectories: %v", err)
+		}
 		if !reflect.DeepEqual(got, want) {
 			t.Error("after new repository pushed to: not equal")
 		}

@@ -98,9 +98,11 @@ func initPackages(code *code.Service, notifications notifications.Service, users
 			return err
 		}
 
-		// We know that "dmitri.shuralyov.com/..." comes before "github.com/...",
-		// that's why code.List(), githubPackages are guaranteed to be in alphabetical order.
-		err = renderPackages(w, expandPattern(code.List(), githubPackages, importPathPattern))
+		dsDirs, err := code.ListDirectories(req.Context())
+		if err != nil {
+			return err
+		}
+		err = renderPackages(w, expandPattern(dsDirs, githubPackages, importPathPattern)) // We know that "dmitri.shuralyov.com/..." comes before "github.com/...", that's why dsDirs, githubPackages are guaranteed to be in alphabetical order.
 		if err != nil {
 			return err
 		}

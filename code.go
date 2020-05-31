@@ -50,8 +50,8 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 	}
 
 	// Look up code directory by import path.
-	d, ok := h.code.Lookup(importPath)
-	if !ok || !d.WithinRepo() || (wantRepoRoot && !d.IsRepoRoot()) {
+	d, err := h.code.GetDirectory(req.Context(), importPath)
+	if err != nil || !d.WithinRepo() || (wantRepoRoot && !d.IsRepoRoot()) {
 		return false
 	}
 
