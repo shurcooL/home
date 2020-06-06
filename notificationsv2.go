@@ -20,9 +20,7 @@ import (
 	githubv3 "github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/shurcooL/githubv4"
-	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
-	notificationsv2 "github.com/shurcooL/home/internal/exp/app/notifications"
 	gerritactivity "github.com/shurcooL/home/internal/exp/service/activity/gerrit"
 	githubactivity "github.com/shurcooL/home/internal/exp/service/activity/github"
 	"github.com/shurcooL/home/internal/exp/service/notification"
@@ -119,6 +117,7 @@ func newNotificationServiceV2(
 func initNotificationsV2(
 	mux *http.ServeMux,
 	notifService notification.Service,
+	notifsApp httperror.Handler,
 	githubActivity interface{ Status() string },
 	gerritActivity interface{ Status() string },
 	users users.Service,
@@ -130,31 +129,6 @@ func initNotificationsV2(
 	mux.Handle(path.Join("/api/notificationv2", httproute.CountNotifications), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.CountNotifications)})
 	mux.Handle(path.Join("/api/notificationv2", httproute.MarkThreadRead), headerAuth{httputil.ErrorHandler(users, notificationAPIHandler.MarkThreadRead)})
 
-	// Register notifications app endpoints.
-	opt := notificationsv2.Options{
-		BaseURL: "/notificationsv2",
-		RedLogo: component.RedLogo,
-		HeadPre: analyticsHTML + `<title>Notifications v2</title>
-<link href="/icon.png" rel="icon" type="image/png">
-<meta name="viewport" content="width=device-width">
-<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
-<style type="text/css">
-	body {
-		margin: 20px;
-		font-family: Go;
-		font-size: 87.5%;
-		line-height: initial;
-		color: rgb(35, 35, 35);
-	}
-</style>`,
-	}
-	notificationsApp := notificationsv2.New(
-		notifService,
-		githubActivity, gerritActivity,
-		users,
-		opt,
-	)
-
 	notificationsHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		// TODO: Keep simplifying this.
 		prefixLen := len("/notificationsv2")
@@ -165,13 +139,8 @@ func initNotificationsV2(
 			}
 			return httperror.Redirect{URL: baseURL}
 		}
-		returnURL := req.RequestURI
-		req = copyRequestAndURL(req)
-		req.URL.Path = req.URL.Path[prefixLen:]
-		if req.URL.Path == "" {
-			req.URL.Path = "/"
-		}
-		err := notificationsApp.ServeHTTP(w, req)
+		returnURL := req.URL.Path
+		err := notifsApp.ServeHTTP(w, req)
 		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
 		if s := req.Context().Value(sessionContextKey).(*session); os.IsPermission(err) && s == nil {
 			loginURL := (&url.URL{
@@ -184,6 +153,25 @@ func initNotificationsV2(
 	})}
 	mux.Handle("/notificationsv2", notificationsHandler)
 	mux.Handle("/notificationsv2/", notificationsHandler)
+
+	statusHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
+		if err := httputil.AllowMethods(req, http.MethodGet, http.MethodHead); err != nil {
+			return err
+		}
+		if user, err := users.GetAuthenticated(req.Context()); err != nil {
+			return err
+		} else if !user.SiteAdmin {
+			return os.ErrPermission
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if req.Method == http.MethodHead {
+			return nil
+		}
+		fmt.Fprintln(w, "GitHub Activity Service:", githubActivity.Status())
+		fmt.Fprintln(w, "Gerrit Activity Service:", gerritActivity.Status())
+		return nil
+	})}
+	mux.Handle("/notificationsv2/status", statusHandler)
 }
 
 func newDirWatcher(ctx context.Context, dir string) (<-chan struct{}, error) {

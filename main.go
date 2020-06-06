@@ -32,6 +32,7 @@ import (
 	"github.com/shurcooL/home/internal/exp/service/auth/directfetch"
 	"github.com/shurcooL/home/internal/exp/service/auth/gcpfetch"
 	"github.com/shurcooL/home/internal/exp/service/notification/v2tov1"
+	"github.com/shurcooL/home/internal/exp/spa"
 	"github.com/shurcooL/httpfs/filter"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/issues"
@@ -254,15 +255,18 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	http.Handle(path.Join("/api/code", codehttproute.ListDirectories), httputil.ErrorHandler(nil, codeAPIHandler.ListDirectories))
 	http.Handle(path.Join("/api/code", codehttproute.GetDirectory), httputil.ErrorHandler(nil, codeAPIHandler.GetDirectory))
 
+	app := spa.NewApp(notifServiceV2, users, nil)
 	issuesApp := initIssues(http.DefaultServeMux, issuesService, changeService, notifications, users)
 	changesApp := initChanges(http.DefaultServeMux, changeService, issuesService, notifications, users)
-	initNotificationsV2(http.DefaultServeMux, notifServiceV2, githubActivity, gerritActivity, users)
+	initNotificationsV2(http.DefaultServeMux, notifServiceV2, &appHandler{app.NotifsApp}, githubActivity, gerritActivity, users)
 
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
 
 	assetsHandler := cookieAuth{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
+	http.Handle("/assets/spa.wasm", http.StripPrefix("/assets", assetsHandler))
+	http.Handle("/assets/notifications/", http.StripPrefix("/assets", assetsHandler))
 
 	fontsHandler := cookieAuth{httpgzip.FileServer(assets.Fonts, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/fonts/", http.StripPrefix("/assets/fonts", fontsHandler))
