@@ -15,9 +15,9 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-// Test that visiting /notificationsv2 without being logged in
+// Test that visiting /notifications without being logged in
 // redirects to /login.
-func TestNotificationsV2RedirectsLogin(t *testing.T) {
+func TestNotificationsRedirectsLogin(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "notifications_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -38,14 +38,14 @@ func TestNotificationsV2RedirectsLogin(t *testing.T) {
 	app := spa.NewApp(ns, users, nil)
 	initNotificationsV2(mux, nil, &appHandler{app.NotifsApp}, nil, nil, users)
 
-	req := httptest.NewRequest(http.MethodGet, "/notificationsv2", nil)
+	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 	resp := rr.Result()
 	if got, want := resp.StatusCode, http.StatusSeeOther; got != want {
 		t.Errorf("got status code %d %s, want %d %s", got, http.StatusText(got), want, http.StatusText(want))
 	}
-	if got, want := resp.Header.Get("Location"), "/login?return=%2Fnotificationsv2"; got != want {
+	if got, want := resp.Header.Get("Location"), "/login?return=%2Fnotifications"; got != want {
 		t.Errorf("got Location header %q, want %q", got, want)
 	}
 }

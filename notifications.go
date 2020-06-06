@@ -108,7 +108,7 @@ func initNotifications(
 	notificationsApp := notificationsapp.New(notificationsService, users, opt)
 
 	notificationsHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
-		prefixLen := len("/notifications")
+		prefixLen := len("/notificationsv1")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
 			if req.URL.RawQuery != "" {
@@ -123,7 +123,7 @@ func initNotifications(
 			req.URL.Path = "/"
 		}
 		rr := httptest.NewRecorder()
-		req = req.WithContext(context.WithValue(req.Context(), notificationsapp.BaseURIContextKey, "/notifications"))
+		req = req.WithContext(context.WithValue(req.Context(), notificationsapp.BaseURIContextKey, "/notificationsv1"))
 		notificationsApp.ServeHTTP(rr, req)
 		// TODO: Have notificationsApp.ServeHTTP return error, check if os.IsPermission(err) is true, etc.
 		// TODO: Factor out this os.IsPermission(err) && u == nil check somewhere, if possible. (But this shouldn't apply for APIs.)
@@ -141,8 +141,8 @@ func initNotifications(
 		_, err := io.Copy(w, rr.Body)
 		return err
 	})}
-	mux.Handle("/notifications", notificationsHandler)
-	mux.Handle("/notifications/", notificationsHandler)
+	mux.Handle("/notificationsv1", notificationsHandler)
+	mux.Handle("/notificationsv1/", notificationsHandler)
 
 	return notificationsService
 }

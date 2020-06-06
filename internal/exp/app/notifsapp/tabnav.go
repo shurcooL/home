@@ -20,12 +20,12 @@ func notificationTabnav(selected notificationTab) htmlg.Component {
 		Tabs: []homecomponent.Tab{
 			{
 				Content: htmlg.NodeComponent(*htmlg.Text("Stream")),
-				URL:     "/notificationsv2", OnClick: "Open(event, this)",
+				URL:     "/notifications", OnClick: "Open(event, this)",
 				Selected: selected == streamTab,
 			},
 			{
 				Content: htmlg.NodeComponent(*htmlg.Text("Threads")),
-				URL:     "/notificationsv2/threads", OnClick: "Open(event, this)",
+				URL:     "/notifications/threads", OnClick: "Open(event, this)",
 				Selected: selected == threadTab,
 			},
 		},

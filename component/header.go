@@ -196,6 +196,7 @@ func (n Notifications) Render() []*html.Node {
 		Type: html.ElementNode, Data: atom.A.String(),
 		Attr: []html.Attribute{
 			{Key: atom.Href.String(), Val: "/notifications"},
+			{Key: atom.Onclick.String(), Val: "Open(event, this)"},
 			{Key: atom.Style.String(), Val: `display: inline-block;
 vertical-align: top;
 position: relative;`},

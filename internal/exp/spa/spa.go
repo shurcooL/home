@@ -82,7 +82,7 @@ type app struct {
 
 func (a *app) ServePage(ctx context.Context, w io.Writer, reqURL *url.URL) (interface{}, error) {
 	switch {
-	case reqURL.Path == "/notificationsv2", strings.HasPrefix(reqURL.Path, "/notificationsv2/"):
+	case reqURL.Path == "/notifications", strings.HasPrefix(reqURL.Path, "/notifications/"):
 		return a.NotifsApp.ServePage(ctx, w, reqURL)
 	default:
 		return nil, OutOfScopeError{URL: reqURL}
@@ -92,7 +92,7 @@ func (a *app) ServePage(ctx context.Context, w io.Writer, reqURL *url.URL) (inte
 func (a *app) SetupPage(ctx context.Context, state interface{}) {
 	// TODO: Make this safer and better.
 	switch reqURL := state.(PageState).RequestURL(); {
-	case reqURL.Path == "/notificationsv2", strings.HasPrefix(reqURL.Path, "/notificationsv2/"):
+	case reqURL.Path == "/notifications", strings.HasPrefix(reqURL.Path, "/notifications/"):
 		a.NotifsApp.SetupPage(ctx, state)
 	}
 }

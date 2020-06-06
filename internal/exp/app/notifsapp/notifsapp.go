@@ -69,7 +69,7 @@ func (a *app) ServePage(ctx context.Context, w io.Writer, reqURL *url.URL) (inte
 	}
 
 	// TODO: Factor out the prefix maybe?
-	route := reqURL.Path[len("/notificationsv2"):]
+	route := reqURL.Path[len("/notifications"):]
 	if route == "" {
 		route = "/"
 	}

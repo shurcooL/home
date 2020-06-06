@@ -19,7 +19,7 @@ import (
 func (a *app) SetupPage(ctx context.Context, state interface{}) {
 	st := state.(State)
 
-	route := st.ReqURL.Path[len("/notificationsv2"):]
+	route := st.ReqURL.Path[len("/notifications"):]
 	if route == "" {
 		route = "/"
 	}

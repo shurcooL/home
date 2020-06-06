@@ -131,7 +131,7 @@ func initNotificationsV2(
 
 	notificationsHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		// TODO: Keep simplifying this.
-		prefixLen := len("/notificationsv2")
+		prefixLen := len("/notifications")
 		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
 			baseURL := prefix
 			if req.URL.RawQuery != "" {
@@ -151,8 +151,8 @@ func initNotificationsV2(
 		}
 		return err
 	})}
-	mux.Handle("/notificationsv2", notificationsHandler)
-	mux.Handle("/notificationsv2/", notificationsHandler)
+	mux.Handle("/notifications", notificationsHandler)
+	mux.Handle("/notifications/", notificationsHandler)
 
 	statusHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
 		if err := httputil.AllowMethods(req, http.MethodGet, http.MethodHead); err != nil {
@@ -171,7 +171,7 @@ func initNotificationsV2(
 		fmt.Fprintln(w, "Gerrit Activity Service:", gerritActivity.Status())
 		return nil
 	})}
-	mux.Handle("/notificationsv2/status", statusHandler)
+	mux.Handle("/notifications/status", statusHandler)
 }
 
 func newDirWatcher(ctx context.Context, dir string) (<-chan struct{}, error) {
