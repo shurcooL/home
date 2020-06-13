@@ -160,7 +160,7 @@ func initChanges(mux *http.ServeMux, changeService change.Service, issueCounter 
 				FirstChild: htmlg.Text(repoSpec + "/..."),
 			}
 			repo := req.Context().Value(repoInfoContextKey).(repoInfo) // From changesHandler.ServeHTTP.
-			tabnav := repositoryTabnav(changesTab, repo, openIssues, openChanges)
+			tabnav := component.RepositoryTabNav(component.ChangesTab, repo.Path, repo.Packages, openIssues, openChanges)
 			return []htmlg.Component{header, heading, tabnav}, nil
 
 		// TODO: Dedup with issues (maybe; mind the githubURL difference).

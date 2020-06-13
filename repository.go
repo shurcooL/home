@@ -13,11 +13,9 @@ import (
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/exp/service/notification"
-	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
-	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -110,7 +108,7 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, repositoryTabnav(packagesTab, h.Repo, openIssues, openChanges))
+	err = htmlg.RenderComponents(w, component.RepositoryTabNav(component.PackagesTab, h.Repo.Path, h.Repo.Packages, openIssues, openChanges))
 	if err != nil {
 		return err
 	}
@@ -132,49 +130,3 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	_, err = io.WriteString(w, `</body></html>`)
 	return err
 }
-
-func repositoryTabnav(selected repositoryTab, repo repoInfo, openIssues, openChanges uint64) htmlg.Component {
-	return tabnav{
-		Tabs: []tab{
-			{
-				Content: contentCounter{
-					Content: iconText{Icon: octicon.Package, Text: "Packages"},
-					Count:   repo.Packages,
-				},
-				URL:      route.RepoIndex(repo.Path),
-				Selected: selected == packagesTab,
-			},
-			{
-				Content:  iconText{Icon: octicon.History, Text: "History"},
-				URL:      route.RepoHistory(repo.Path),
-				Selected: selected == historyTab,
-			},
-			{
-				Content: contentCounter{
-					Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
-					Count:   int(openIssues),
-				},
-				URL:      route.RepoIssues(repo.Path),
-				Selected: selected == issuesTab,
-			},
-			{
-				Content: contentCounter{
-					Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
-					Count:   int(openChanges),
-				},
-				URL:      route.RepoChanges(repo.Path),
-				Selected: selected == changesTab,
-			},
-		},
-	}
-}
-
-type repositoryTab uint8
-
-const (
-	noTab repositoryTab = iota
-	packagesTab
-	historyTab
-	issuesTab
-	changesTab
-)

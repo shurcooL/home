@@ -1,7 +1,11 @@
 package component
 
 import (
+	"fmt"
+
+	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
+	"github.com/shurcooL/octicon"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -51,4 +55,78 @@ func (t Tab) Render() []*html.Node {
 	}
 	htmlg.AppendChildren(a, t.Content.Render()...)
 	return []*html.Node{a}
+}
+
+type RepositoryTab uint8
+
+const (
+	NoTab RepositoryTab = iota
+	PackagesTab
+	HistoryTab
+	IssuesTab
+	ChangesTab
+)
+
+func RepositoryTabNav(selected RepositoryTab, repoPath string, packages int, openIssues, openChanges uint64) htmlg.Component {
+	return TabNav{
+		Tabs: []Tab{
+			{
+				Content: contentCounter{
+					Content: iconText{Icon: octicon.Package, Text: "Packages"},
+					Count:   packages,
+				},
+				URL:      route.RepoIndex(repoPath),
+				Selected: selected == PackagesTab,
+			},
+			{
+				Content:  iconText{Icon: octicon.History, Text: "History"},
+				URL:      route.RepoHistory(repoPath),
+				Selected: selected == HistoryTab,
+			},
+			{
+				Content: contentCounter{
+					Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
+					Count:   int(openIssues),
+				},
+				URL:      route.RepoIssues(repoPath),
+				Selected: selected == IssuesTab,
+			},
+			{
+				Content: contentCounter{
+					Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
+					Count:   int(openChanges),
+				},
+				URL:      route.RepoChanges(repoPath),
+				Selected: selected == ChangesTab,
+			},
+		},
+	}
+}
+
+type contentCounter struct {
+	Content htmlg.Component
+	Count   int
+}
+
+func (cc contentCounter) Render() []*html.Node {
+	var ns []*html.Node
+	ns = append(ns, cc.Content.Render()...)
+	ns = append(ns, htmlg.SpanClass("counter", htmlg.Text(fmt.Sprint(cc.Count))))
+	return ns
+}
+
+// iconText is an icon with text on the right.
+// Icon must be not nil.
+type iconText struct {
+	Icon func() *html.Node // Must be not nil.
+	Text string
+}
+
+func (it iconText) Render() []*html.Node {
+	icon := htmlg.Span(it.Icon())
+	icon.Attr = append(icon.Attr, html.Attribute{
+		Key: atom.Style.String(), Val: "margin-right: 4px;",
+	})
+	text := htmlg.Text(it.Text)
+	return []*html.Node{icon, text}
 }

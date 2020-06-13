@@ -69,8 +69,8 @@ func initAbout(notification notification.Service, users users.Service) {
 		}
 
 		// Render the tabnav.
-		err = htmlg.RenderComponents(w, tabnav{
-			Tabs: []tab{
+		err = htmlg.RenderComponents(w, component.TabNav{
+			Tabs: []component.Tab{
 				{
 					Content:  iconText{Icon: octicon.Person, Text: "Overview"},
 					URL:      "/about",

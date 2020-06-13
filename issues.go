@@ -15,7 +15,7 @@ import (
 	"dmitri.shuralyov.com/route/github"
 	"dmitri.shuralyov.com/service/change"
 	"github.com/shurcooL/events"
-	homecomponent "github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
@@ -130,7 +130,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 		}
 		returnURL := req.RequestURI
 
-		header := homecomponent.Header{
+		header := component.Header{
 			CurrentUser:       authenticatedUser,
 			NotificationCount: nc,
 			ReturnURL:         returnURL,
@@ -158,7 +158,7 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 				FirstChild: htmlg.Text(repo.URI + "/..."),
 			}
 			repo := req.Context().Value(repoInfoContextKey).(repoInfo) // From issuesHandler.ServeHTTP.
-			tabnav := repositoryTabnav(issuesTab, repo, openIssues, openChanges)
+			tabnav := component.RepositoryTabNav(component.IssuesTab, repo.Path, repo.Packages, openIssues, openChanges)
 			return []htmlg.Component{header, heading, tabnav}, nil
 
 		// TODO: Dedup with changes (maybe; mind the githubURL difference).

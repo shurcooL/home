@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/route"
 	"github.com/shurcooL/htmlg"
@@ -25,13 +26,13 @@ func pathWithinRepo(d *code.Directory) string {
 	return d.ImportPath[len(d.RepoRoot)+len("/"):]
 }
 
-func directoryTabnav(selected repositoryTab, pkgPath string) htmlg.Component {
-	return tabnav{
-		Tabs: []tab{
+func directoryTabnav(selected component.RepositoryTab, pkgPath string) htmlg.Component {
+	return component.TabNav{
+		Tabs: []component.Tab{
 			{
 				Content:  iconText{Icon: octicon.History, Text: "History"},
 				URL:      route.PkgHistory(pkgPath),
-				Selected: selected == historyTab,
+				Selected: selected == component.HistoryTab,
 			},
 		},
 	}

@@ -121,7 +121,7 @@ func (h *commitsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, repositoryTabnav(historyTab, h.Repo, openIssues, openChanges))
+	err = htmlg.RenderComponents(w, homecomponent.RepositoryTabNav(homecomponent.HistoryTab, h.Repo.Path, h.Repo.Packages, openIssues, openChanges))
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (h *commitsHandlerPkg) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, directoryTabnav(historyTab, h.PkgPath))
+	err = htmlg.RenderComponents(w, directoryTabnav(homecomponent.HistoryTab, h.PkgPath))
 	if err != nil {
 		return err
 	}

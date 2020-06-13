@@ -112,7 +112,7 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	}
 
 	// Render the tabnav.
-	err = htmlg.RenderComponents(w, repositoryTabnav(noTab, h.Repo, openIssues, openChanges))
+	err = htmlg.RenderComponents(w, component.RepositoryTabNav(component.NoTab, h.Repo.Path, h.Repo.Packages, openIssues, openChanges))
 	if err != nil {
 		return err
 	}
