@@ -1,6 +1,6 @@
 // +build js,wasm,go1.14
 
-package main
+package issuesapp
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"honnef.co/go/js/dom/v2"
 )
 
-func (f *frontend) EditComment(action string, this dom.HTMLElement, evt dom.Event) {
+func (a *appAndState) EditComment(action string, this dom.HTMLElement, evt dom.Event) {
 	if evt.DefaultPrevented() {
 		return
 	}
@@ -63,7 +63,7 @@ func (f *frontend) EditComment(action string, this dom.HTMLElement, evt dom.Even
 						ID:   commentID,
 						Body: &body,
 					}
-					_, err := f.is.EditComment(context.Background(), state.RepoSpec, state.IssueID, cr)
+					_, err := a.is.EditComment(context.Background(), a.State.RepoSpec, a.State.IssueID, cr)
 					if err != nil {
 						// TODO: Handle failure more visibly in the UI.
 						log.Println("EditComment:", err)

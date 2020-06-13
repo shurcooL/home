@@ -3,16 +3,18 @@ package issuesapp_test
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
+	"io/ioutil"
+	"net/url"
+	"os"
 	"path"
 	"testing"
 
 	"dmitri.shuralyov.com/state"
-	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/exp/app/issuesapp"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/issue/fs"
+	"github.com/shurcooL/home/internal/exp/spa"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 	"github.com/shurcooL/webdavfs/vfsutil"
@@ -20,55 +22,39 @@ import (
 )
 
 func TestRoutes(t *testing.T) {
-	repo := issues.RepoSpec{URI: "example.org"}
-	issuesApp, err := mockIssuesApp(repo)
+	issuesApp, err := mockIssuesApp()
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := http.NewServeMux()
-	mux.Handle("/", httputil.ErrorHandler(nil, func(w http.ResponseWriter, req *http.Request) error {
-		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, repo))
-		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, "."))
-		return issuesApp.ServeHTTP(w, req)
-	}))
 
 	tests := []struct {
-		method, url string
-		wantCode    int
+		url       string
+		wantError error
 	}{
-		{"GET", "/assets/frontend.wasm", http.StatusOK},
-		{"POST", "/assets/frontend.wasm", http.StatusMethodNotAllowed},
-		{"GET", "/assets/gfm/gfm.css", http.StatusOK},
-
-		{"GET", "/", http.StatusOK},
-		{"POST", "/", http.StatusMethodNotAllowed},
-		{"GET", "/new", http.StatusOK},
-		{"PATCH", "/new", http.StatusMethodNotAllowed},
-		{"GET", "/1", http.StatusOK},
-		{"POST", "/1", http.StatusMethodNotAllowed},
-		{"GET", "/1/", http.StatusNotFound},
-		{"GET", "/1-foobar", http.StatusNotFound},
-		{"GET", "/2", http.StatusNotFound},
-		{"GET", "/foobar", http.StatusNotFound},
-		{"GET", "/1/edit", http.StatusMethodNotAllowed},
-		{"GET", "/1/comment", http.StatusMethodNotAllowed},
-		{"GET", "/1/foobar", http.StatusNotFound},
-		{"POST", "/1/comment/0", http.StatusNotFound},
-		{"GET", "/1/comment/foobar", http.StatusNotFound},
+		{"/test123/...$issues", nil},
+		{"/test123/...$issues/", httperror.Redirect{URL: "/test123/...$issues"}},
+		{"/test123/...$issues/new", nil},
+		{"/test123/...$issues/1", nil},
+		{"/test123/...$issues/1/", os.ErrNotExist},
+		{"/test123/...$issues/1-foo", os.ErrNotExist},
+		{"/test123/...$issues/2", &os.PathError{Op: "open", Path: "dmitri.shuralyov.com/test123/issues/2/0", Err: os.ErrNotExist}},
+		{"/test123/...$issues/foo", os.ErrNotExist},
+		{"/test123/...$issues/foo/bar", os.ErrNotExist},
+		{"/test123/...$issues/1/foo", os.ErrNotExist},
+		{"/test123/...$issues/1/foo/bar", os.ErrNotExist},
 	}
 	for _, tc := range tests {
-		req := httptest.NewRequest(tc.method, tc.url, nil)
-		w := httptest.NewRecorder()
-		mux.ServeHTTP(w, req)
-		if got, want := w.Code, tc.wantCode; got != want {
-			t.Errorf("%s %q: got %v, want %v", tc.method, tc.url, http.StatusText(got), http.StatusText(want))
+		reqURL, _ := url.Parse(tc.url)
+		_, err := issuesApp.ServePage(context.Background(), ioutil.Discard, reqURL)
+		if got, want := err, tc.wantError; !equalError(got, want) {
+			t.Errorf("%q: got %v, want %v", tc.url, got, want)
 		}
 	}
 }
 
-func mockIssuesApp(repo issues.RepoSpec) (interface {
-	ServeHTTP(w http.ResponseWriter, req *http.Request) error
-}, error) {
+func mockIssuesApp() (spa.App, error) {
+	repo := issues.RepoSpec{URI: "dmitri.shuralyov.com/test123"}
+
 	mem := webdav.NewMemFS()
 	err := vfsutil.MkdirAll(context.Background(), mem, path.Join(repo.URI, "issues"), 0700)
 	if err != nil {
@@ -119,7 +105,7 @@ func mockIssuesApp(repo issues.RepoSpec) (interface {
 		return nil, err
 	}
 
-	return issuesapp.New(service, users, issuesapp.Options{}), nil
+	return issuesapp.New(service, users, nil, issuesapp.Options{}), nil
 }
 
 type mockUsers struct {
@@ -154,4 +140,10 @@ func (m mockUsers) GetAuthenticated(ctx context.Context) (users.User, error) {
 		return users.User{}, nil
 	}
 	return m.Get(ctx, userSpec)
+}
+
+// equalError reports whether errors a and b are considered equal.
+// They are equal if both are nil, or both are not nil and a.Error() == b.Error().
+func equalError(a, b error) bool {
+	return a == nil && b == nil || a != nil && b != nil && a.Error() == b.Error()
 }

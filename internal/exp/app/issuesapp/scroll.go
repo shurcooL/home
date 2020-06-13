@@ -1,6 +1,6 @@
 // +build js,wasm,go1.14
 
-package main
+package issuesapp
 
 import (
 	"fmt"
@@ -28,7 +28,12 @@ func setupScroll() {
 			return
 		}
 
-		switch ke := event.(*dom.KeyboardEvent); {
+		ke, ok := event.(*dom.KeyboardEvent)
+		if !ok {
+			// Chrome 83 sends a *dom.BasicEvent{Type: "keydown"} event when selecting an auto-complete entry.
+			return
+		}
+		switch {
 		// Escape.
 		case ke.KeyCode() == 27 && !ke.Repeat() && !ke.CtrlKey() && !ke.AltKey() && !ke.MetaKey() && !ke.ShiftKey():
 			if strings.TrimPrefix(dom.GetWindow().Location().Hash(), "#") == "" {
