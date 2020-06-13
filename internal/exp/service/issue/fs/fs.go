@@ -14,21 +14,21 @@ import (
 	"dmitri.shuralyov.com/state"
 	"github.com/shurcooL/events"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
-	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/reactions"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/webdav"
 )
 
 // NewService creates a virtual filesystem-backed issues.Service using root for storage.
-// It uses notifications service, if not nil.
+// It uses notification service, if not nil.
 // It uses events service, if not nil.
-func NewService(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (issues.Service, error) {
+func NewService(root webdav.FileSystem, notification notification.Service, events events.ExternalService, users users.Service) (issues.Service, error) {
 	return &service{
-		fs:            root,
-		notifications: notifications,
-		events:        events,
-		users:         users,
+		fs:           root,
+		notification: notification,
+		events:       events,
+		users:        users,
 	}, nil
 }
 
@@ -36,8 +36,8 @@ type service struct {
 	fsMu sync.RWMutex
 	fs   webdav.FileSystem
 
-	// notifications may be nil if there's no notifications service.
-	notifications notifications.ExternalService
+	// notification may be nil if there's no notification service.
+	notification notification.Service
 	// events may be nil if there's no events service.
 	events events.ExternalService
 
@@ -351,13 +351,13 @@ func (s *service) CreateComment(ctx context.Context, repo issues.RepoSpec, id ui
 	s.fsMu.Lock()
 	defer s.fsMu.Unlock()
 
+	author := currentUser
+
 	comment := comment{
-		Author:    fromUserSpec(currentUser.UserSpec),
+		Author:    fromUserSpec(author.UserSpec),
 		CreatedAt: time.Now().UTC(),
 		Body:      c.Body,
 	}
-
-	author := comment.Author.UserSpec()
 
 	// Commit to storage.
 	commentID, err := nextID(ctx, s.fs, issueDir(repo, id))
@@ -370,28 +370,28 @@ func (s *service) CreateComment(ctx context.Context, repo issues.RepoSpec, id ui
 	}
 
 	// Subscribe interested users.
-	err = s.subscribe(ctx, repo, id, author, c.Body)
+	err = s.subscribe(ctx, repo, id, author.UserSpec, c.Body)
 	if err != nil {
 		log.Println("service.CreateComment: failed to s.subscribe:", err)
 	}
 
 	// Notify subscribed users.
 	// TODO: Come up with a better way to compute fragment; that logic shouldn't be duplicated here from issuesapp router.
-	err = s.notify(ctx, repo, id, fmt.Sprintf("comment-%d", commentID), author, comment.CreatedAt)
+	err = s.notifyIssueComment(ctx, repo, id, fmt.Sprintf("comment-%d", commentID), comment.CreatedAt, comment.Body)
 	if err != nil {
-		log.Println("service.CreateComment: failed to s.notify:", err)
+		log.Println("service.CreateComment: failed to s.notifyIssueComment:", err)
 	}
 
 	// Log event.
 	// TODO: Come up with a better way to compute fragment; that logic shouldn't be duplicated here from issuesapp router.
-	err = s.logIssueComment(ctx, repo, id, fmt.Sprintf("comment-%d", commentID), currentUser, comment.CreatedAt, comment.Body)
+	err = s.logIssueComment(ctx, repo, id, fmt.Sprintf("comment-%d", commentID), author, comment.CreatedAt, comment.Body)
 	if err != nil {
 		log.Println("service.CreateComment: failed to s.logIssueComment:", err)
 	}
 
 	return issues.Comment{
 		ID:        commentID,
-		User:      s.user(ctx, author),
+		User:      author,
 		CreatedAt: comment.CreatedAt,
 		Body:      comment.Body,
 		Editable:  true, // You can always edit comments you've created.
@@ -419,6 +419,8 @@ func (s *service) Create(ctx context.Context, repo issues.RepoSpec, i issues.Iss
 		return issues.Issue{}, err
 	}
 
+	author := currentUser
+
 	var labels []label
 	for _, l := range i.Labels {
 		labels = append(labels, label{
@@ -431,13 +433,11 @@ func (s *service) Create(ctx context.Context, repo issues.RepoSpec, i issues.Iss
 		Title:  i.Title,
 		Labels: labels,
 		comment: comment{
-			Author:    fromUserSpec(currentUser.UserSpec),
+			Author:    fromUserSpec(author.UserSpec),
 			CreatedAt: time.Now().UTC(),
 			Body:      i.Body,
 		},
 	}
-
-	author := issue.Author.UserSpec()
 
 	// Commit to storage.
 	issueID, err := nextID(ctx, s.fs, issuesDir(repo))
@@ -458,19 +458,19 @@ func (s *service) Create(ctx context.Context, repo issues.RepoSpec, i issues.Iss
 	}
 
 	// Subscribe interested users.
-	err = s.subscribe(ctx, repo, issueID, author, i.Body)
+	err = s.subscribe(ctx, repo, issueID, author.UserSpec, i.Body)
 	if err != nil {
 		log.Println("service.Create: failed to s.subscribe:", err)
 	}
 
 	// Notify subscribed users.
-	err = s.notify(ctx, repo, issueID, "", author, issue.CreatedAt)
+	err = s.notifyIssue(ctx, repo, issueID, "", issue, "opened", issue.CreatedAt)
 	if err != nil {
-		log.Println("service.Create: failed to s.notify:", err)
+		log.Println("service.Create: failed to s.notifyIssue:", err)
 	}
 
 	// Log event.
-	err = s.logIssue(ctx, repo, issueID, "", issue, currentUser, "opened", issue.CreatedAt)
+	err = s.logIssue(ctx, repo, issueID, "", issue, author, "opened", issue.CreatedAt)
 	if err != nil {
 		log.Println("service.Create: failed to s.logIssue:", err)
 	}
@@ -481,7 +481,7 @@ func (s *service) Create(ctx context.Context, repo issues.RepoSpec, i issues.Iss
 		Title: issue.Title,
 		Comment: issues.Comment{
 			ID:        0,
-			User:      s.user(ctx, author),
+			User:      author,
 			CreatedAt: issue.CreatedAt,
 			Body:      issue.Body,
 			Editable:  true, // You can always edit issues you've created.
@@ -548,7 +548,7 @@ func (s *service) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir 
 	}
 
 	author := issue.Author.UserSpec()
-	actor := currentUser.UserSpec
+	actor := currentUser
 
 	// Apply edits.
 	origState := issue.State
@@ -568,7 +568,7 @@ func (s *service) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir 
 
 	// Create event and commit to storage.
 	event := event{
-		Actor:     fromUserSpec(actor),
+		Actor:     fromUserSpec(actor.UserSpec),
 		CreatedAt: time.Now().UTC(),
 	}
 	// TODO: A single edit operation can result in multiple events, we should emit multiple events in such cases. We're currently emitting at most one event.
@@ -601,7 +601,7 @@ func (s *service) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir 
 
 		events = append(events, issues.Event{
 			ID:        eventID,
-			Actor:     s.user(ctx, actor),
+			Actor:     actor,
 			CreatedAt: event.CreatedAt,
 			Type:      event.Type,
 			Rename:    event.Rename,
@@ -610,21 +610,21 @@ func (s *service) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir 
 
 	if ir.State != nil && *ir.State != origState {
 		// Subscribe interested users.
-		err = s.subscribe(ctx, repo, id, actor, "")
+		err = s.subscribe(ctx, repo, id, actor.UserSpec, "")
 		if err != nil {
 			log.Println("service.Edit: failed to s.subscribe:", err)
 		}
 
 		// Notify subscribed users.
 		// TODO: Maybe set fragment to fmt.Sprintf("event-%d", eventID), etc.
-		err = s.notify(ctx, repo, id, "", actor, event.CreatedAt)
+		err = s.notifyIssue(ctx, repo, id, "", issue, string(event.Type), event.CreatedAt)
 		if err != nil {
-			log.Println("service.Edit: failed to s.notify:", err)
+			log.Println("service.Edit: failed to s.notifyIssue:", err)
 		}
 
 		// Log event.
 		// TODO: Maybe set fragment to fmt.Sprintf("event-%d", eventID), etc.
-		err = s.logIssue(ctx, repo, id, "", issue, currentUser, string(event.Type), event.CreatedAt)
+		err = s.logIssue(ctx, repo, id, "", issue, actor, string(event.Type), event.CreatedAt)
 		if err != nil {
 			log.Println("service.Edit: failed to s.logIssue:", err)
 		}

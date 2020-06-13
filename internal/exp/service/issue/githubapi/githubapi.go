@@ -14,25 +14,25 @@ import (
 	githubv3 "github.com/google/go-github/github"
 	"github.com/shurcooL/githubv4"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
-	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/users"
 )
 
 // NewService creates a GitHub-backed issues.Service using given GitHub clients.
-// It uses notifications service, if not nil. At this time it infers the current user
-// from GitHub clients (their authentication info), and cannot be used to serve multiple users.
-// Both GitHub clients must use same authentication info.
+// It uses notification service, if not nil, to mark issues as read.
+// At this time it infers the current user from GitHub clients (their authentication info),
+// and cannot be used to serve multiple users. Both GitHub clients must use same authentication info.
 //
 // If router is nil, github.DotCom router is used, which links to subjects on github.com.
-func NewService(clientV3 *githubv3.Client, clientV4 *githubv4.Client, notifications notifications.ExternalService, router github.Router) issues.Service {
+func NewService(clientV3 *githubv3.Client, clientV4 *githubv4.Client, notification notification.Service, router github.Router) issues.Service {
 	if router == nil {
 		router = github.DotCom{}
 	}
 	return service{
-		clV3:          clientV3,
-		clV4:          clientV4,
-		rtr:           router,
-		notifications: notifications,
+		clV3:         clientV3,
+		clV4:         clientV4,
+		rtr:          router,
+		notification: notification,
 	}
 }
 
@@ -41,8 +41,8 @@ type service struct {
 	clV4 *githubv4.Client // GitHub GraphQL API v4 client.
 	rtr  github.Router
 
-	// notifications may be nil if there's no notifications service.
-	notifications notifications.ExternalService
+	// notification may be nil if there's no notification service.
+	notification notification.Service
 }
 
 // We use 0 as a special ID for the comment that is the issue description. This comment is edited differently.

@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"dmitri.shuralyov.com/state"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
-	"github.com/shurcooL/notifications"
+	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/users"
 )
 
@@ -19,7 +18,7 @@ func (*service) ThreadType(context.Context, issues.RepoSpec) (string, error) { r
 
 // subscribe subscribes user and anyone mentioned in body to the issue.
 func (s *service) subscribe(ctx context.Context, repo issues.RepoSpec, issueID uint64, user users.UserSpec, body string) error {
-	if s.notifications == nil {
+	if s.notification == nil {
 		return nil
 	}
 
@@ -31,43 +30,64 @@ func (s *service) subscribe(ctx context.Context, repo issues.RepoSpec, issueID u
 		return err
 	}
 	subscribers = append(subscribers, mentions...)*/
+	_ = body
 
-	return s.notifications.Subscribe(ctx, notifications.RepoSpec(repo), threadType, issueID, subscribers)
+	return s.notification.SubscribeThread(ctx, repo.URI, threadType, issueID, subscribers)
 }
 
 // markRead marks the specified issue as read for current user.
 func (s *service) markRead(ctx context.Context, repo issues.RepoSpec, issueID uint64) error {
-	if s.notifications == nil {
+	if s.notification == nil {
 		return nil
 	}
 
-	return s.notifications.MarkRead(ctx, notifications.RepoSpec(repo), threadType, issueID)
+	return s.notification.MarkThreadRead(ctx, repo.URI, threadType, issueID)
 }
 
-// notify notifies all subscribed users of an update that shows up in their Notification Center.
-func (s *service) notify(ctx context.Context, repo issues.RepoSpec, issueID uint64, fragment string, actor users.UserSpec, time time.Time) error {
-	if s.notifications == nil {
+// notifyIssue notifies all subscribed users about an issue.
+func (s *service) notifyIssue(ctx context.Context, repo issues.RepoSpec, issueID uint64, fragment string, issue issue, action string, time time.Time) error {
+	if s.notification == nil {
 		return nil
 	}
 
-	// TODO, THINK: Is this the best place/time?
-	// Get issue from storage for to populate notification fields.
+	nr := notification.NotificationRequest{
+		ImportPaths: []string{repo.URI},
+		Time:        time,
+		Payload: notification.Issue{
+			Action:       action,
+			IssueTitle:   issue.Title,
+			IssueBody:    issue.Body,
+			IssueHTMLURL: htmlURL(repo.URI, issueID, fragment),
+		},
+	}
+	return s.notification.NotifyThread(ctx, repo.URI, threadType, issueID, nr)
+}
+
+// notifyIssueComment notifies all subscribed users about an issue comment.
+func (s *service) notifyIssueComment(ctx context.Context, repo issues.RepoSpec, issueID uint64, fragment string, time time.Time, body string) error {
+	if s.notification == nil {
+		return nil
+	}
+
+	// TODO, THINK: Is this the best place/time? It's also being done in s.notify...
+	// Get issue from storage for to populate event fields.
 	var issue issue
 	err := jsonDecodeFile(ctx, s.fs, issueCommentPath(repo, issueID, 0), &issue)
 	if err != nil {
 		return err
 	}
 
-	nr := notifications.NotificationRequest{
-		Title:     issue.Title,
-		Icon:      notificationIcon(issue.State),
-		Color:     notificationColor(issue.State),
-		Actor:     actor,
-		UpdatedAt: time,
-		HTMLURL:   htmlURL(repo.URI, issueID, fragment),
+	nr := notification.NotificationRequest{
+		ImportPaths: []string{repo.URI},
+		Time:        time,
+		Payload: notification.IssueComment{
+			IssueTitle:     issue.Title,
+			IssueState:     issue.State,
+			CommentBody:    body,
+			CommentHTMLURL: htmlURL(repo.URI, issueID, fragment),
+		},
 	}
-
-	return s.notifications.Notify(ctx, notifications.RepoSpec(repo), threadType, issueID, nr)
+	return s.notification.NotifyThread(ctx, repo.URI, threadType, issueID, nr)
 }
 
 // TODO, THINK: Where should the logic to come up with the URL live?
@@ -89,40 +109,4 @@ func htmlURL(repoURI string, issueID uint64, fragment string) string {
 		htmlURL += "#" + fragment
 	}
 	return htmlURL
-}
-
-// TODO: This is display/presentation logic; try to factor it out of the backend service implementation.
-//       (Have it be provided to the service, maybe? Or another way.)
-func notificationIcon(st state.Issue) notifications.OcticonID {
-	switch st {
-	case state.IssueOpen:
-		return "issue-opened"
-	case state.IssueClosed:
-		return "issue-closed"
-	default:
-		return ""
-	}
-}
-
-/* TODO
-func (e event) Octicon() string {
-	switch e.Event.Type {
-	case issues.Reopened:
-		return "octicon-primitive-dot"
-	case issues.Closed:
-		return "octicon-circle-slash"
-	default:
-		return "octicon-primitive-dot"
-	}
-}*/
-
-func notificationColor(st state.Issue) notifications.RGB {
-	switch st {
-	case state.IssueOpen: // Open.
-		return notifications.RGB{R: 0x6c, G: 0xc6, B: 0x44}
-	case state.IssueClosed: // Closed.
-		return notifications.RGB{R: 0xbd, G: 0x2c, B: 0x00}
-	default:
-		return notifications.RGB{}
-	}
 }
