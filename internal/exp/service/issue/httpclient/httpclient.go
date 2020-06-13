@@ -20,6 +20,10 @@ func init() {
 	// For Issues.ListTimeline.
 	gob.Register(issues.Comment{})
 	gob.Register(issues.Event{})
+
+	// For issues.Close.Closer.
+	gob.Register(issues.Change{})
+	gob.Register(issues.Commit{})
 }
 
 // NewIssues creates a client that implements issues.Service remotely over HTTP.
@@ -90,8 +94,27 @@ func (ic *issueClient) Count(ctx context.Context, repo issues.RepoSpec, opt issu
 	return count, err
 }
 
-func (*issueClient) Get(_ context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
-	return issues.Issue{}, fmt.Errorf("Get: not implemented")
+func (ic *issueClient) Get(ctx context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
+	q := url.Values{
+		"RepoURI": {repo.URI},
+		"ID":      {fmt.Sprint(id)},
+	}
+	u := url.URL{
+		Path:     httproute.Get,
+		RawQuery: q.Encode(),
+	}
+	resp, err := ctxhttp.Get(ctx, ic.client, ic.baseURL.ResolveReference(&u).String())
+	if err != nil {
+		return issues.Issue{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return issues.Issue{}, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var i issues.Issue
+	err = json.NewDecoder(resp.Body).Decode(&i)
+	return i, err
 }
 
 func (ic *issueClient) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
@@ -144,12 +167,67 @@ func (ic *issueClient) Create(ctx context.Context, repo issues.RepoSpec, issue i
 	return i, err
 }
 
-func (*issueClient) CreateComment(_ context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
-	return issues.Comment{}, fmt.Errorf("CreateComment: not implemented")
+func (ic *issueClient) CreateComment(ctx context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
+	u := url.URL{
+		Path: httproute.CreateComment,
+		RawQuery: url.Values{
+			"RepoURI": {repo.URI},
+			"ID":      {fmt.Sprint(id)},
+		}.Encode(),
+	}
+	data := url.Values{ // TODO: Automate this conversion process.
+		"Body": {comment.Body},
+	}
+	resp, err := ctxhttp.PostForm(ctx, ic.client, ic.baseURL.ResolveReference(&u).String(), data)
+	if err != nil {
+		return issues.Comment{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return issues.Comment{}, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var c issues.Comment
+	err = json.NewDecoder(resp.Body).Decode(&c)
+	return c, err
 }
 
-func (*issueClient) Edit(_ context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
-	return issues.Issue{}, nil, fmt.Errorf("Edit: not implemented")
+func (ic *issueClient) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
+	u := url.URL{
+		Path: httproute.Edit,
+		RawQuery: url.Values{
+			"RepoURI": {repo.URI},
+			"ID":      {fmt.Sprint(id)},
+		}.Encode(),
+	}
+	data := url.Values{} // TODO: Automate this conversion process.
+	if ir.State != nil {
+		data.Set("State", string(*ir.State))
+	}
+	if ir.Title != nil {
+		data.Set("Title", *ir.Title)
+	}
+	resp, err := ctxhttp.PostForm(ctx, ic.client, ic.baseURL.ResolveReference(&u).String(), data)
+	if err != nil {
+		return issues.Issue{}, nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return issues.Issue{}, nil, fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	dec := json.NewDecoder(resp.Body)
+	var i issues.Issue
+	err = dec.Decode(&i)
+	if err != nil {
+		return issues.Issue{}, nil, err
+	}
+	var es []issues.Event
+	err = dec.Decode(&es)
+	if err != nil {
+		return issues.Issue{}, nil, err
+	}
+	return i, es, nil
 }
 
 func (ic *issueClient) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {

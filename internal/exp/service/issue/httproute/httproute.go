@@ -3,9 +3,12 @@ package httproute
 
 // Route paths.
 const (
-	List         = "List"
-	Count        = "Count"
-	ListTimeline = "ListTimeline"
-	Create       = "Create"
-	EditComment  = "EditComment"
+	List          = "List"
+	Count         = "Count"
+	Get           = "Get"
+	ListTimeline  = "ListTimeline"
+	Create        = "Create"
+	CreateComment = "CreateComment"
+	Edit          = "Edit"
+	EditComment   = "EditComment"
 )

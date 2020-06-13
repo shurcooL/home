@@ -3,5 +3,11 @@ package httproute
 
 // Route paths.
 const (
-	EditComment = "EditComment"
+	List         = "List"
+	Count        = "Count"
+	Get          = "Get"
+	ListTimeline = "ListTimeline"
+	ListCommits  = "ListCommits"
+	GetDiff      = "GetDiff"
+	EditComment  = "EditComment"
 )
