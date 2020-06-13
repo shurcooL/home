@@ -679,5 +679,6 @@ func project(repo string) string {
 // gerritChangeThreadType is the notification thread type for Gerrit changes.
 const gerritChangeThreadType = "Change"
 
-// ThreadType returns the notification thread type for this service.
-func (service) ThreadType(repo string) string { return gerritChangeThreadType }
+func (service) ThreadType(ctx context.Context, repo string) (string, error) {
+	return gerritChangeThreadType, nil
+}

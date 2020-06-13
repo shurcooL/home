@@ -15,8 +15,7 @@ import (
 // threadType is the notifications thread type for this service.
 const threadType = "issues"
 
-// ThreadType returns the notifications thread type for this service.
-func (*service) ThreadType(issues.RepoSpec) string { return threadType }
+func (*service) ThreadType(context.Context, issues.RepoSpec) (string, error) { return threadType, nil }
 
 // subscribe subscribes user and anyone mentioned in body to the issue.
 func (s *service) subscribe(ctx context.Context, repo issues.RepoSpec, issueID uint64, user users.UserSpec, body string) error {

@@ -398,8 +398,9 @@ func hasChange(repo string, id uint64) bool {
 // fsChangeThreadType is the notification thread type for changes stored in a virtual filesystem.
 const fsChangeThreadType = "Change"
 
-// ThreadType returns the notification thread type for this service.
-func (*Service) ThreadType(repo string) string { return fsChangeThreadType }
+func (*Service) ThreadType(ctx context.Context, repo string) (string, error) {
+	return fsChangeThreadType, nil
+}
 
 var (
 	dmitshur = users.User{

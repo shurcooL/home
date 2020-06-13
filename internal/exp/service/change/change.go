@@ -30,6 +30,9 @@ type Service interface {
 
 	// EditComment edits a comment.
 	EditComment(ctx context.Context, repo string, id uint64, cr CommentRequest) (Comment, error)
+
+	// ThreadType reports the notification thread type for this service in repo.
+	ThreadType(ctx context.Context, repo string) (string, error)
 }
 
 // Change represents a change in a repository.

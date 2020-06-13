@@ -180,3 +180,16 @@ func (h Change) EditComment(w http.ResponseWriter, req *http.Request) error {
 	}
 	return httperror.JSONResponse{V: comment}
 }
+
+func (h Change) ThreadType(w http.ResponseWriter, req *http.Request) error {
+	if req.Method != "GET" {
+		return httperror.Method{Allowed: []string{"GET"}}
+	}
+	q := req.URL.Query() // TODO: Automate this conversion process.
+	repo := q.Get("Repo")
+	tt, err := h.Change.ThreadType(req.Context(), repo)
+	if err != nil {
+		return err
+	}
+	return httperror.JSONResponse{V: tt}
+}

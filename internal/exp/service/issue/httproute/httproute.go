@@ -11,4 +11,5 @@ const (
 	CreateComment = "CreateComment"
 	Edit          = "Edit"
 	EditComment   = "EditComment"
+	ThreadType    = "ThreadType"
 )

@@ -260,3 +260,22 @@ func (ic *issueClient) EditComment(ctx context.Context, repo issues.RepoSpec, id
 	err = json.NewDecoder(resp.Body).Decode(&c)
 	return c, err
 }
+
+func (cc *issueClient) ThreadType(ctx context.Context, repo issues.RepoSpec) (string, error) {
+	u := url.URL{
+		Path:     httproute.ThreadType,
+		RawQuery: url.Values{"Repo": {repo.URI}}.Encode(),
+	}
+	resp, err := ctxhttp.Get(ctx, cc.client, cc.baseURL.ResolveReference(&u).String())
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return "", fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var tt string
+	err = json.NewDecoder(resp.Body).Decode(&tt)
+	return tt, err
+}

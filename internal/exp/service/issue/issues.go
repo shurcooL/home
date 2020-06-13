@@ -45,6 +45,9 @@ type Service interface {
 	Edit(ctx context.Context, repo RepoSpec, id uint64, ir IssueRequest) (Issue, []Event, error)
 	// EditComment edits comment of specified issue id.
 	EditComment(ctx context.Context, repo RepoSpec, id uint64, cr CommentRequest) (Comment, error)
+
+	// ThreadType reports the notification thread type for this service in repo.
+	ThreadType(ctx context.Context, repo RepoSpec) (string, error)
 }
 
 // Issue represents an issue on a repository.

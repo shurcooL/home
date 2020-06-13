@@ -10,4 +10,5 @@ const (
 	ListCommits  = "ListCommits"
 	GetDiff      = "GetDiff"
 	EditComment  = "EditComment"
+	ThreadType   = "ThreadType"
 )

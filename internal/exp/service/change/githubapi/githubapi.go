@@ -1019,5 +1019,6 @@ func externalizeReaction(reaction reactions.EmojiID) (githubv4.ReactionContent, 
 // githubPRThreadType is the notification thread type for GitHub Pull Requests.
 const githubPRThreadType = "PullRequest"
 
-// ThreadType returns the notification thread type for this service.
-func (service) ThreadType(repo string) string { return githubPRThreadType }
+func (service) ThreadType(ctx context.Context, repo string) (string, error) {
+	return githubPRThreadType, nil
+}

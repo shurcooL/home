@@ -227,3 +227,22 @@ func (cc *changeClient) EditComment(ctx context.Context, repo string, id uint64,
 	err = json.NewDecoder(resp.Body).Decode(&comment)
 	return comment, err
 }
+
+func (cc *changeClient) ThreadType(ctx context.Context, repo string) (string, error) {
+	u := url.URL{
+		Path:     httproute.ThreadType,
+		RawQuery: url.Values{"Repo": {repo}}.Encode(),
+	}
+	resp, err := ctxhttp.Get(ctx, cc.client, cc.baseURL.ResolveReference(&u).String())
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return "", fmt.Errorf("did not get acceptable status code: %v body: %q", resp.Status, body)
+	}
+	var tt string
+	err = json.NewDecoder(resp.Body).Decode(&tt)
+	return tt, err
+}
