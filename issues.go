@@ -2,18 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"strings"
-	"time"
 
-	"dmitri.shuralyov.com/route/github"
-	"dmitri.shuralyov.com/service/change"
 	"github.com/shurcooL/events"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/httputil"
@@ -21,45 +15,23 @@ import (
 	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/issues"
 	"github.com/shurcooL/issues/fs"
-	ghissues "github.com/shurcooL/issues/githubapi"
 	"github.com/shurcooL/issuesapp"
-	"github.com/shurcooL/issuesapp/common"
 	"github.com/shurcooL/issuesapp/httphandler"
 	"github.com/shurcooL/issuesapp/httproute"
 	"github.com/shurcooL/notifications"
-	"github.com/shurcooL/octicon"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/net/webdav"
 )
 
-func newIssuesService(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service, router github.Router) (issues.Service, error) {
-	local, err := fs.NewService(root, notifications, events, users)
-	if err != nil {
-		return nil, err
-	}
-	dmitshurGitHubIssues := ghissues.NewService(
-		dmitshurPublicRepoGHV3,
-		dmitshurPublicRepoGHV4,
-		notifications,
-		router,
-	)
-	return dmitshurSeesExternalIssues{
-		local:                local,
-		dmitshurGitHubIssues: dmitshurGitHubIssues,
-		users:                users,
-	}, nil
+func newIssuesServiceV1(root webdav.FileSystem, notifications notifications.ExternalService, events events.ExternalService, users users.Service) (issues.Service, error) {
+	return fs.NewService(root, notifications, events, users)
 }
 
-type issueCounter interface {
-	// Count issues.
-	Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error)
-}
-
-// initIssues registers handlers for the issues service HTTP API,
+// initIssuesV1 registers handlers for the issues service HTTP API,
 // and handlers for the issues app.
-func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter changeCounter, notifications notifications.Service, users users.Service) (issuesApp http.Handler) {
+func initIssuesV1(mux *http.ServeMux, issuesService issues.Service, notifications notifications.Service, users users.Service) {
 	// Register HTTP API endpoints.
 	issuesAPIHandler := httphandler.Issues{Issues: issuesService}
 	mux.Handle(httproute.List, headerAuth{httputil.ErrorHandler(users, issuesAPIHandler.List)})
@@ -136,96 +108,11 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 			ReturnURL:         returnURL,
 		}
 
-		switch repo := req.Context().Value(issuesapp.RepoSpecContextKey).(issues.RepoSpec); {
-		default:
-			return []htmlg.Component{header}, nil
-
-		case strings.HasPrefix(repo.URI, "dmitri.shuralyov.com/") && repo.URI != "dmitri.shuralyov.com/idiomatic-go":
-			// TODO: Maybe try to avoid fetching openIssues twice...
-			t0 := time.Now()
-			openIssues, err := issuesService.Count(req.Context(), repo, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
-			if err != nil {
-				return nil, err
-			}
-			openChanges, err := changeCounter.Count(req.Context(), repo.URI, change.ListOptions{Filter: change.FilterOpen})
-			if err != nil {
-				return nil, err
-			}
-			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repo.URI)
-
-			heading := htmlg.NodeComponent{
-				Type: html.ElementNode, Data: atom.H2.String(),
-				FirstChild: htmlg.Text(repo.URI + "/..."),
-			}
-			repo := req.Context().Value(repoInfoContextKey).(repoInfo) // From issuesHandler.ServeHTTP.
-			tabnav := component.RepositoryTabNav(component.IssuesTab, repo.Path, repo.Packages, openIssues, openChanges)
-			return []htmlg.Component{header, heading, tabnav}, nil
-
-		// TODO: Dedup with changes (maybe; mind the githubURL difference).
-		case strings.HasPrefix(repo.URI, "github.com/"):
-			// TODO: Maybe try to avoid fetching openIssues twice...
-			t0 := time.Now()
-			openIssues, err := issuesService.Count(req.Context(), repo, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
-			if err != nil {
-				return nil, err
-			}
-			openChanges, err := changeCounter.Count(req.Context(), repo.URI, change.ListOptions{Filter: change.FilterOpen})
-			if err != nil {
-				return nil, err
-			}
-			fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", repo.URI)
-
-			heading := &html.Node{
-				Type: html.ElementNode, Data: atom.H2.String(),
-			}
-			heading.AppendChild(htmlg.Text(repo.URI + "/..."))
-			var githubURL string
-			switch issueID := req.Context().Value(issuesapp.StateContextKey).(common.State).IssueID; {
-			case repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" &&
-				issueID == 0:
-				githubURL = fmt.Sprintf("https://%s/issues", repo.URI)
-			case repo.URI != "github.com/shurcooL/issuesapp" && repo.URI != "github.com/shurcooL/notificationsapp" &&
-				issueID != 0:
-				githubURL = fmt.Sprintf("https://%s/issues/%d", repo.URI, issueID)
-			default:
-				githubURL = "https://" + repo.URI
-			}
-			heading.AppendChild(&html.Node{
-				Type: html.ElementNode, Data: atom.A.String(),
-				Attr: []html.Attribute{
-					{Key: atom.Href.String(), Val: githubURL},
-					{Key: atom.Class.String(), Val: "gray"},
-					{Key: atom.Style.String(), Val: "margin-left: 10px;"},
-				},
-				FirstChild: octicon.SetSize(octicon.MarkGitHub(), 24),
-			})
-			tabnav := tabnav{
-				Tabs: []tab{
-					{
-						Content: contentCounter{
-							Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
-							Count:   int(openIssues),
-						},
-						URL:      "/issues/" + repo.URI,
-						Selected: true,
-					},
-					{
-						Content: contentCounter{
-							Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
-							Count:   int(openChanges),
-						},
-						URL: "/changes/" + repo.URI,
-					},
-				},
-			}
-			return []htmlg.Component{header, htmlg.NodeComponent(*heading), tabnav}, nil
-		}
+		return []htmlg.Component{header}, nil
 	}
-	issuesApp = issuesapp.New(issuesService, users, opt)
+	issuesApp := issuesapp.New(issuesService, users, opt)
 
 	for _, repo := range [...]struct{ SpecURL, BaseURL string }{
-		{SpecURL: "github.com/shurcooL/issuesapp", BaseURL: "/issues/github.com/shurcooL/issuesapp"},
-		{SpecURL: "github.com/shurcooL/notificationsapp", BaseURL: "/issues/github.com/shurcooL/notificationsapp"},
 		{SpecURL: "dmitri.shuralyov.com/idiomatic-go", BaseURL: "/idiomatic-go/entries"},
 	} {
 		issuesHandler := cookieAuth{httputil.ErrorHandler(users, issuesHandler{
@@ -236,50 +123,6 @@ func initIssues(mux *http.ServeMux, issuesService issues.Service, changeCounter 
 		mux.Handle(repo.BaseURL, issuesHandler)
 		mux.Handle(repo.BaseURL+"/", issuesHandler)
 	}
-
-	githubIssuesHandler := cookieAuth{httputil.ErrorHandler(users, func(w http.ResponseWriter, req *http.Request) error {
-		// Parse "/issues/github.com/..." request.
-		elems := strings.SplitN(req.URL.Path[len("/issues/github.com/"):], "/", 3)
-		if len(elems) < 2 || elems[0] == "" || elems[1] == "" {
-			return os.ErrNotExist
-		}
-		currentUser, err := users.GetAuthenticatedSpec(req.Context())
-		if err != nil {
-			return err
-		}
-		if currentUser != dmitshur {
-			// Redirect to GitHub.
-			switch len(elems) {
-			case 2:
-				return httperror.Redirect{URL: "https://github.com/" + elems[0] + "/" + elems[1] + "/issues"}
-			default: // 3 or more.
-				return httperror.Redirect{URL: "https://github.com/" + elems[0] + "/" + elems[1] + "/issues/" + elems[2]}
-			}
-		}
-		specURL := "github.com/" + elems[0] + "/" + elems[1]
-		baseURL := "/issues/" + specURL
-
-		prefixLen := len(baseURL)
-		if prefix := req.URL.Path[:prefixLen]; req.URL.Path == prefix+"/" {
-			baseURL := prefix
-			if req.URL.RawQuery != "" {
-				baseURL += "?" + req.URL.RawQuery
-			}
-			return httperror.Redirect{URL: baseURL}
-		}
-		req = copyRequestAndURL(req)
-		req.URL.Path = req.URL.Path[prefixLen:]
-		if req.URL.Path == "" {
-			req.URL.Path = "/"
-		}
-		req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: specURL}))
-		req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, baseURL))
-		issuesApp.ServeHTTP(w, req)
-		return nil
-	})}
-	mux.Handle("/issues/github.com/", githubIssuesHandler)
-
-	return issuesApp
 }
 
 func signInViaURL(returnURL string) template.HTML {
@@ -338,145 +181,4 @@ func (h issuesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 	w.WriteHeader(rr.Code)
 	_, err := io.Copy(w, rr.Body)
 	return err
-}
-
-// dmitshurSeesExternalIssues gives dmitshur access to issues on GitHub,
-// in addition to local ones.
-type dmitshurSeesExternalIssues struct {
-	local                issues.Service
-	dmitshurGitHubIssues issues.Service
-	users                users.Service
-}
-
-func (s dmitshurSeesExternalIssues) List(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) ([]issues.Issue, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return nil, err
-	}
-	return service.List(ctx, repo, opt)
-}
-
-func (s dmitshurSeesExternalIssues) Count(ctx context.Context, repo issues.RepoSpec, opt issues.IssueListOptions) (uint64, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return 0, err
-	}
-	return service.Count(ctx, repo, opt)
-}
-
-func (s dmitshurSeesExternalIssues) Get(ctx context.Context, repo issues.RepoSpec, id uint64) (issues.Issue, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return issues.Issue{}, err
-	}
-	return service.Get(ctx, repo, id)
-}
-
-func (s dmitshurSeesExternalIssues) ListComments(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Comment, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return nil, err
-	}
-	return service.ListComments(ctx, repo, id, opt)
-}
-
-func (s dmitshurSeesExternalIssues) ListEvents(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]issues.Event, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return nil, err
-	}
-	return service.ListEvents(ctx, repo, id, opt)
-}
-
-func (s dmitshurSeesExternalIssues) ListTimeline(ctx context.Context, repo issues.RepoSpec, id uint64, opt *issues.ListOptions) ([]interface{}, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return nil, err
-	}
-	tl, ok := service.(issues.TimelineLister)
-	if !ok {
-		return nil, fmt.Errorf("service doesn't implement issues.TimelineLister")
-	}
-	return tl.ListTimeline(ctx, repo, id, opt)
-}
-
-func (s dmitshurSeesExternalIssues) Create(ctx context.Context, repo issues.RepoSpec, issue issues.Issue) (issues.Issue, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return issues.Issue{}, err
-	}
-	return service.Create(ctx, repo, issue)
-}
-
-func (s dmitshurSeesExternalIssues) CreateComment(ctx context.Context, repo issues.RepoSpec, id uint64, comment issues.Comment) (issues.Comment, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return issues.Comment{}, err
-	}
-	return service.CreateComment(ctx, repo, id, comment)
-}
-
-func (s dmitshurSeesExternalIssues) Edit(ctx context.Context, repo issues.RepoSpec, id uint64, ir issues.IssueRequest) (issues.Issue, []issues.Event, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return issues.Issue{}, nil, err
-	}
-	return service.Edit(ctx, repo, id, ir)
-}
-
-func (s dmitshurSeesExternalIssues) EditComment(ctx context.Context, repo issues.RepoSpec, id uint64, cr issues.CommentRequest) (issues.Comment, error) {
-	service, err := s.service(ctx, repo)
-	if err != nil {
-		return issues.Comment{}, err
-	}
-	return service.EditComment(ctx, repo, id, cr)
-}
-
-func (s dmitshurSeesExternalIssues) service(ctx context.Context, repo issues.RepoSpec) (issues.Service, error) {
-	switch {
-	default:
-		return s.local, nil
-	case strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" &&
-		repo.URI != "github.com/shurcooL/notificationsapp":
-
-		currentUser, err := s.users.GetAuthenticatedSpec(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if currentUser != dmitshur {
-			return nil, os.ErrPermission
-		}
-		return s.dmitshurGitHubIssues, nil
-	}
-}
-
-func (s dmitshurSeesExternalIssues) IsTimelineLister(repo issues.RepoSpec) bool {
-	switch {
-	default:
-		tl, ok := s.local.(issues.TimelineLister)
-		return ok && tl.IsTimelineLister(repo)
-	case strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" &&
-		repo.URI != "github.com/shurcooL/notificationsapp":
-
-		tl, ok := s.dmitshurGitHubIssues.(issues.TimelineLister)
-		return ok && tl.IsTimelineLister(repo)
-	}
-}
-
-func (s dmitshurSeesExternalIssues) ThreadType(repo issues.RepoSpec) string {
-	switch {
-	default:
-		return s.local.(interface {
-			ThreadType(issues.RepoSpec) string
-		}).ThreadType(repo)
-	case strings.HasPrefix(repo.URI, "github.com/") &&
-		repo.URI != "github.com/shurcooL/issuesapp" &&
-		repo.URI != "github.com/shurcooL/notificationsapp":
-
-		return s.dmitshurGitHubIssues.(interface {
-			ThreadType(issues.RepoSpec) string
-		}).ThreadType(repo)
-	}
 }

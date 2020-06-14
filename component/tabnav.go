@@ -88,7 +88,7 @@ func RepositoryTabNav(selected RepositoryTab, repoPath string, packages int, ope
 					Content: iconText{Icon: octicon.IssueOpened, Text: "Issues"},
 					Count:   int(openIssues),
 				},
-				URL:      route.RepoIssues(repoPath),
+				URL: route.RepoIssues(repoPath), OnClick: "Open(event, this)",
 				Selected: selected == IssuesTab,
 			},
 			{
@@ -96,7 +96,7 @@ func RepositoryTabNav(selected RepositoryTab, repoPath string, packages int, ope
 					Content: iconText{Icon: octicon.GitPullRequest, Text: "Changes"},
 					Count:   int(openChanges),
 				},
-				URL:      route.RepoChanges(repoPath),
+				URL: route.RepoChanges(repoPath), OnClick: "Open(event, this)",
 				Selected: selected == ChangesTab,
 			},
 		},

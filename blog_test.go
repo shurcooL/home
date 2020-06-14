@@ -17,7 +17,7 @@ func TestBlogNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	issuesService, err := newIssuesService(webdav.NewMemFS(), nil, nil, users, nil)
+	issuesService, err := newIssuesServiceV1(webdav.NewMemFS(), nil, nil, users)
 	if err != nil {
 		t.Fatal(err)
 	}

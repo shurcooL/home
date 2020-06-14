@@ -268,7 +268,7 @@ func (a *app) augmentUnread(ctx context.Context, st State, es []component.IssueE
 
 	unreadThreads := make(map[uint64]struct{}) // Set of unread thread IDs.
 	for _, n := range ns {
-		// n.RepoSpec == s.RepoSpec is guaranteed because we filtered in notifications.ListOptions,
+		// n.RepoSpec == st.RepoSpec is guaranteed because we filtered in notifications.ListOptions,
 		// so we only need to check that n.ThreadType matches.
 		if n.ThreadType != threadType {
 			continue

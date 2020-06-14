@@ -14,6 +14,7 @@ import (
 	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/route"
+	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/httpgzip"
 	"github.com/shurcooL/users"
 	"golang.org/x/tools/godoc/vfs"
@@ -23,8 +24,8 @@ import (
 type codeHandler struct {
 	code         *code.Service
 	reposDir     string
-	issuesApp    http.Handler
-	changesApp   http.Handler
+	issuesApp    httperror.Handler
+	changesApp   httperror.Handler
 	issues       issueCounter
 	change       changeCounter
 	notification notification.Service
@@ -181,23 +182,13 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 	case req.URL.Path == route.RepoIssues(repo.Path) ||
 		strings.HasPrefix(req.URL.Path, route.RepoIssues(repo.Path)+"/"):
 
-		h := cookieAuth{httputil.ErrorHandler(h.users, issuesHandler{
-			SpecURL:   repo.Spec, // Issues trackers are mapped to repo roots at this time.
-			BaseURL:   route.RepoIssues(repo.Path),
-			Repo:      repo,
-			issuesApp: h.issuesApp,
-		}.ServeHTTP)}
+		h := cookieAuth{httputil.ErrorHandler(h.users, h.issuesApp.ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
 	case req.URL.Path == route.RepoChanges(repo.Path) ||
 		strings.HasPrefix(req.URL.Path, route.RepoChanges(repo.Path)+"/"):
 
-		h := cookieAuth{httputil.ErrorHandler(h.users, changesHandler{
-			SpecURL:    repo.Spec, // Change trackers are mapped to repo roots at this time.
-			BaseURL:    route.RepoChanges(repo.Path),
-			Repo:       repo,
-			changesApp: h.changesApp,
-		}.ServeHTTP)}
+		h := cookieAuth{httputil.ErrorHandler(h.users, h.changesApp.ServeHTTP)}
 		h.ServeHTTP(w, req)
 		return true
 	default:

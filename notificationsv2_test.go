@@ -35,7 +35,7 @@ func TestNotificationsRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := spa.NewApp(ns, users, nil)
+	app := spa.NewApp(nil, nil, nil, ns, users, nil)
 	initNotificationsV2(mux, nil, &appHandler{app.NotifsApp}, nil, nil, users)
 
 	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)

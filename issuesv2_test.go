@@ -6,7 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"dmitri.shuralyov.com/service/change"
+	"github.com/shurcooL/home/internal/exp/service/change"
+	"github.com/shurcooL/home/internal/exp/spa"
 	"golang.org/x/net/webdav"
 )
 
@@ -19,11 +20,12 @@ func TestNewIssueRedirectsLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	issues, err := newIssuesService(webdav.NewMemFS(), nil, nil, users, nil)
+	issues, err := newIssuesServiceV2(webdav.NewMemFS(), nil, nil, users, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	initIssues(mux, issues, zeroCounter{}, nil, users)
+	app := spa.NewApp(nil, issues, zeroChangeCounter{}, nil, users, nil)
+	initIssuesV2(mux, issues, &appHandler{app.IssuesApp}, users)
 
 	req := httptest.NewRequest(http.MethodGet, "/issues/github.com/shurcooL/issuesapp/new", nil)
 	rr := httptest.NewRecorder()
@@ -46,11 +48,12 @@ func TestIssueNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	issues, err := newIssuesService(webdav.NewMemFS(), nil, nil, users, nil)
+	issues, err := newIssuesServiceV2(webdav.NewMemFS(), nil, nil, users, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	initIssues(mux, issues, zeroCounter{}, nil, users)
+	app := spa.NewApp(nil, issues, zeroChangeCounter{}, nil, users, nil)
+	initIssuesV2(mux, issues, &appHandler{app.IssuesApp}, users)
 
 	req := httptest.NewRequest(http.MethodGet, "/issues/github.com/shurcooL/issuesapp/1822", nil)
 	rr := httptest.NewRecorder()
@@ -67,7 +70,9 @@ func TestIssueNotFound(t *testing.T) {
 	}
 }
 
-// zeroCounter implements changeCounter that always returns 0 change count.
-type zeroCounter struct{}
+// zeroChangeCounter implements change.Service that always returns 0 change count.
+type zeroChangeCounter struct{ change.Service }
 
-func (zeroCounter) Count(context.Context, string, change.ListOptions) (uint64, error) { return 0, nil }
+func (zeroChangeCounter) Count(context.Context, string, change.ListOptions) (uint64, error) {
+	return 0, nil
+}

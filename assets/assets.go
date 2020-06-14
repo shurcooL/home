@@ -20,6 +20,8 @@ import (
 var Assets = union.New(map[string]http.FileSystem{
 	"/assets":        gopherjs_http.NewFS(http.Dir(importPathToDir("github.com/shurcooL/home/_data"))),
 	"/spa.wasm":      packageWasmFS{"github.com/shurcooL/home/internal/exp/cmd/spa"},
+	"/issues":        http.Dir(importPathToDir("github.com/shurcooL/home/internal/exp/app/issuesapp/_data")),
+	"/changes":       http.Dir(importPathToDir("github.com/shurcooL/home/internal/exp/app/changesapp/_data")),
 	"/notifications": http.Dir(importPathToDir("github.com/shurcooL/home/internal/exp/app/notifsapp/_data")),
 })
 

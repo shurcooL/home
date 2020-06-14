@@ -192,12 +192,19 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	if err != nil {
 		return fmt.Errorf("newEventsService: %v", err)
 	}
-	issuesService, err := newIssuesService(
+	issuesServiceV1, err := newIssuesServiceV1(
 		webdav.Dir(filepath.Join(storeDir, "issues")),
-		notifications, multiEvents{events, localNotifications.NotifyPayloadSource}, users, githubRouter,
+		notifications, multiEvents{events, localNotifications.NotifyPayloadSource}, users,
 	)
 	if err != nil {
-		return fmt.Errorf("newIssuesService: %v", err)
+		return fmt.Errorf("newIssuesServiceV1: %v", err)
+	}
+	issuesService, err := newIssuesServiceV2(
+		webdav.Dir(filepath.Join(storeDir, "issues")),
+		notifServiceV2, events, users, githubRouter,
+	)
+	if err != nil {
+		return fmt.Errorf("newIssuesServiceV2: %v", err)
 	}
 	changeService := newChangeService(reactions, users, githubRouter)
 
@@ -240,7 +247,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 
 	initAbout(notifServiceV2, users)
 
-	err = initBlog(http.DefaultServeMux, issuesService, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifServiceV2, users)
+	err = initBlog(http.DefaultServeMux, issuesServiceV1, issues.RepoSpec{URI: "dmitri.shuralyov.com/blog"}, notifServiceV2, users)
 	if err != nil {
 		return fmt.Errorf("initBlog: %v", err)
 	}
@@ -255,25 +262,33 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	http.Handle(path.Join("/api/code", codehttproute.ListDirectories), httputil.ErrorHandler(nil, codeAPIHandler.ListDirectories))
 	http.Handle(path.Join("/api/code", codehttproute.GetDirectory), httputil.ErrorHandler(nil, codeAPIHandler.GetDirectory))
 
-	app := spa.NewApp(notifServiceV2, users, nil)
-	issuesApp := initIssues(http.DefaultServeMux, issuesService, changeService, notifications, users)
-	changesApp := initChanges(http.DefaultServeMux, changeService, issuesService, notifications, users)
+	app := spa.NewApp(code, issuesService, changeService, notifServiceV2, users, nil)
+	issuesApp, changesApp := &appHandler{app.IssuesApp}, &appHandler{app.ChangesApp}
+	initIssuesV1(http.DefaultServeMux, issuesServiceV1, notifications, users)
+	initIssuesV2(http.DefaultServeMux, issuesService, issuesApp, users)
+	initChanges(http.DefaultServeMux, changeService, changesApp, users)
 	initNotificationsV2(http.DefaultServeMux, notifServiceV2, &appHandler{app.NotifsApp}, githubActivity, gerritActivity, users)
 
 	emojisHandler := cookieAuth{httpgzip.FileServer(assets.Emojis, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/emojis/", http.StripPrefix("/emojis", emojisHandler))
+	http.Handle("/assets/emojis/", http.StripPrefix("/assets/emojis", emojisHandler))
 
 	assetsHandler := cookieAuth{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
 	http.Handle("/assets/spa.wasm", http.StripPrefix("/assets", assetsHandler))
+	http.Handle("/assets/issues/", http.StripPrefix("/assets", assetsHandler))
+	http.Handle("/assets/changes/", http.StripPrefix("/assets", assetsHandler))
 	http.Handle("/assets/notifications/", http.StripPrefix("/assets", assetsHandler))
 
 	fontsHandler := cookieAuth{httpgzip.FileServer(assets.Fonts, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/fonts/", http.StripPrefix("/assets/fonts", fontsHandler))
 
+	gfmHandler := cookieAuth{httpgzip.FileServer(assets.GFMStyle, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
+	http.Handle("/assets/gfm/", http.StripPrefix("/assets/gfm", gfmHandler))
+
 	initResume(reactions, notifServiceV2, users)
 
-	initIdiomaticGo(issuesService, notifServiceV2, users)
+	initIdiomaticGo(issuesServiceV1, notifServiceV2, users)
 
 	// Code repositories (part 2 of 2).
 	moduleHandler := codepkg.ModuleHandler{Code: code}

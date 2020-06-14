@@ -190,6 +190,7 @@ func issueFromAction(p notification.Issue, importPath string) htmlg.Component {
 		State:   is,
 		Title:   importPath + ": " + p.IssueTitle,
 		HTMLURL: p.IssueHTMLURL,
+		OnClick: "Open(event, this)",
 	}
 }
 func issueFromComment(p notification.IssueComment, importPath string) htmlg.Component {
@@ -197,6 +198,7 @@ func issueFromComment(p notification.IssueComment, importPath string) htmlg.Comp
 		State:   p.IssueState,
 		Title:   importPath + ": " + p.IssueTitle,
 		HTMLURL: p.CommentHTMLURL,
+		OnClick: "Open(event, this)",
 	}
 }
 func changeFromAction(p notification.Change, importPath string) htmlg.Component {
@@ -216,6 +218,7 @@ func changeFromAction(p notification.Change, importPath string) htmlg.Component 
 		State:   cs,
 		Title:   importPath + ": " + p.ChangeTitle,
 		HTMLURL: p.ChangeHTMLURL,
+		OnClick: "Open(event, this)",
 	}
 }
 func changeFromComment(p notification.ChangeComment, importPath string) htmlg.Component {
@@ -223,6 +226,7 @@ func changeFromComment(p notification.ChangeComment, importPath string) htmlg.Co
 		State:   p.ChangeState,
 		Title:   importPath + ": " + p.ChangeTitle,
 		HTMLURL: p.CommentHTMLURL,
+		OnClick: "Open(event, this)",
 	}
 }
 

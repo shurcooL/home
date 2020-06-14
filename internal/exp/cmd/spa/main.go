@@ -13,6 +13,9 @@ import (
 	"github.com/shurcooL/go/gopherjs_http/jsutil/v2"
 	homecomponent "github.com/shurcooL/home/component"
 	homehttp "github.com/shurcooL/home/http"
+	codehttpclient "github.com/shurcooL/home/internal/code/httpclient"
+	changehttpclient "github.com/shurcooL/home/internal/exp/service/change/httpclient"
+	issuehttpclient "github.com/shurcooL/home/internal/exp/service/issue/httpclient"
 	notifhttpclient "github.com/shurcooL/home/internal/exp/service/notification/httpclient"
 	"github.com/shurcooL/home/internal/exp/spa"
 	"golang.org/x/oauth2"
@@ -26,11 +29,14 @@ func main() {
 
 	httpClient := httpClient()
 
+	codeService := codehttpclient.NewCode(httpClient, "", "", "/api/code")
+	issueService := issuehttpclient.NewIssues(httpClient, "", "", "/api/issue")
+	changeService := changehttpclient.NewChange(httpClient, "", "", "/api/change")
 	notifService := notifhttpclient.NewNotification(httpClient, "", "", "/api/notificationv2")
 	userService := homehttp.Users{}
 
 	redirect := func(reqURL *url.URL) { openCh <- openRequest{URL: reqURL, PushState: true} }
-	app = spa.NewApp(notifService, userService, redirect)
+	app = spa.NewApp(codeService, issueService, changeService, notifService, userService, redirect)
 
 	// Start the scheduler loop.
 	go scheduler(userService)

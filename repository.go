@@ -9,13 +9,14 @@ import (
 	"path"
 	"time"
 
-	"dmitri.shuralyov.com/service/change"
+	statepkg "dmitri.shuralyov.com/state"
 	"github.com/shurcooL/home/component"
 	"github.com/shurcooL/home/internal/code"
+	"github.com/shurcooL/home/internal/exp/service/change"
+	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
 	"github.com/shurcooL/httperror"
-	"github.com/shurcooL/issues"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -64,7 +65,7 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 
 	t0 := time.Now()
-	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(issues.OpenState)})
+	openIssues, err := h.issues.Count(req.Context(), issues.RepoSpec{URI: h.Repo.Spec}, issues.IssueListOptions{State: issues.StateFilter(statepkg.IssueOpen)})
 	if err != nil {
 		return err
 	}
