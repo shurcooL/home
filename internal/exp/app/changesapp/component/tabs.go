@@ -56,6 +56,7 @@ func (n ChangesNav) tabs() []*html.Node {
 			Type: html.ElementNode, Data: atom.A.String(),
 			Attr: []html.Attribute{
 				{Key: atom.Href.String(), Val: tabURL},
+				{Key: atom.Onclick.String(), Val: "Open(event, this)"},
 			},
 		}
 		if tab.Name == selectedTabName {

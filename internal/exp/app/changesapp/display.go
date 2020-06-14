@@ -1,3 +1,5 @@
+// +build go1.14
+
 package changesapp
 
 import (
@@ -79,47 +81,6 @@ func (s byCreatedAtID) Less(i, j int) bool {
 func (s byCreatedAtID) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 // TODO: Dedup.
-
-// tabnav is a left-aligned horizontal row of tabs Primer CSS component.
-//
-// http://primercss.io/nav/#tabnav
-type tabnav struct {
-	Tabs []tab
-}
-
-func (t tabnav) Render() []*html.Node {
-	nav := &html.Node{
-		Type: html.ElementNode, Data: atom.Nav.String(),
-		Attr: []html.Attribute{{Key: atom.Class.String(), Val: "tabnav-tabs"}},
-	}
-	for _, t := range t.Tabs {
-		htmlg.AppendChildren(nav, t.Render()...)
-	}
-	return []*html.Node{htmlg.DivClass("tabnav", nav)}
-}
-
-// tab is a single tab entry within a tabnav.
-type tab struct {
-	Content  htmlg.Component
-	URL      string
-	Selected bool
-}
-
-func (t tab) Render() []*html.Node {
-	aClass := "tabnav-tab"
-	if t.Selected {
-		aClass += " selected"
-	}
-	a := &html.Node{
-		Type: html.ElementNode, Data: atom.A.String(),
-		Attr: []html.Attribute{
-			{Key: atom.Href.String(), Val: t.URL},
-			{Key: atom.Class.String(), Val: aClass},
-		},
-	}
-	htmlg.AppendChildren(a, t.Content.Render()...)
-	return []*html.Node{a}
-}
 
 type contentCounter struct {
 	Content htmlg.Component

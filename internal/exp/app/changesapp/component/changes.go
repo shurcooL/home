@@ -62,7 +62,7 @@ type ChangeEntry struct {
 	Unread bool // Unread indicates whether the change contains unread notifications for authenticated user.
 
 	// TODO, THINK: This is router details, can it be factored out or cleaned up?
-	BaseURI string
+	BaseURL string
 }
 
 func (i ChangeEntry) Render() []*html.Node {
@@ -72,7 +72,7 @@ func (i ChangeEntry) Render() []*html.Node {
 	// 		{{render (issueIcon .State)}}
 	// 		<div style="flex-grow: 1;">
 	// 			<div>
-	// 				<a class="black" href="{{state.BaseURI}}/{{.ID}}"><strong>{{.Title}}</strong></a>
+	// 				<a class="black" href="{{state.BaseURL}}/{{.ID}}"><strong>{{.Title}}</strong></a>
 	// 				{{range .Labels}}{{render (label .)}}{{end}}
 	// 			</div>
 	// 			<div class="gray tiny">#{{.ID}} opened {{render (time .CreatedAt)}} by {{.User.Login}}</div>
@@ -97,7 +97,8 @@ func (i ChangeEntry) Render() []*html.Node {
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Class.String(), Val: "black"},
-					{Key: atom.Href.String(), Val: fmt.Sprintf("%s/%d", i.BaseURI, i.Change.ID)},
+					{Key: atom.Href.String(), Val: fmt.Sprintf("%s/%d", i.BaseURL, i.Change.ID)},
+					{Key: atom.Onclick.String(), Val: "Open(event, this)"},
 				},
 				FirstChild: htmlg.Strong(i.Change.Title),
 			},

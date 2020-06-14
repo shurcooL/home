@@ -1,3 +1,5 @@
+// +build go1.14
+
 package changesapp
 
 import (
@@ -45,7 +47,7 @@ func (c commit) Render() []*html.Node {
 
 	avatarDiv := &html.Node{
 		Type: html.ElementNode, Data: atom.Div.String(),
-		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "margin-right: 6px;"}},
+		Attr: []html.Attribute{{Key: atom.Style.String(), Val: "margin-right: 6px; line-height: 0;"}},
 	}
 	htmlg.AppendChildren(avatarDiv, component.Avatar{User: c.Author, Size: 32}.Render()...)
 	div.AppendChild(avatarDiv)
@@ -63,6 +65,7 @@ func (c commit) Render() []*html.Node {
 				Attr: []html.Attribute{
 					{Key: atom.Class.String(), Val: "black"},
 					{Key: atom.Href.String(), Val: "files/" + c.SHA},
+					{Key: atom.Onclick.String(), Val: "Open(event, this)"},
 				},
 				FirstChild: htmlg.Strong(commitSubject),
 			},

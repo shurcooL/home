@@ -1,8 +1,9 @@
 // +build js,wasm,go1.14
 
-package main
+package changesapp
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -13,7 +14,7 @@ import (
 	"honnef.co/go/js/dom/v2"
 )
 
-func setupScroll() {
+func (a *app) setupScroll(ctx context.Context, st State) {
 	js.Global().Set("AnchorScroll", jsutil.Wrap(AnchorScroll))
 
 	// Start watching for hashchange events.
@@ -23,7 +24,7 @@ func setupScroll() {
 		event.PreventDefault()
 	})
 
-	document.Body().AddEventListener("keydown", false, func(event dom.Event) {
+	keydownListener := document.Body().AddEventListener("keydown", false, func(event dom.Event) {
 		if event.DefaultPrevented() {
 			return
 		}
@@ -43,18 +44,18 @@ func setupScroll() {
 
 		// 'p' keyboard shortcut to go to previous commit.
 		case ke.KeyCode() == 'P' && !ke.Repeat() && !ke.CtrlKey() && !ke.AltKey() && !ke.MetaKey() && !ke.ShiftKey():
-			if state.PrevSHA == "" {
+			if st.PrevSHA == "" {
 				return
 			}
-			dom.GetWindow().Location().SetHref(state.PrevSHA)
 			ke.PreventDefault()
+			a.redirect(&url.URL{Path: fmt.Sprintf("%s/%d/files/%s", st.BaseURL, st.ChangeID, st.PrevSHA)})
 		// 'n' keyboard shortcut to go to next commit.
 		case ke.KeyCode() == 'N' && !ke.Repeat() && !ke.CtrlKey() && !ke.AltKey() && !ke.MetaKey() && !ke.ShiftKey():
-			if state.NextSHA == "" {
+			if st.NextSHA == "" {
 				return
 			}
-			dom.GetWindow().Location().SetHref(state.NextSHA)
 			ke.PreventDefault()
+			a.redirect(&url.URL{Path: fmt.Sprintf("%s/%d/files/%s", st.BaseURL, st.ChangeID, st.NextSHA)})
 		}
 	})
 
@@ -63,6 +64,12 @@ func setupScroll() {
 		// This needs to be delayed, or else it "happens too early".
 		time.Sleep(time.Millisecond)
 		processHash()
+	}()
+
+	// Clean up when done.
+	go func() {
+		<-ctx.Done()
+		document.Body().RemoveEventListener("keydown", false, keydownListener)
 	}()
 }
 

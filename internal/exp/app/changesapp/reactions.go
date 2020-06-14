@@ -1,6 +1,6 @@
 // +build js,wasm,go1.14
 
-package main
+package changesapp
 
 import (
 	"context"

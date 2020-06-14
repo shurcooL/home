@@ -8,7 +8,6 @@ import (
 	"dmitri.shuralyov.com/html/belt"
 	"dmitri.shuralyov.com/state"
 	"github.com/dustin/go-humanize"
-	"github.com/shurcooL/home/internal/exp/app/changesapp/common"
 	"github.com/shurcooL/home/internal/exp/service/change"
 	"github.com/shurcooL/htmlg"
 	issuescomponent "github.com/shurcooL/issuesapp/component"
@@ -22,9 +21,12 @@ import (
 type Event struct {
 	Event change.TimelineItem
 
-	// State must have BaseURI and ChangeID fields populated.
+	// TODO: See if can/should be deleted?
+
+	// State must have BaseURL and ChangeID fields populated.
 	// They are used while rendering change.CommitEvent events.
-	State common.State
+	BaseURL  string
+	ChangeID uint64
 }
 
 func (e Event) Render() []*html.Node {
@@ -141,7 +143,8 @@ func (e Event) text() []*html.Node {
 				Type: html.ElementNode, Data: atom.A.String(),
 				Attr: []html.Attribute{
 					{Key: atom.Class.String(), Val: "black"},
-					{Key: atom.Href.String(), Val: fmt.Sprintf("%s/%d/files/%s", e.State.BaseURI, e.State.ChangeID, p.SHA)},
+					{Key: atom.Href.String(), Val: fmt.Sprintf("%s/%d/files/%s", e.BaseURL, e.ChangeID, p.SHA)},
+					{Key: atom.Onclick.String(), Val: "Open(event, this)"},
 				},
 				FirstChild: htmlg.Text(p.Subject),
 			},
