@@ -46,19 +46,12 @@ func main() {
 			return
 		}
 		ev.PreventDefault()
-		reqURL := &url.URL{
-			Path:     el.(*dom.HTMLAnchorElement).Pathname(),
-			RawQuery: strings.TrimPrefix(el.(*dom.HTMLAnchorElement).Search(), "?"),
-		}
+		reqURL := urlToURL(el.(*dom.HTMLAnchorElement).URLUtils)
 		openCh <- openRequest{URL: reqURL, PushState: true}
 	}))
 
 	dom.GetWindow().AddEventListener("popstate", false, func(dom.Event) {
-		reqURL := &url.URL{
-			Path:     dom.GetWindow().Location().Pathname(),
-			RawQuery: strings.TrimPrefix(dom.GetWindow().Location().Search(), "?"),
-			// TODO: Preserve hash.
-		}
+		reqURL := urlToURL(dom.GetWindow().Location().URLUtils)
 		openCh <- openRequest{URL: reqURL}
 	})
 
@@ -91,4 +84,13 @@ func requestURL() *url.URL {
 	}
 	u.Scheme, u.Opaque, u.User, u.Host = "", "", nil, ""
 	return u
+}
+
+// urlToURL converts a DOM URL to a URL.
+func urlToURL(u *dom.URLUtils) *url.URL {
+	return &url.URL{
+		Path:     u.Pathname(),
+		RawQuery: strings.TrimPrefix(u.Search(), "?"),
+		Fragment: strings.TrimPrefix(u.Hash(), "#"),
+	}
 }
