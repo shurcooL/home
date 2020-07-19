@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/shurcooL/home/indieauth"
@@ -34,18 +35,18 @@ func TestFetchUserProfileRedirect(t *testing.T) {
 	mux.Handle("/6", http.RedirectHandler("/7", http.StatusMovedPermanently))
 	mux.Handle("/7", http.RedirectHandler("/8", http.StatusFound))
 	mux.Handle("/8", http.RedirectHandler("/9", http.StatusFound))
-	mux.Handle("/9", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	mux.Handle("/9", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		mustWrite(w, `<link href="/api/indieauth/authorization" rel="authorization_endpoint">`)
 	}))
-	ts := httptest.NewServer(mux)
+	ts := httptest.NewTLSServer(mux)
 	defer ts.Close()
 
 	me, err := url.Parse(ts.URL + "/1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	u, _, err := indieauth.FetchUserProfile(context.Background(), ts.Client(), me)
+	u, _, err := indieauth.FetchUserProfile(context.Background(), ts.Client().Transport, me)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,6 +57,30 @@ func TestFetchUserProfileRedirect(t *testing.T) {
 		t.Error("got AuthzEndpoint = nil, want non-nil")
 	} else if got, want := u.AuthzEndpoint.Path, "/api/indieauth/authorization"; got != want {
 		t.Errorf("got AuthzEndpoint.Path = %q, want %q", got, want)
+	}
+}
+
+// Test that FetchUserProfile returns an error
+// on a redirect to the insecure HTTP protocol.
+func TestFetchUserProfileRedirectToInsecure(t *testing.T) {
+	insecure := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		mustWrite(w, `<link href="/api/indieauth/authorization" rel="authorization_endpoint">`)
+	}))
+	defer insecure.Close()
+	secure := httptest.NewTLSServer(http.RedirectHandler(insecure.URL+"/2", http.StatusMovedPermanently))
+	defer secure.Close()
+
+	me, err := url.Parse(secure.URL + "/1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = indieauth.FetchUserProfile(context.Background(), secure.Client().Transport, me)
+	if err == nil {
+		t.Fatal("got err = nil, want non-nil")
+	}
+	if got, want := err.Error(), "redirected to insecure URL"; !strings.Contains(got, want) {
+		t.Errorf("got %q, doesn't contain %q", got, want)
 	}
 }
 

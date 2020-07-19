@@ -29,13 +29,13 @@ type UserProfile struct {
 // the response body of the HTTP GET request in error messages.
 //
 // The caller is responsible for enforcing a timeout.
-func FetchUserProfile(ctx context.Context, cl *http.Client, me *url.URL) (UserProfile, *html.Node, error) {
+func FetchUserProfile(ctx context.Context, t http.RoundTripper, me *url.URL) (UserProfile, *html.Node, error) {
 	// Make a GET request to the user profile URL.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, me.String(), nil)
 	if err != nil {
 		return UserProfile{}, nil, fmt.Errorf("internal error: http.NewRequestWithContext failed: %v", err)
 	}
-	resp, err := cl.Do(req)
+	resp, err := (&http.Client{Transport: t, CheckRedirect: httpsOnly}).Do(req)
 	if err != nil {
 		return UserProfile{}, nil, err
 	}
@@ -69,10 +69,11 @@ func FetchUserProfile(ctx context.Context, cl *http.Client, me *url.URL) (UserPr
 		u.AuthzEndpoint = authz
 	}
 
+	// If the media type is not HTML,
+	// stop the search at this point.
 	if mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type")); err != nil {
 		return UserProfile{}, nil, err
 	} else if mediaType != "text/html" {
-		// Media type is not HTML, stop the search here.
 		return u, nil, nil
 	}
 
@@ -148,4 +149,13 @@ func attr(n *html.Node, key string) string {
 		}
 	}
 	return ""
+}
+
+// httpsOnly is an http.Client CheckRedirect policy
+// that requires redirect target scheme to be HTTPS.
+func httpsOnly(req *http.Request, _ []*http.Request) error {
+	if req.URL.Scheme != "https" {
+		return fmt.Errorf("redirected to insecure URL %s", req.URL)
+	}
+	return nil
 }

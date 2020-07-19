@@ -17,25 +17,25 @@ import (
 )
 
 type service struct {
-	cl *http.Client     // Unauthenticated HTTP client for use by unauthenticated requests.
-	gh *githubv3.Client // Unauthenticated GitHub API client for use by unauthenticated requests.
+	http http.RoundTripper // Unauthenticated HTTP transport for use by unauthenticated requests.
+	gh   *githubv3.Client  // Unauthenticated GitHub API client for use by unauthenticated requests.
 }
 
 // NewService creates an auth.FetchService that fetches directly
 // by using unauthenticated HTTP and GitHub API clients.
 func NewService() auth.FetchService {
 	return service{
-		cl: &http.Client{Transport: &httpcache.Transport{Cache: httpcache.NewMemoryCache()}},
-		gh: githubv3.NewClient(&http.Client{Transport: &httpcache.Transport{Cache: httpcache.NewMemoryCache()}}),
+		http: &httpcache.Transport{Cache: httpcache.NewMemoryCache()},
+		gh:   githubv3.NewClient(&http.Client{Transport: &httpcache.Transport{Cache: httpcache.NewMemoryCache()}}),
 	}
 }
 
 // FetchUserProfile implements auth.FetchService.
 func (s service) FetchUserProfile(ctx context.Context, me *url.URL) (auth.UserProfile, error) {
-	// Do a direct fetch using the HTTP client s.cl.
+	// Do a direct fetch using the HTTP transport s.http.
 	// Set the timeout and detect when it happens.
 	fetchCtx, cancel := context.WithTimeout(ctx, auth.FetchTimeout)
-	ia, doc, fetchError := indieauth.FetchUserProfile(fetchCtx, s.cl, me)
+	ia, doc, fetchError := indieauth.FetchUserProfile(fetchCtx, s.http, me)
 	cancel()
 	if errors.Is(fetchError, context.DeadlineExceeded) {
 		return auth.UserProfile{}, fmt.Errorf("user profile not found at %q because it took more than %v to respond", me, auth.FetchTimeout)
