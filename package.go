@@ -14,11 +14,11 @@ import (
 	"github.com/shurcooL/home/exp/vec"
 	"github.com/shurcooL/home/exp/vec/attr"
 	"github.com/shurcooL/home/exp/vec/elem"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/exp/service/change"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
-	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -45,8 +45,8 @@ var packageHTML = template.Must(template.New("").Parse(`<html>
 	<body>`))
 
 func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" {
-		return httperror.Method{Allowed: []string{"GET"}}
+	if err := httputil.AllowMethods(req, http.MethodGet, http.MethodHead); err != nil {
+		return err
 	}
 
 	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
@@ -74,6 +74,9 @@ func (h *packageHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) err
 	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if req.Method == http.MethodHead {
+		return nil
+	}
 	var fullName string
 	if h.Pkg.IsCommand() {
 		fullName = "Command " + path.Base(h.Pkg.Spec)

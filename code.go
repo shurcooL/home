@@ -70,9 +70,16 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 	switch {
 	case req.URL.Path == route.PkgIndex(pkgPath):
 		// Handle ?go-get=1 requests, serve a go-import meta tag page.
-		if req.Method == http.MethodGet && req.URL.Query().Get("go-get") == "1" {
-			metrics.IncGoGetRequestsTotal(d.ImportPath)
+		if req.URL.Query().Get("go-get") == "1" {
+			if err := httputil.AllowMethods(req, http.MethodGet, http.MethodHead); err != nil {
+				httperror.HandleMethod(w, err.(httperror.Method))
+				return true
+			}
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			if req.Method == http.MethodHead {
+				return true
+			}
+			metrics.IncGoGetRequestsTotal(d.ImportPath)
 			fmt.Fprintf(w, `<meta name="go-import" content="%[1]s git https://%[1]s">
 <meta name="go-import" content="%[1]s mod https://dmitri.shuralyov.com/api/module">
 <meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[2]s https://gotools.org/%[2]s#{file}-L{line}">`, d.RepoRoot, d.ImportPath)
