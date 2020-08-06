@@ -72,7 +72,7 @@ func TestCodeHandler(t *testing.T) {
 			wantType: "text/plain; charset=utf-8",
 			wantBody: `<meta name="go-import" content="dmitri.shuralyov.com/kebabcase git https://dmitri.shuralyov.com/kebabcase">
 <meta name="go-import" content="dmitri.shuralyov.com/kebabcase mod https://dmitri.shuralyov.com/api/module">
-<meta name="go-source" content="dmitri.shuralyov.com/kebabcase https://dmitri.shuralyov.com/kebabcase https://gotools.org/dmitri.shuralyov.com/kebabcase https://gotools.org/dmitri.shuralyov.com/kebabcase#{file}-L{line}">`,
+<meta name="go-source" content="dmitri.shuralyov.com/kebabcase https://dmitri.shuralyov.com/kebabcase/... https://gotools.org/dmitri.shuralyov.com/kebabcase https://gotools.org/dmitri.shuralyov.com/kebabcase#{file}-L{line}">`,
 		},
 		{
 			url:      "/kebabcase?go-get=1",

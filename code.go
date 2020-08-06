@@ -82,7 +82,7 @@ func (h *codeHandler) ServeCodeMaybe(w http.ResponseWriter, req *http.Request) (
 			metrics.IncGoGetRequestsTotal(d.ImportPath)
 			fmt.Fprintf(w, `<meta name="go-import" content="%[1]s git https://%[1]s">
 <meta name="go-import" content="%[1]s mod https://dmitri.shuralyov.com/api/module">
-<meta name="go-source" content="%[1]s https://%[1]s https://gotools.org/%[2]s https://gotools.org/%[2]s#{file}-L{line}">`, d.RepoRoot, d.ImportPath)
+<meta name="go-source" content="%[1]s https://%[1]s/... https://gotools.org/%[2]s https://gotools.org/%[2]s#{file}-L{line}">`, d.RepoRoot, d.ImportPath)
 			return true
 		}
 
