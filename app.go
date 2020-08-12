@@ -99,7 +99,7 @@ var appHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 		</style>
 
 		<script>var RedLogo = {{.RedLogo}};</script>
-		<script src="/assets/wasm_exec_go114.js"></script>
+		<script src="/assets/wasm_exec_go115.js"></script>
 		<script>
 			if (!WebAssembly.instantiateStreaming) { // polyfill for Safari :/
 				WebAssembly.instantiateStreaming = async (resp, importObject) => {
