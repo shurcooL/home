@@ -11,12 +11,12 @@ import (
 
 	statepkg "dmitri.shuralyov.com/state"
 	"github.com/shurcooL/home/component"
+	"github.com/shurcooL/home/httputil"
 	"github.com/shurcooL/home/internal/code"
 	"github.com/shurcooL/home/internal/exp/service/change"
 	issues "github.com/shurcooL/home/internal/exp/service/issue"
 	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/htmlg"
-	"github.com/shurcooL/httperror"
 	"github.com/shurcooL/users"
 	"golang.org/x/net/html"
 )
@@ -47,8 +47,8 @@ var repositoryHTML = template.Must(template.New("").Parse(`<html>
 	<body>`))
 
 func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
-	if req.Method != "GET" {
-		return httperror.Method{Allowed: []string{"GET"}}
+	if err := httputil.AllowMethods(req, http.MethodGet, http.MethodHead); err != nil {
+		return err
 	}
 
 	authenticatedUser, err := h.users.GetAuthenticated(req.Context())
@@ -76,6 +76,9 @@ func (h *repositoryHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	fmt.Println("counting open issues & changes took:", time.Since(t0).Nanoseconds(), "for:", h.Repo.Spec)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if req.Method == http.MethodHead {
+		return nil
+	}
 	err = repositoryHTML.Execute(w, struct {
 		AnalyticsHTML template.HTML
 		Name          string
