@@ -42,9 +42,15 @@ var githubConfig = oauth2.Config{
 }
 
 func initAuth(fs auth.FetchService, usersService users.Service, userStore userCreator) {
-	logoStyle := "header a.Logo { color: rgb(35, 35, 35); } header a.Logo:hover { color: #4183c4; }"
+	logoStyle := `header a.Logo { color: rgb(35, 35, 35); } header a.Logo:hover { color: #4183c4; }
+@media (prefers-color-scheme: dark) {
+	header a.Logo { color: hsl(0, 0%, 90%); } header a.Logo:hover { color: #4183c4; }
+}`
 	if component.RedLogo {
-		logoStyle = "header a.Logo { color: red; } header a.Logo:hover { color: darkred; }"
+		logoStyle = `header a.Logo { color: red; } header a.Logo:hover { color: darkred; }
+@media (prefers-color-scheme: dark) {
+	header a.Logo { color: #a00; } header a.Logo:hover { color: #e00; }
+}`
 	}
 	signInPage := signInPage{
 		Logo: template.HTML("<style>" + logoStyle + "</style>" + htmlg.RenderComponentsString(component.Logo{})),
@@ -818,6 +824,29 @@ strong {
 small {
 	font-size: 10px;
 }
+.gray, .gray a {
+	color: gray;
+}
+@media (prefers-color-scheme: dark) {
+	body, input {
+		background-color: rgb(30, 30, 30);
+		color: rgb(220, 220, 220);
+	}
+	button {
+		background-color: rgb(40, 40, 40);
+		color: rgb(220, 220, 220);
+	}
+	form, input, button {
+		border-color: rgb(100, 100, 100);
+	}
+	div.error {
+		background-color: hsl(353, 100%, 15%);
+		border-color: hsl(358, 33%, 35%);
+	}
+	.gray, .gray a {
+		color: rgb(180, 180, 180);
+	}
+}
 		</style>
 	</head>
 	<body>
@@ -830,16 +859,16 @@ small {
 		<form method="post" action="/login{{with .ReturnURL}}?return={{.}}{{end}}">
 			<p>Enter your URL to sign in.</p>
 			<p><input type="url" name="me" value="https://"></p>
-			<p style="font-size: 80%; color: gray; margin-bottom: 8px;">Supported authentication methods:</p>
-			<ul style="font-size: 80%; color: gray; margin-top: 8px; padding-left: 20px;">
-				<li>https://example.com<small> — authenticate as <strong>example.com</strong> via <a href="https://indieauth.net" style="color: gray;">IndieAuth</a> or <a href="http://microformats.org/wiki/relmeauth" style="color: gray;">RelMeAuth</a></small></li>
+			<p class="gray" style="font-size: 80%; margin-bottom: 8px;">Supported authentication methods:</p>
+			<ul class="gray" style="font-size: 80%; margin-top: 8px; padding-left: 20px;">
+				<li>https://example.com<small> — authenticate as <strong>example.com</strong> via <a href="https://indieauth.net">IndieAuth</a> or <a href="http://microformats.org/wiki/relmeauth">RelMeAuth</a></small></li>
 				<li>https://github.com/example<small> — authenticate as <strong>example</strong> on GitHub</small></li>
 			</ul>
 			<p><button type="submit">Sign In</button></p>
 		</form>
 		<footer>
-			<p style="font-size: 80%; color: gray;">Problem signing in?
-			Please <a href="/about" style="color: gray;">let me know</a> and I'll fix it.</p>
+			<p class="gray" style="font-size: 80%;">Problem signing in?
+			Please <a href="/about">let me know</a> and I'll fix it.</p>
 		</footer>
 	</body>
 </html>
