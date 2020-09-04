@@ -99,12 +99,11 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 		})
 	}
 	if component.RedLogo {
-		http.HandleFunc("/icon.png", func(w http.ResponseWriter, req *http.Request) {
-			w.Header().Set("Content-Type", "image/png")
-			w.Header()["Content-Encoding"] = nil // Disable automatic gzip compression, png is already compressed.
-			err := serveFile(w, req, filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "icon-red.png"))
+		http.HandleFunc("/icon.svg", func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Content-Type", "image/svg+xml")
+			err := serveFile(w, req, filepath.Join(os.Getenv("HOME"), "Dropbox", "Public", "dmitri", "icon-red.svg"))
 			if err != nil {
-				log.Println(`serveFile("icon-red.png"):`, err)
+				log.Println(`serveFile("icon-red.svg"):`, err)
 			}
 		})
 	}

@@ -43,7 +43,7 @@ func initIssuesV1(mux *http.ServeMux, issuesService issues.Service, notification
 	opt := issuesapp.Options{
 		Notifications: notifications,
 
-		HeadPre: analyticsHTML + `<link href="/icon.png" rel="icon" type="image/png">
+		HeadPre: analyticsHTML + `<link href="/icon.svg" rel="icon" type="image/svg+xml">
 <meta name="viewport" content="width=device-width">
 <link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 <style type="text/css">

@@ -17,7 +17,7 @@ import (
 var idiomaticGoHTML = template.Must(template.New("").Parse(`<html>
 	<head>
 {{.AnalyticsHTML}}		<title>Idiomatic Go</title>
-		<link href="/icon.png" rel="icon" type="image/png">
+		<link href="/icon.svg" rel="icon" type="image/svg+xml">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/blog/assets/gfm/gfm.css" rel="stylesheet" type="text/css">

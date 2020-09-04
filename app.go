@@ -51,7 +51,7 @@ func (h *appHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 var appHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 <html lang="en">
 	<head>
-{{.AnalyticsHTML}}		<link href="/icon.png" rel="icon" type="image/png">
+{{.AnalyticsHTML}}		<link href="/icon.svg" rel="icon" type="image/svg+xml">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<style type="text/css">

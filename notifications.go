@@ -68,7 +68,7 @@ func initNotifications(
 	// Register notifications app endpoints.
 	opt := notificationsapp.Options{
 		HeadPre: analyticsHTML + `<title>Notifications</title>
-<link href="/icon.png" rel="icon" type="image/png">
+<link href="/icon.svg" rel="icon" type="image/svg+xml">
 <meta name="viewport" content="width=device-width">
 <link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 <style type="text/css">

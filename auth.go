@@ -742,7 +742,7 @@ var signInHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<title>Dmitri Shuralyov - Sign In</title>
-		<link href="/icon.png" rel="icon" type="image/png">
+		<link href="/icon.svg" rel="icon" type="image/svg+xml">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<style type="text/css">
@@ -851,7 +851,7 @@ var consentHTML = template.Must(template.New("").Funcs(template.FuncMap{
 <html lang="en">
 	<head>
 		<title>Dmitri Shuralyov - Consent</title>
-		<link href="/icon.png" rel="icon" type="image/png">
+		<link href="/icon.svg" rel="icon" type="image/svg+xml">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<style type="text/css">

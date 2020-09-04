@@ -20,7 +20,7 @@ import (
 var resumeHTML = template.Must(template.New("").Funcs(template.FuncMap{"noescape": func(s string) template.HTML { return template.HTML(s) }}).Parse(`<html>
 	<head>
 {{.AnalyticsHTML}}		<title>Dmitri Shuralyov - Resume</title>
-		<link href="/icon.png" rel="icon" type="image/png">
+		<link href="/icon.svg" rel="icon" type="image/svg+xml">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/resume/style.css" rel="stylesheet" type="text/css">

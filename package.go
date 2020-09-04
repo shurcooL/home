@@ -37,7 +37,7 @@ type packageHandler struct {
 var packageHTML = template.Must(template.New("").Parse(`<html>
 	<head>
 {{.AnalyticsHTML}}		<title>{{.FullName}}</title>
-		<link href="/icon.png" rel="icon" type="image/png">
+		<link href="/icon.svg" rel="icon" type="image/svg+xml">
 		<meta name="viewport" content="width=device-width">
 		<link href="/assets/fonts/fonts.css" rel="stylesheet" type="text/css">
 		<link href="/assets/package/style.css" rel="stylesheet" type="text/css">
