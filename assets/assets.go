@@ -3,6 +3,8 @@
 package assets
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"go/build"
 	"io/ioutil"
@@ -10,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sync"
 
 	"github.com/shurcooL/go/gopherjs_http"
 	"github.com/shurcooL/go/osutil"
@@ -18,8 +22,9 @@ import (
 
 // Assets contains assets for home.
 var Assets = union.New(map[string]http.FileSystem{
-	"/assets":        gopherjs_http.NewFS(http.Dir(importPathToDir("github.com/shurcooL/home/_data"))),
-	"/spa.wasm":      packageWasmFS{"github.com/shurcooL/home/internal/exp/cmd/spa"},
+	"/assets":   gopherjs_http.NewFS(http.Dir(importPathToDir("github.com/shurcooL/home/_data"))),
+	"/spa.wasm": packageWasmFS{"github.com/shurcooL/home/internal/exp/cmd/spa"},
+	"/wasm_exec_go1" + fmt.Sprint(goVersion) + ".js": &wasmExecFile{},
 	"/issues":        http.Dir(importPathToDir("github.com/shurcooL/home/internal/exp/app/issuesapp/_data")),
 	"/changes":       http.Dir(importPathToDir("github.com/shurcooL/home/internal/exp/app/changesapp/_data")),
 	"/notifications": http.Dir(importPathToDir("github.com/shurcooL/home/internal/exp/app/notifsapp/_data")),
@@ -91,3 +96,41 @@ func (f tempFile) Close() error {
 	os.Remove(f.File.Name())
 	return nil
 }
+
+// wasmExecFile is an http.FileSystem that contains the
+// $(go env GOROOT)/misc/wasm/wasm_exec.js file at root.
+type wasmExecFile struct {
+	once   sync.Once
+	goroot string
+	err    error
+}
+
+func (f *wasmExecFile) Open(name string) (http.File, error) {
+	if name != "/" {
+		return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
+	}
+	f.once.Do(func() { f.goroot, f.err = goroot() })
+	if f.err != nil {
+		return nil, f.err
+	}
+	return os.Open(filepath.Join(f.goroot, "misc", "wasm", "wasm_exec.js"))
+}
+
+// goroot returns the go env GOROOT value by invoking the go command.
+func goroot() (string, error) {
+	out, err := exec.Command("go", "env", "-json", "GOROOT").Output()
+	if ee := (*exec.ExitError)(nil); errors.As(err, &ee) {
+		return "", fmt.Errorf("go command exited unsuccessfully: %v\n%s", ee.ProcessState.String(), ee.Stderr)
+	} else if err != nil {
+		return "", err
+	}
+	var env struct{ GOROOT string }
+	err = json.Unmarshal(out, &env)
+	if err != nil {
+		return "", err
+	}
+	return env.GOROOT, nil
+}
+
+// goVersion is the Go 1.x version used during the build.
+var goVersion = len(build.Default.ReleaseTags)

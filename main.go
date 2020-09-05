@@ -276,6 +276,7 @@ func run(ctx context.Context, cancel context.CancelFunc, storeDir, stateFile, an
 	assetsHandler := cookieAuth{httpgzip.FileServer(assets.Assets, httpgzip.FileServerOptions{ServeError: detailedForAdmin{Users: users}.ServeError})}
 	http.Handle("/assets/", assetsHandler)
 	http.Handle("/assets/spa.wasm", http.StripPrefix("/assets", assetsHandler))
+	http.Handle("/assets/wasm_exec_go1"+fmt.Sprint(goVersion)+".js", http.StripPrefix("/assets", assetsHandler))
 	http.Handle("/assets/issues/", http.StripPrefix("/assets", assetsHandler))
 	http.Handle("/assets/changes/", http.StripPrefix("/assets", assetsHandler))
 	http.Handle("/assets/notifications/", http.StripPrefix("/assets", assetsHandler))

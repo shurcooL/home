@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/build"
 	"html/template"
 	"io"
 	"net/http"
@@ -34,7 +35,8 @@ func (h *appHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error {
 	err = appHTML.Execute(w, struct {
 		AnalyticsHTML template.HTML
 		RedLogo       bool
-	}{analyticsHTML, component.RedLogo})
+		GoVersion     int
+	}{analyticsHTML, component.RedLogo, goVersion})
 	if err != nil {
 		return err
 	}
@@ -99,7 +101,7 @@ var appHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 		</style>
 
 		<script>var RedLogo = {{.RedLogo}};</script>
-		<script src="/assets/wasm_exec_go115.js"></script>
+		<script src="/assets/wasm_exec_go1{{.GoVersion}}.js"></script>
 		<script>
 			if (!WebAssembly.instantiateStreaming) { // polyfill for Safari :/
 				WebAssembly.instantiateStreaming = async (resp, importObject) => {
@@ -123,3 +125,6 @@ var appHTML = template.Must(template.New("").Parse(`<!DOCTYPE html>
 		</script>
 	</head>
 	<body>`))
+
+// goVersion is the Go 1.x version used during the build.
+var goVersion = len(build.Default.ReleaseTags)
