@@ -53,7 +53,7 @@ func (p packageWasmFS) Open(name string) (http.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command("go", "build", "-tags=nethttpomithttp2", "-o", temp, p.ImportPath)
+	cmd := exec.Command("go", "build", "-tags=nethttpomithttp2", "-trimpath", "-o", temp, p.ImportPath)
 	env := osutil.Environ(os.Environ())
 	env.Set("GOOS", "js")
 	env.Set("GOARCH", "wasm")
