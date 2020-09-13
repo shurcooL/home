@@ -277,7 +277,7 @@ func (e streamNotification) Render() []*html.Node {
 	htmlg.AppendChildren(action, e.Action.Render()...)
 	var markReadStyle string // HACK
 	if e.LeftBorderColor == nil {
-		markReadStyle = " display: none;"
+		markReadStyle = "display: none;"
 	}
 	div := htmlg.DivClass("notification", htmlg.DivClass("overview",
 		htmlg.SpanClass("icon", e.Icon()),
@@ -295,12 +295,10 @@ func (e streamNotification) Render() []*html.Node {
 			FirstChild: htmlg.Text(compactTime(e.Time)),
 		},
 		htmlg.SpanClass("right", &html.Node{
-			Type: html.ElementNode, Data: atom.A.String(),
+			Type: html.ElementNode, Data: atom.Button.String(),
 			Attr: []html.Attribute{
-				{Key: atom.Class.String(), Val: "icon"},
-				{Key: atom.Style.String(), Val: "cursor: pointer;" + markReadStyle},
-				{Key: atom.Onclick.String(), Val: fmt.Sprintf("MarkRead(%q, %q, %d);", e.Namespace, e.ThreadType, e.ThreadID)},
-				{Key: atom.Tabindex.String(), Val: "0"},
+				{Key: atom.Style.String(), Val: markReadStyle},
+				{Key: atom.Onclick.String(), Val: fmt.Sprintf("MarkRead(this, %q, %q, %d);", e.Namespace, e.ThreadType, e.ThreadID)},
 				{Key: atom.Title.String(), Val: "Mark as read"},
 			},
 			FirstChild: octicon.Check(),

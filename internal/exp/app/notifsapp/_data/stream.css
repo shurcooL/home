@@ -32,15 +32,9 @@ div.notificationStream {
 	align-items: baseline;
 }
 .notificationStream div.notification div.overview .icon {
-	flex-shrink: 0;
 	color: #bbb;
-	display: inline-block;
-	width: 16px;
 	margin-left: 16px;
 	margin-right: 16px;
-}
-.notificationStream div.notification div.overview a.icon:hover {
-	color: rgb(35, 35, 35);
 }
 .notificationStream div.notification div.overview span.middle {
 	white-space: nowrap;
@@ -55,6 +49,22 @@ div.notificationStream {
 }
 .notificationStream div.notification div.overview span.right {
 	margin-left: auto;
+}
+.notificationStream div.notification div.overview span.right button {
+	border: none;
+	background: none;
+	padding: 0;
+	color: #bbb;
+	margin-left: 8px;
+	cursor: pointer;
+}
+.notificationStream div.notification div.overview span.right button:hover,
+.notificationStream div.notification div.overview span.right button:focus {
+	color: rgb(35, 35, 35);
+}
+.notificationStream div.notification div.overview span.right button:disabled {
+	color: #bbb;
+	cursor: default;
 }
 
 .notificationStream div.notification div.details {

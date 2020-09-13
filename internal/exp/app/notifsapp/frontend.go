@@ -28,9 +28,9 @@ func (a *app) SetupPage(ctx context.Context, state interface{}) {
 	case "/":
 		// TODO: Set MarkRead for stream and thread pages? Per-route setup?
 		js.Global().Set("MarkRead", js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-			namespace, threadType, threadID := args[0].String(), args[1].String(), uint64(args[2].Int())
+			el, namespace, threadType, threadID := args[0], args[1].String(), args[2].String(), uint64(args[3].Int())
 			fmt.Printf("app.MarkStreamRead: %q, %q, %v\n", namespace, threadType, threadID)
-			a.MarkStreamRead(namespace, threadType, threadID)
+			a.MarkStreamRead(el, namespace, threadType, threadID)
 			return nil
 		}))
 
@@ -131,7 +131,8 @@ func browserNotification(n notification.Notification) (title, body string, ok bo
 	}
 }
 
-func (a *app) MarkStreamRead(namespace string, threadType string, threadID uint64) {
+func (a *app) MarkStreamRead(el js.Value, namespace string, threadType string, threadID uint64) {
+	el.Set("disabled", true)
 	go func() {
 		err := a.ns.MarkThreadRead(context.Background(), namespace, threadType, threadID)
 		if err != nil {
@@ -160,7 +161,7 @@ func markStreamRead(namespace, threadType string, threadID uint64) {
 			continue
 		}
 		n.Get("style").Set("box-shadow", "none")                              // Hide blue edge marker.
-		n.Call("querySelector", "a.icon").Get("style").Set("display", "none") // Hide mark-read button.
+		n.Call("querySelector", "button").Get("style").Set("display", "none") // Hide mark-read button.
 	}
 }
 
