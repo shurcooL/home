@@ -2,6 +2,8 @@ package indieauth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,16 +38,23 @@ type Client struct {
 // user profile and state.
 //
 // See https://indieauth.spec.indieweb.org/#authentication-request.
-func (c *Client) AuthnReqURL(authzEndpoint *url.URL, me, state string) string {
+func (c *Client) AuthnReqURL(authzEndpoint *url.URL, me, state, verifier string) string {
 	return authzEndpoint.ResolveReference(&url.URL{
 		RawQuery: url.Values{
-			"me":            {me},
-			"client_id":     {c.ClientID},
-			"redirect_uri":  {c.RedirectURL},
-			"state":         {state},
-			"response_type": {"id"},
+			"me":                    {me},
+			"client_id":             {c.ClientID},
+			"redirect_uri":          {c.RedirectURL},
+			"state":                 {state},
+			"response_type":         {"code"},
+			"code_challenge":        {s256Challenge(verifier)},
+			"code_challenge_method": {"S256"},
 		}.Encode(),
 	}).String()
+}
+
+func s256Challenge(verifier string) string {
+	s := sha256.Sum256([]byte(verifier))
+	return base64.RawURLEncoding.EncodeToString(s[:])
 }
 
 // Verify makes a POST request to the authorization endpoint to verify
@@ -56,11 +65,13 @@ func (c *Client) AuthnReqURL(authzEndpoint *url.URL, me, state string) string {
 //
 // See https://indieauth.spec.indieweb.org/#authorization-code-verification
 // and https://indieauth.spec.indieweb.org/#differing-user-profile-urls.
-func (c *Client) Verify(ctx context.Context, authzEndpoint, enteredHost, code string) (me *url.URL, _ error) {
+func (c *Client) Verify(ctx context.Context, authzEndpoint, enteredHost, code, verifier string) (me *url.URL, _ error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, authzEndpoint, strings.NewReader(url.Values{
-		"code":         {code},
-		"client_id":    {c.ClientID},
-		"redirect_uri": {c.RedirectURL},
+		"grant_type":    {"authorization_code"},
+		"code":          {code},
+		"client_id":     {c.ClientID},
+		"redirect_uri":  {c.RedirectURL},
+		"code_verifier": {verifier},
 	}.Encode()))
 	if err != nil {
 		return nil, err

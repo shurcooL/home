@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	cryptorand "crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -68,6 +70,7 @@ func initAuth(fs auth.FetchService, usersService users.Service, userStore userCr
 		EnteredHost   string     // Host of entered user profile URL.
 		AuthzEndpoint *url.URL   // URL of IndieAuth authorization endpoint.
 		ReturnURL     string
+		Verifier      string
 	}
 	var iaStatesMu sync.Mutex
 	var iaStates = make(map[string]iaState) // State Key -> IndieAuth State.
@@ -239,6 +242,7 @@ func initAuth(fs auth.FetchService, usersService users.Service, userStore userCr
 				case authVia.AuthzEndpoint != nil:
 					// Add new IndieAuth state.
 					stateKey := base64.RawURLEncoding.EncodeToString(cryptoRandBytes()) // OAuth 2.0 requires state to be printable ASCII, so use base64. See https://tools.ietf.org/html/rfc6749#appendix-A.5.
+					verifier := newVerifier()
 					iaStatesMu.Lock()
 					for key, s := range iaStates { // Clean up expired IndieAuth states.
 						if time.Now().Before(s.Expiry) {
@@ -252,11 +256,12 @@ func initAuth(fs auth.FetchService, usersService users.Service, userStore userCr
 						EnteredHost:   enteredHost,
 						AuthzEndpoint: authVia.AuthzEndpoint,
 						ReturnURL:     returnURL.String(),
+						Verifier:      verifier,
 					}
 					iaStatesMu.Unlock()
 
 					// Build the authentication request URL and redirect to it.
-					url := indieauthClient.AuthnReqURL(authVia.AuthzEndpoint, user.CanonicalMe, stateKey)
+					url := indieauthClient.AuthnReqURL(authVia.AuthzEndpoint, user.CanonicalMe, stateKey, verifier)
 					return httperror.Redirect{URL: url}
 
 				// Authenticate via GitHub (either directly, or via RelMeAuth).
@@ -331,7 +336,7 @@ func initAuth(fs auth.FetchService, usersService users.Service, userStore userCr
 			}
 
 			// Verify the authorization code by making a POST request to the authorization endpoint.
-			me, err := indieauthClient.Verify(req.Context(), state.AuthzEndpoint.String(), state.EnteredHost, req.FormValue("code"))
+			me, err := indieauthClient.Verify(req.Context(), state.AuthzEndpoint.String(), state.EnteredHost, req.FormValue("code"), state.Verifier)
 			if err != nil {
 				return serveSignInPage(w, req, err.Error())
 			}
@@ -530,6 +535,19 @@ func initAuth(fs auth.FetchService, usersService users.Service, userStore userCr
 	)})
 }
 
+// newVerifier generates a new code_verifier value.
+func newVerifier() string {
+	// A valid code_verifier has a minimum length of 43 characters and a maximum
+	// length of 128 characters per https://tools.ietf.org/html/rfc7636#section-4.1.
+	// Use 64 bytes of random data, which becomes 86 bytes after base64 encoding.
+	b := make([]byte, 64)
+	_, err := cryptorand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
+}
+
 // initIndieAuth initializes the IndieAuth authorization endpoint.
 // canonicalMe is the canonical IndieAuth 'me' user profile URL.
 func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
@@ -537,6 +555,7 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 		Expiry      time.Time
 		ClientID    string
 		RedirectURL string
+		Challenge   string // The code_challenge value.
 	}
 	var authzsMu sync.Mutex
 	var authzs = make(map[string]authz) // Code -> Authorization.
@@ -557,15 +576,20 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 			}
 			switch req.Method {
 			case http.MethodGet:
-				if typ := req.Form.Get("response_type"); typ != "" && typ != "id" {
-					return httperror.BadRequest{Err: fmt.Errorf("unexpected request type %q", typ)}
+				if typ := req.Form.Get("response_type"); typ != "code" {
+					return httperror.BadRequest{Err: fmt.Errorf(`unexpected response_type type %q, want "code"`, typ)}
 				}
-				me := req.Form.Get("me")
-				if me != canonicalMe.String() {
-					return httperror.BadRequest{Err: fmt.Errorf("unexpected me value %q, want %q", me, canonicalMe.String())}
+				if me, ok := req.Form["me"]; ok && !(len(me) == 1 && me[0] == canonicalMe.String()) {
+					return httperror.BadRequest{Err: fmt.Errorf("unexpected me value %q, want absent or %q", me, canonicalMe.String())}
 				}
 				if req.Form.Get("state") == "" {
-					return httperror.BadRequest{Err: fmt.Errorf("missing state parameter")}
+					return httperror.BadRequest{Err: fmt.Errorf("mandatory state parameter is missing")}
+				}
+				if ccm := req.Form.Get("code_challenge_method"); ccm != "S256" {
+					return httperror.BadRequest{Err: fmt.Errorf(`unsupported code_challenge_method value %q, only "S256" is supported`, ccm)}
+				}
+				if got, want := len(req.Form.Get("code_challenge")), base64.RawURLEncoding.EncodedLen(sha256.Size); got != want {
+					return httperror.BadRequest{Err: fmt.Errorf("bad code_challenge length %d, want %d", got, want)}
 				}
 				clientID, err := indieauth.ParseClientID(req.Form.Get("client_id"))
 				if err != nil {
@@ -638,6 +662,7 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 						Expiry:      expiry,
 						ClientID:    req.Form.Get("client_id"),
 						RedirectURL: req.Form.Get("redirect_uri"),
+						Challenge:   req.Form.Get("code_challenge"),
 					}
 					authzsMu.Unlock()
 
@@ -654,10 +679,29 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 					delete(authzs, authzCode)
 					authzsMu.Unlock()
 
-					// Verify code, expiry, client_id, redirect_id match.
+					if grant := req.Form.Get("grant_type"); grant == "" {
+						// Respond with an OAuth 2.0 error. See https://tools.ietf.org/html/rfc6749#section-5.2.
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusBadRequest)
+						return json.NewEncoder(w).Encode(struct {
+							Error       string `json:"error"`
+							Description string `json:"error_description"`
+						}{"invalid_request", "mandatory grant_type parameter is missing"})
+					} else if grant != "authorization_code" {
+						// Respond with an OAuth 2.0 error. See https://tools.ietf.org/html/rfc6749#section-5.2.
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusBadRequest)
+						return json.NewEncoder(w).Encode(struct {
+							Error       string `json:"error"`
+							Description string `json:"error_description"`
+						}{"unsupported_grant_type", fmt.Sprintf("unexpected grant_type value %q, want %q", grant, "authorization_code")})
+					}
+
+					// Verify code, expiry, client_id, redirect_id, code_verifier match.
 					if !ok || !time.Now().Before(a.Expiry) ||
 						req.Form.Get("client_id") != a.ClientID ||
-						req.Form.Get("redirect_uri") != a.RedirectURL {
+						req.Form.Get("redirect_uri") != a.RedirectURL ||
+						!verifyPKCE(req.Form.Get("code_verifier"), a.Challenge) {
 
 						// Respond with an OAuth 2.0 error. See https://tools.ietf.org/html/rfc6749#section-5.2.
 						w.Header().Set("Content-Type", "application/json")
@@ -676,6 +720,18 @@ func initIndieAuth(usersService users.Service, canonicalMe *url.URL) {
 			}
 		},
 	)})
+}
+
+// verifyPKCE verifies the provided values according to the S256 code_challenge_method.
+func verifyPKCE(verifier, challenge string) bool {
+	if len(verifier) < 43 || 128 < len(verifier) {
+		// A valid code_verifier has a minimum length of 43 characters and a maximum
+		// length of 128 characters per https://tools.ietf.org/html/rfc7636#section-4.1.
+		// Don't proceed if we see something outside that range.
+		return false
+	}
+	s := sha256.Sum256([]byte(verifier))
+	return base64.RawURLEncoding.EncodeToString(s[:]) == challenge
 }
 
 // parseGitHubLogin parses a syntactically valid GitHub login from the path of a GitHub URL.
