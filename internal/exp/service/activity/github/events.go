@@ -673,6 +673,51 @@ func convert(
 					//e.Action = component.Text(fmt.Sprintf("%v on a pull request in", *p.Action))
 				}
 			}
+		case *githubv3.PullRequestReviewEvent:
+			switch *p.Action {
+			case "created":
+				var changeState state.Change
+				switch {
+				case p.PullRequest.MergedAt == nil && *p.PullRequest.State == "open":
+					changeState = state.ChangeOpen
+				case p.PullRequest.MergedAt == nil && *p.PullRequest.State == "closed":
+					changeState = state.ChangeClosed
+				case p.PullRequest.MergedAt != nil:
+					changeState = state.ChangeMerged
+				default:
+					log.Printf("convert: unsupported *githubv3.PullRequestReviewEvent: PullRequest.MergedAt=%v PullRequest.State=%v\n", p.PullRequest.MergedAt, *p.PullRequest.State)
+					continue
+				}
+				var reviewState state.Review
+				switch *p.Review.State {
+				case "approved":
+					reviewState = state.ReviewPlus2
+				case "commented":
+					reviewState = state.ReviewNoScore
+				default:
+					log.Printf("convert: PR review %s/%s/%d/%d had not ok ReviewState\n", owner, repo, *p.PullRequest.Number, *p.Review.ID)
+					continue
+				}
+				if reviewState == state.ReviewNoScore && p.Review.Body == nil {
+					// No score, no body. Skip this empty review.
+					// (The content is likely in review comments.)
+					continue
+				}
+				paths, title := prefixtitle.ParseChange(modulePath, *p.PullRequest.Title)
+				ee.Container = paths[0]
+				ee.Payload = event.ChangeComment{
+					ChangeTitle:    title,
+					ChangeState:    changeState,
+					CommentBody:    p.Review.GetBody(),
+					CommentReview:  reviewState,
+					CommentHTMLURL: router.PullRequestReviewURL(ctx, owner, repo, uint64(*p.PullRequest.Number), uint64(*p.Review.ID)),
+				}
+				eventID.PRReviewID = uint64(*p.Review.ID)
+
+				//default:
+				//basicEvent.WIP = true
+				//e.Action = component.Text(fmt.Sprintf("%v on a pull request in", *p.Action))
+			}
 		case *githubv3.PullRequestReviewCommentEvent:
 			switch *p.Action {
 			case "created":
@@ -702,8 +747,7 @@ func convert(
 				//basicEvent.WIP = true
 				//e.Action = component.Text(fmt.Sprintf("%v on a pull request in", *p.Action))
 			}
-		// TODO: Add support for *githubv3.PullRequestReviewEvent whenever GitHub API v3 starts
-		//       including it... Map it to an event.ChangeComment with the CommentReview field set.
+
 		case *githubv3.CommitCommentEvent:
 			c := commits[*p.Comment.CommitID]
 			subject, body := splitCommitMessage(c.Message)
