@@ -161,11 +161,11 @@ func initAbout(notification notification.Service, users users.Service) {
 		case "/about/setup":
 			err = vec.RenderHTML(w,
 				elem.Div(
-					elem.H3("Work"),
+					elem.H3("Home"),
 					elem.Ul(
 						elem.Li(iconText{
 							Icon: faIcon("laptop"),
-							Text: "Apple MacBook Pro (15-inch, 2017)",
+							Text: "Apple MacBook Air (M1, 2020)",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("tv"),
@@ -185,53 +185,11 @@ func initAbout(notification notification.Service, users users.Service) {
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("headphones"),
-							Text: "GID6B",
+							Text: "Apple AirPods Max",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("square"),
 							Text: "Rain Design mStand",
-						}),
-					),
-					elem.H3("Home (New York, NY)"),
-					elem.Ul(
-						elem.Li(iconText{
-							Icon: faIcon("laptop"),
-							Text: "Apple MacBook Pro (Retina, 15-inch, Mid 2015)",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("user"),
-							Text: "IKEA LINNMON (150 cm x 75 cm), IKEA ADILS",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("user"),
-							Text: "IKEA JÄRVFJÄLLET",
-						}),
-					),
-					elem.H3("Home (Toronto, ON)"),
-					elem.Ul(
-						elem.Li(iconText{
-							Icon: faIcon("tv"),
-							Text: "Dell 3008WFP",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("keyboard-o"),
-							Text: "Gateway KB-2961",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("mouse-pointer"),
-							Text: "Logitech G9 Laser Mouse",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("volume-off"),
-							Text: "Bose Companion 2 Series II",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("headphones"),
-							Text: "Bose QuietComfort 25",
-						}),
-						elem.Li(iconText{
-							Icon: faIcon("square"),
-							Text: "SteelSeries QcK",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("user"),
@@ -246,7 +204,7 @@ func initAbout(notification notification.Service, users users.Service) {
 					elem.Ul(
 						elem.Li(iconText{
 							Icon: faIcon("mobile"),
-							Text: "Apple iPhone 11 Pro Max",
+							Text: "Apple iPhone 12 Pro Max",
 						}),
 						elem.Li(iconText{
 							Icon: faIcon("headphones"),
