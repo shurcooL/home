@@ -224,30 +224,32 @@ func (a *appAndState) postComment() error {
 {{/* Dot is an issues.Comment. */}}
 {{define "comment"}}
 <div class="comment-edit-container">
-	<div>
-		<div style="float: left; margin-right: 10px;">{{render (avatar .User)}}</div>
-		<div id="comment-{{.ID}}" style="display: flex;" class="list-entry">
-			<div class="list-entry-container list-entry-border">
-				<div class="list-entry-header" style="display: flex;">
-					<span class="content">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
-						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
-					</span>
-					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
-					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{` + "`edit`" + ` | json}}, this, event);">{{octicon "pencil"}}</a></span>{{end}}
-				</div>
-				<div class="list-entry-body">
-					<div class="markdown-body">
-						{{with .Body}}
-							{{. | gfm}}
-						{{else}}
-							<i class="gray">No description.</i>
-						{{end}}
+	<div>` /* The comment view div. Visible initially. */ + `
+		<div style="display: flex;" class="list-entry">
+			<div style="margin-right: 10px;">{{render (avatar .User)}}</div>
+			<div id="comment-{{.ID}}" style="flex-grow: 1; display: flex;">
+				<div class="list-entry-container list-entry-border">
+					<div class="list-entry-header" style="display: flex;">
+						<span style="flex-grow: 1;">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
+							{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
+						</span>
+						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
+						{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{` + "`edit`" + ` | json}}, this, event);">{{octicon "pencil"}}</a></span>{{end}}
+					</div>
+					<div class="list-entry-body">
+						<div class="markdown-body">
+							{{with .Body}}
+								{{. | gfm}}
+							{{else}}
+								<i class="gray">No description.</i>
+							{{end}}
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div style="display: none;">
+	<div style="display: none;">` /* The edit view div. Hidden initially. */ + `
 		{{template "edit-comment" .}}
 	</div>
 	{{render (reactionsBar .Reactions (reactableID .ID))}}

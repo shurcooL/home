@@ -71,12 +71,7 @@ div.multilist-entry:not(:nth-child(0n+2)) {
 	font-size: 14px;
 }
 
-span.content {
-	display: table-cell;
-	width: 100%;
-}
 span.right-icon {
-	display: table-cell;
 	padding-left: 12px;
 	padding-right: 4px;
 }
@@ -140,6 +135,7 @@ textarea.comment-editor:focus {
 }
 
 .event {
+	display: flex;
 	margin-left: 58px;
 }
 .event-header {
@@ -148,12 +144,12 @@ textarea.comment-editor:focus {
 	line-height: 20px;
 }
 .event-icon {
-	float: left;
 	margin-right: 10px;
 	width: 32px;
 	height: 32px;
 	display: flex; justify-content: center; align-items: center;
 	border-radius: 50%;
+	flex-shrink: 0;
 }
 
 div.list-entry-header nav a {

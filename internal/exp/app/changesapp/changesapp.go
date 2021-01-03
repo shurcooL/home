@@ -389,13 +389,13 @@ func (a *app) serveChange(ctx context.Context, w io.Writer, st State) error {
 	}).Parse(`
 {{/* Dot is a change.Comment. */}}
 {{define "comment"}}
-<div class="list-entry">
-	<div style="float: left; margin-right: 10px;">{{render (avatar .User)}}</div>
-	<div style="display: flex; flex-direction: column;">
+<div class="list-entry" style="display: flex;">
+	<div style="margin-right: 10px;">{{render (avatar .User)}}</div>
+	<div style="flex-grow: 1; display: flex; flex-direction: column;">
 		<div id="comment-{{.ID}}">
 			<div class="list-entry-container list-entry-border">
 				<header class="list-entry-header" style="display: flex;">
-					<span class="content">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
+					<span style="flex-grow: 1;">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
 						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
 					</span>
 					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
@@ -420,34 +420,37 @@ func (a *app) serveChange(ctx context.Context, w io.Writer, st State) error {
 {{/* Dot is a change.Review. */}}
 {{define "review"}}
 <div class="list-entry">
-	<div style="float: left; margin-right: 10px;">{{render (avatar .User)}}</div>
-	<div style="display: flex; flex-direction: column;">
-		<div id="comment-{{.ID}}">
-			<div class="list-entry-container list-entry-border">
-				<header class="list-entry-header" style="display: flex;{{if ne .State 0}} padding: 4px;{{end}}{{if not .Body}} border: none;{{end}}">
-					<span class="content"{{if .State}} style="line-height: 28px;"{{end}}>{{template "review-icon" .State}}{{render (user .User)}} {{template "review-action" .State}} <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
-						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
-					</span>
-					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
-					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{` + "`edit`" + ` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
-				</header>
-				{{with .Body}}
-				<div class="list-entry-body">
-					<div class="markdown-body">
-						{{. | gfm}}
+	<div style="display: flex;">
+		<div style="margin-right: 10px;">{{render (avatar .User)}}</div>
+		<div style="flex-grow: 1; display: flex; flex-direction: column;">
+			<div id="comment-{{.ID}}">
+				<div class="list-entry-container list-entry-border">
+					<header class="list-entry-header" style="display: flex;{{if ne .State 0}} padding: 4px;{{end}}{{if not .Body}} border: none;{{end}}">
+						{{template "review-icon" .State}}
+						<span style="flex-grow: 1;{{if .State}} line-height: 28px;{{end}}">{{render (user .User)}} {{template "review-action" .State}} <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
+							{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
+						</span>
+						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
+						{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{` + "`edit`" + ` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
+					</header>
+					{{with .Body}}
+					<div class="list-entry-body">
+						<div class="markdown-body">
+							{{. | gfm}}
+						</div>
 					</div>
+					{{end}}
 				</div>
-				{{end}}
 			</div>
+			{{render (reactionsBar .Reactions (reactableID .ID))}}
 		</div>
-		{{render (reactionsBar .Reactions (reactableID .ID))}}
 	</div>
 	{{with .Comments}}
 		<div style="margin-left: 80px;">
 		{{range .}}
 			<div class="list-entry list-entry-container list-entry-border">
-				<header class="list-entry-header">
-					<span class="content">{{.File}}:{{.Line}}</span>
+				<header style="display: flex;" class="list-entry-header">
+					<span style="flex-grow: 1;">{{.File}}:{{.Line}}</span>
 					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
 				</header>
 				<div class="list-entry-body">
@@ -796,13 +799,13 @@ var t = template.Must(template.New("").Funcs(template.FuncMap{
 
 {{/* Dot is a change.Comment. */}}
 {{define "comment"}}
-<div class="list-entry">
-	<div style="float: left; margin-right: 10px;">{{render (avatar .User)}}</div>
-	<div style="display: flex; flex-direction: column;">
+<div class="list-entry" style="display: flex;">
+	<div style="margin-right: 10px;">{{render (avatar .User)}}</div>
+	<div style="flex-grow: 1; display: flex; flex-direction: column;">
 		<div id="comment-{{.ID}}">
 			<div class="list-entry-container list-entry-border">
 				<header class="list-entry-header" style="display: flex;">
-					<span class="content">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
+					<span style="flex-grow: 1;">{{render (user .User)}} commented <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
 						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
 					</span>
 					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
@@ -827,34 +830,37 @@ var t = template.Must(template.New("").Funcs(template.FuncMap{
 {{/* Dot is a change.Review. */}}
 {{define "review"}}
 <div class="list-entry">
-	<div style="float: left; margin-right: 10px;">{{render (avatar .User)}}</div>
-	<div style="display: flex; flex-direction: column;">
-		<div id="comment-{{.ID}}">
-			<div class="list-entry-container list-entry-border">
-				<header class="list-entry-header" style="display: flex;{{if ne .State 0}} padding: 4px;{{end}}{{if not .Body}} border: none;{{end}}">
-					<span class="content"{{if .State}} style="line-height: 28px;"{{end}}>{{template "review-icon" .State}}{{render (user .User)}} {{template "review-action" .State}} <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
-						{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
-					</span>
-					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
-					{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{` + "`edit`" + ` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
-				</header>
-				{{with .Body}}
-				<div class="list-entry-body">
-					<div class="markdown-body">
-						{{. | gfm}}
+	<div style="display: flex;">
+		<div style="margin-right: 10px;">{{render (avatar .User)}}</div>
+		<div style="flex-grow: 1; display: flex; flex-direction: column;">
+			<div id="comment-{{.ID}}">
+				<div class="list-entry-container list-entry-border">
+					<header class="list-entry-header" style="display: flex;{{if ne .State 0}} padding: 4px;{{end}}{{if not .Body}} border: none;{{end}}">
+						{{template "review-icon" .State}}
+						<span style="flex-grow: 1;{{if .State}} line-height: 28px;{{end}}">{{render (user .User)}} {{template "review-action" .State}} <a class="black" href="#comment-{{.ID}}" onclick="AnchorScroll(this, event);">{{render (time .CreatedAt)}}</a>
+							{{with .Edited}} · <span style="cursor: default;" title="{{.By.Login}} edited this comment {{reltime .At}}.">edited{{if not (equalUsers $.User .By)}} by {{.By.Login}}{{end}}</span>{{end}}
+						</span>
+						<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
+						{{if .Editable}}<span class="right-icon"><a href="javascript:" title="Edit" onclick="EditComment({{` + "`edit`" + ` | json}}, this);">{{octicon "pencil"}}</a></span>{{end}}
+					</header>
+					{{with .Body}}
+					<div class="list-entry-body">
+						<div class="markdown-body">
+							{{. | gfm}}
+						</div>
 					</div>
+					{{end}}
 				</div>
-				{{end}}
 			</div>
+			{{render (reactionsBar .Reactions (reactableID .ID))}}
 		</div>
-		{{render (reactionsBar .Reactions (reactableID .ID))}}
 	</div>
 	{{with .Comments}}
 		<div style="margin-left: 80px;">
 		{{range .}}
 			<div class="list-entry list-entry-container list-entry-border">
-				<header class="list-entry-header">
-					<span class="content">{{.File}}:{{.Line}}</span>
+				<header style="display: flex;" class="list-entry-header">
+					<span style="flex-grow: 1;">{{.File}}:{{.Line}}</span>
 					<span class="right-icon">{{render (newReaction (reactableID .ID))}}</span>
 				</header>
 				<div class="list-entry-body">
@@ -905,12 +911,10 @@ var t = template.Must(template.New("").Funcs(template.FuncMap{
 			{{end}}
 		</div>
 	</header>
-	<div class="list-entry-body">
+	<div class="list-entry-body" style="display: flex;">
 		<span style="display: inline-block; vertical-align: bottom; margin-right: 5px;">{{.Avatar}}</span>{{/*
-		*/}}<span style="display: inline-block;">{{.User}} committed {{.Time}}</span>
-		<span style="float: right;">
-			<span>commit <code>{{.CommitHash}}</code></span>
-		</span>
+		*/}}<span style="flex-grow: 1; display: inline-block;">{{.User}} committed {{.Time}}</span>
+		<span>commit <code>{{.CommitHash}}</code></span>
 	</div>
 </div>
 {{end}}
