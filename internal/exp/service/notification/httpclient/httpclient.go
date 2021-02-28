@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/shurcooL/home/internal/exp/service/notification"
 	"github.com/shurcooL/home/internal/exp/service/notification/httproute"
@@ -91,16 +92,36 @@ func (n *notificationClient) StreamNotifications(ctx context.Context, ch chan<- 
 	}
 	dec := json.NewDecoder(resp.Body)
 	go func() {
-		defer resp.Body.Close()
 		for {
+			if dec == nil {
+				const backoff = 10 * time.Second
+				log.Printf("notificationClient.StreamNotifications: sleeping %v then trying again\n", backoff)
+				time.Sleep(backoff)
+				resp, err := ctxhttp.Get(ctx, n.client, n.baseURL.ResolveReference(&u).String())
+				if err != nil {
+					log.Println("notificationClient.StreamNotifications: http.Get:", err)
+					continue
+				}
+				if resp.StatusCode != http.StatusOK {
+					body, _ := ioutil.ReadAll(resp.Body)
+					resp.Body.Close()
+					log.Printf("notificationClient.StreamNotifications: did not get acceptable status code: %v body: %q\n", resp.Status, body)
+					continue
+				}
+				dec = json.NewDecoder(resp.Body)
+			}
+
 			var notifs []notification.Notification
 			err := dec.Decode(&notifs)
 			if err != nil {
 				log.Println("notificationClient.StreamNotifications: dec.Decode:", err)
-				return
+				resp.Body.Close()
+				dec = nil
+				continue
 			}
 			select {
 			case <-ctx.Done():
+				resp.Body.Close()
 				return
 			case ch <- notifs:
 			}
