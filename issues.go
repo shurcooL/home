@@ -162,7 +162,6 @@ func (h issuesHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) error
 		req.URL.Path = "/"
 	}
 	rr := httptest.NewRecorder()
-	req = req.WithContext(context.WithValue(req.Context(), repoInfoContextKey, h.Repo)) // For BodyTop.
 	req = req.WithContext(context.WithValue(req.Context(), issuesapp.RepoSpecContextKey, issues.RepoSpec{URI: h.SpecURL}))
 	req = req.WithContext(context.WithValue(req.Context(), issuesapp.BaseURIContextKey, h.BaseURL))
 	h.issuesApp.ServeHTTP(rr, req)

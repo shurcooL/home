@@ -211,11 +211,6 @@ type repoInfo struct {
 	Packages int    // Number of packages contained by repository.
 }
 
-// repoInfoContextKey is a context key for the request's repo info.
-// That value specifies which repo is being displayed.
-// The associated value will be of type repoInfo.
-var repoInfoContextKey = &contextKey{"RepoInfo"}
-
 type pkgInfo struct {
 	Spec       string // Package import path. E.g., "example.com/repo/package".
 	Name       string // Package name. E.g., "pkg".
