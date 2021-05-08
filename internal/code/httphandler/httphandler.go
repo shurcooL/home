@@ -1,4 +1,4 @@
-// Package httphandler contains an API handler for issues.Service.
+// Package httphandler contains an API handler for code.Service.
 package httphandler
 
 import (

@@ -1,4 +1,4 @@
-// Package httpclient contains issues.Service implementation over HTTP.
+// Package httpclient contains code.Service implementation over HTTP.
 package httpclient
 
 import (
