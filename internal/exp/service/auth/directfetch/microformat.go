@@ -20,13 +20,23 @@ func photoURL(data *microformats.Data) (string, error) {
 	if len(photos) == 0 {
 		return "", fmt.Errorf("h-card.photo property exists but is empty, want non-empty")
 	}
-	u, ok := photos[0].(string)
-	if !ok {
-		return "", fmt.Errorf("h-card.photo[0] type is %T, want string", photos[0])
-	} else if _, err := url.Parse(u); err != nil {
-		return "", fmt.Errorf("error parsing photo URL %q: %v", u, err)
+	var photoURL string
+	switch v := photos[0].(type) {
+	case string:
+		photoURL = v
+	case map[string]string:
+		vv, ok := v["value"]
+		if !ok {
+			return "", fmt.Errorf(`h-card.photo[0] is a map without a "value" entry`)
+		}
+		photoURL = vv
+	default:
+		return "", fmt.Errorf("h-card.photo[0] type is %T, want string or map[string]string", photos[0])
 	}
-	return u, nil
+	if _, err := url.Parse(photoURL); err != nil {
+		return "", fmt.Errorf("error parsing photo URL %q: %v", photoURL, err)
+	}
+	return photoURL, nil
 }
 
 // hCard returns the first h-card microformat element,
